@@ -1,0 +1,29 @@
+{{define "content"}}
+<div class="page-head">
+  <h1>Settings</h1>
+</div>
+<div class="grid-2">
+<section class="card">
+  <h2>School</h2>
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/admin/settings" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="school">School name</label>
+    <input id="school" name="school" required maxlength="100" value="{{.School}}">
+    <p class="help">Shown at the top of every page and as the app's name on phones.</p>
+    <button type="submit" class="button primary">Save</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>This server</h2>
+  <dl class="facts">
+    <dt>Version</dt><dd>{{.Version}}</dd>
+    <dt>Web address</dt><dd>{{.D.Network}}</dd>
+    <dt>Data folder</dt><dd><code>{{.D.DataDir}}</code></dd>
+    <dt>Database</dt><dd>{{.D.DBSize}} · schema {{.D.Schema}}</dd>
+  </dl>
+  <p class="help">To change how Taper is reached (HTTPS, port, reverse proxy), run the installer again with new options. See <a href="/guide/install">Installing Taper</a>.</p>
+</section>
+</div>
+{{end}}

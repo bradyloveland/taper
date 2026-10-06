@@ -1,0 +1,65 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{if .Title}}{{.Title}} · {{end}}{{.AppName}}</title>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1f3a5f">
+<meta name="description" content="{{.AppName}}: classes, calendars, assignments and chat.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="{{asset "icons/icon.svg"}}" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{.ShortName}}">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="{{asset "app.css"}}">
+<script src="{{asset "app.js"}}" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <img src="{{asset "icons/icon.svg"}}" alt="" width="32" height="32">
+      <span class="brand-name">{{.AppName}}</span>
+    </a>
+    {{if and .User (not .User.MustChangePassword)}}
+    <input type="checkbox" id="nav-toggle" class="nav-toggle sr-only">
+    <label for="nav-toggle" class="nav-button"><span class="hamburger" aria-hidden="true"></span><span class="sr-only">Menu</span></label>
+      <nav class="nav" aria-label="Main">
+        <a href="/" {{if eq .Section "home"}}aria-current="page"{{end}}>Home</a>
+        <a href="/guide" {{if eq .Section "guide"}}aria-current="page"{{end}}>Guide</a>
+        {{if .User.IsAdmin}}
+        <span class="nav-sep" aria-hidden="true"></span>
+        <a href="/admin/people" {{if eq .Section "people"}}aria-current="page"{{end}}>People</a>
+        <a href="/admin/settings" {{if eq .Section "settings"}}aria-current="page"{{end}}>Settings</a>
+        {{end}}
+        <span class="nav-sep nav-push" aria-hidden="true"></span>
+        <a href="/account" class="nav-account" {{if eq .Section "account"}}aria-current="page"{{end}}>
+          <span class="avatar" aria-hidden="true">{{.User.Initials}}</span>
+          <span>{{.User.DisplayName}}</span>
+        </a>
+        <form method="post" action="/logout" class="nav-form">
+          <input type="hidden" name="csrf" value="{{.CSRF}}">
+          <button type="submit" class="link-button">Sign out</button>
+        </form>
+      </nav>
+    {{end}}
+  </div>
+</header>
+<main id="main" class="container">
+  {{with .Flash}}<div class="flash flash-{{.Kind}}" role="status">{{.Message}}</div>{{end}}
+  {{template "content" .}}
+</main>
+<footer class="footer">
+  <span class="footer-tagline">Light your taper at mine</span>
+  <span>Taper {{.Version}}</span>
+  <a href="/guide">Guide</a>
+  <a href="https://github.com/{{.Repo}}" rel="noopener">GitHub</a>
+</footer>
+</body>
+</html>
+{{end}}

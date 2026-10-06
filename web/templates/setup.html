@@ -1,0 +1,34 @@
+{{define "content"}}
+<section class="auth-card card">
+  <p class="tagline">Light your taper at mine</p>
+  <h1>Set up Taper</h1>
+  <p class="muted">Welcome! Name your school and create the first admin account. You can add mentors and scholars after this.</p>
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/setup" class="form">
+    <label for="code">Setup code</label>
+    <input id="code" name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" value="{{.D.Form.code}}" aria-describedby="code-help">
+    <p id="code-help" class="help">The installer printed this code. To see it again, run <code>sudo taper setup-code</code> on the server.</p>
+
+    <label for="school">School name</label>
+    <input id="school" name="school" required maxlength="100" value="{{.D.Form.school}}" placeholder="Liberty Commonwealth School">
+
+    <fieldset>
+      <legend>Your admin account</legend>
+      <label for="display_name">Your name</label>
+      <input id="display_name" name="display_name" required maxlength="100" autocomplete="name" value="{{.D.Form.display_name}}">
+
+      <label for="username">Username</label>
+      <input id="username" name="username" required maxlength="40" autocomplete="username" autocapitalize="none" spellcheck="false" value="{{.D.Form.username}}" aria-describedby="username-help">
+      <p id="username-help" class="help">Letters, numbers, dots, dashes and underscores. You'll sign in with this.</p>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password">
+
+      <label for="confirm">Type the password again</label>
+      <input id="confirm" name="confirm" type="password" required minlength="8" autocomplete="new-password">
+    </fieldset>
+
+    <button type="submit" class="button primary block">Finish setup</button>
+  </form>
+</section>
+{{end}}

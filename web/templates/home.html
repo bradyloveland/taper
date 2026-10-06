@@ -1,0 +1,33 @@
+{{define "content"}}
+<div class="page-head">
+  <h1>{{.D.Greeting}}, {{.User.DisplayName}}</h1>
+  <p class="muted">{{.User.RoleLabel}} at {{.School}}</p>
+</div>
+
+{{if .User.IsAdmin}}
+<section class="stats" aria-label="People">
+  <a class="stat card" href="/admin/people?role=admin"><span class="stat-num">{{index .D.Counts "admin"}}</span><span class="stat-label">Admins</span></a>
+  <a class="stat card" href="/admin/people?role=mentor"><span class="stat-num">{{index .D.Counts "mentor"}}</span><span class="stat-label">Mentors</span></a>
+  <a class="stat card" href="/admin/people?role=scholar"><span class="stat-num">{{index .D.Counts "scholar"}}</span><span class="stat-label">Scholars</span></a>
+</section>
+
+<section class="card">
+  <h2>Getting started</h2>
+  <ol class="checklist">
+    <li class="{{if gt (index .D.Counts "mentor") 0}}done{{end}}"><a href="/admin/people/new?role=mentor">Add your mentors</a> <span class="muted">and give each one their temporary password.</span></li>
+    <li class="{{if gt (index .D.Counts "scholar") 0}}done{{end}}"><a href="/admin/people/new?role=scholar">Add your scholars</a>.</li>
+    <li><a href="/guide/phone-app">Show everyone how to add Taper to their phone</a>.</li>
+    <li class="muted">Classes, calendars, assignments and chat come in the next versions. <a href="/guide">See the guide</a>.</li>
+  </ol>
+</section>
+{{else}}
+<section class="card">
+  <h2>Your classes</h2>
+  <p class="muted">Your classes, calendar, assignments and chat will show up here. Taper is new at {{.School}}, and these arrive in upcoming versions.</p>
+</section>
+<section class="card">
+  <h2>Get the app</h2>
+  <p>Add Taper to your phone's home screen, so it opens like any other app. <a href="/guide/phone-app">Here's how</a>.</p>
+</section>
+{{end}}
+{{end}}

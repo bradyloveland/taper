@@ -1,0 +1,48 @@
+{{define "content"}}
+<div class="page-head row">
+  <div>
+    <h1>People</h1>
+    <p class="muted">Everyone who can sign in to Taper.</p>
+  </div>
+  <a class="button primary" href="/admin/people/new{{with .D.Filter.Role}}?role={{.}}{{end}}">Add a person</a>
+</div>
+
+<form method="get" action="/admin/people" class="filters card">
+  <label class="sr-only" for="q">Search</label>
+  <input id="q" name="q" type="search" placeholder="Search names, usernames, email" value="{{.D.Filter.Query}}">
+  <label class="sr-only" for="role">Role</label>
+  <select id="role" name="role">
+    <option value="">Every role</option>
+    {{range .D.Roles}}<option value="{{.}}" {{if eq . $.D.Filter.Role}}selected{{end}}>{{roleLabel .}}s</option>{{end}}
+  </select>
+  <label class="sr-only" for="status">Status</label>
+  <select id="status" name="status">
+    <option value="active" {{if eq .D.Filter.Status "active"}}selected{{end}}>Active</option>
+    <option value="inactive" {{if eq .D.Filter.Status "inactive"}}selected{{end}}>Deactivated</option>
+    <option value="all" {{if eq .D.Filter.Status "all"}}selected{{end}}>Everyone</option>
+  </select>
+  <button type="submit" class="button">Filter</button>
+</form>
+
+{{if .D.Users}}
+<div class="table-wrap card">
+<table class="table">
+  <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Last signed in</th></tr></thead>
+  <tbody>
+  {{range .D.Users}}
+  <tr>
+    <td data-label="Name"><a href="/admin/people/{{.ID}}">{{.DisplayName}}</a>{{if not .Active}} <span class="badge muted">Deactivated</span>{{end}}{{if .MustChangePassword}} <span class="badge warn" title="Hasn't chosen their own password yet">Temporary password</span>{{end}}</td>
+    <td data-label="Username">{{.Username}}</td>
+    <td data-label="Role"><span class="role role-{{.Role}}">{{.RoleLabel}}</span></td>
+    <td data-label="Last signed in">{{if .LastLoginAt}}{{ago .LastLoginAt}}{{else}}<span class="muted">Never</span>{{end}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+{{else}}
+<div class="card empty">
+  <p>No one matches. {{if or .D.Filter.Query .D.Filter.Role}}<a href="/admin/people">Clear the filters</a> or {{end}}<a href="/admin/people/new">add a person</a>.</p>
+</div>
+{{end}}
+{{end}}

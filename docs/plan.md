@@ -1,5 +1,7 @@
 # Taper: plan and milestones
 
+*Light your taper at mine.*
+
 Taper is a self-hosted learning platform for a Thomas Jefferson Education (TJEd)
 commonwealth school. One school runs one copy on its own Debian server.
 

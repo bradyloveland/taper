@@ -1,0 +1,22 @@
+{{define "offline"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offline · {{.AppName}}</title>
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="{{asset "app.css"}}">
+<script src="{{asset "app.js"}}" defer></script>
+</head>
+<body>
+<main id="main" class="container">
+  <section class="card narrow center offline">
+    <img src="{{asset "icons/icon.svg"}}" alt="" width="72" height="72">
+    <h1>You're offline</h1>
+    <p>{{.AppName}} needs an internet connection. Check your Wi-Fi or mobile data, then try again.</p>
+    <p><a class="button primary" href="/" data-reload>Try again</a></p>
+  </section>
+</main>
+</body>
+</html>
+{{end}}

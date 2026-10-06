@@ -9,6 +9,11 @@ Taper is a self-hosted learning platform for a Thomas Jefferson Education
 **mentor** (teacher) and **scholar** (student). Use those words in the UI, never
 "teacher" or "student". There are no letter grades.
 
+The tagline is **"Light your taper at mine"** (from Jefferson's letter on how
+ideas spread, the way one candle lights another without dimming). It appears on
+the sign-in and setup pages, in the footer and in the docs. The icon is a lit
+candle (a taper).
+
 The plan and milestones are in `docs/plan.md`. User documentation is in
 `docs/guide/`, and the same files are built into the app as its Guide.
 
@@ -28,6 +33,8 @@ The plan and milestones are in `docs/plan.md`. User documentation is in
 - **Privacy:** scholars are often minors. Never send personal data off the server
   except where the user chooses to (a bug report they write, a calendar link they share).
 - **User-facing text is plain and specific:** say what happened and what to do next.
+
+Code layout and conventions are in `docs/development.md`.
 
 ## Commands
 
