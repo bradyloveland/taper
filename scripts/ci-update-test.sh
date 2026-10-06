@@ -72,7 +72,7 @@ upload_install b 0.0.1-ci.2
 wait_for "B to run" 60 is_version 0.0.1-ci.2
 test "$(sudo /opt/taper/taper.prev version)" = 0.0.1-ci.1 || fail "A should be kept as taper.prev"
 wait_for "B to be confirmed" 90 has "Updated from 0.0.1-ci.1 to 0.0.1-ci.2. Everything went well." "$base/admin/updates"
-ls /var/lib/taper/backups/taper-*-0.0.1-ci.1.db >/dev/null 2>&1 || fail "the database wasn't backed up before the update"
+sudo sh -c "ls /var/lib/taper/backups/taper-*-0.0.1-ci.1.db" >/dev/null 2>&1 || fail "the database wasn't backed up before the update"
 
 say "Going back to A by hand"
 has "Go back to 0.0.1-ci.1" "$base/admin/updates" || fail "going back should be offered"
