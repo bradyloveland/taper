@@ -1,8 +1,8 @@
-# eduk8
+# Taper
 
 A self-hosted learning platform for Thomas Jefferson Education (TJEd) commonwealth schools.
 
-eduk8 gives a school one place for its classes, school and class calendars,
+Taper gives a school one place for its classes, school and class calendars,
 assignments and chat. Admins, mentors and scholars each get their own view. The
 school runs it on its own Debian server, so its data stays with the school.
 
@@ -30,7 +30,7 @@ Installation instructions arrive with milestone 1. They will be in
 
 ## Development
 
-eduk8 is written in Go with SQLite. See [docs/development.md](docs/development.md)
+Taper is written in Go with SQLite. See [docs/development.md](docs/development.md)
 once milestone 1 lands, and [CLAUDE.md](CLAUDE.md) for the project's working rules.
 
 ## License

@@ -1,6 +1,6 @@
-# eduk8: plan and milestones
+# Taper: plan and milestones
 
-eduk8 is a self-hosted learning platform for a Thomas Jefferson Education (TJEd)
+Taper is a self-hosted learning platform for a Thomas Jefferson Education (TJEd)
 commonwealth school. One school runs one copy on its own Debian server.
 
 ## Who uses it
@@ -34,7 +34,7 @@ look*, *Complete*).
 - **Live updates** (chat, notifications) use Server-Sent Events, which work through
   proxies and on every current browser.
 - **Installable app (PWA)**: a web app manifest, icons and a service worker
-  let Android and iOS users add eduk8 to their home screen. iOS and Android need
+  let Android and iOS users add Taper to their home screen. iOS and Android need
   HTTPS for that, so the installer can get a free Let's Encrypt certificate on its
   own (or sit behind an existing reverse proxy).
 
@@ -46,7 +46,7 @@ assignment text). Anything new needs a reason in its pull request.
 
 1. A version is released by tagging it on GitHub. GitHub Actions builds the
    program for x86-64 and ARM64, **signs** the files, and publishes a release.
-2. In eduk8, **Admin → Updates** shows when a newer release is out, with its
+2. In Taper, **Admin → Updates** shows when a newer release is out, with its
    notes. Clicking **Install** downloads it, checks the signature, backs up the
    database, swaps the program and restarts.
 3. If the new version doesn't start, it's put back on its own. An admin can
@@ -54,7 +54,7 @@ assignment text). Anything new needs a reason in its pull request.
 
 ## Bug reports
 
-Anyone signed in can use **Report a problem**. eduk8 adds the version, page and
+Anyone signed in can use **Report a problem**. Taper adds the version, page and
 browser, and files it as a GitHub issue in this repository. The repository is
 public, so the form says not to include names or private details. The admin adds a
 GitHub token that's only allowed to create issues; without one, the form opens a
@@ -69,7 +69,7 @@ updated documentation, and passes `make check`, before it's opened for review.
 - Public GitHub repository, plan (this file), README, license, changelog, working rules for contributors.
 
 ### M1: foundation
-- One Go program: `eduk8 serve`, plus a few commands for setup and recovering a locked-out admin account.
+- One Go program: `taper serve`, plus a few commands for setup and recovering a locked-out admin account.
 - SQLite database with numbered migrations.
 - `install.sh` for Debian 12/13: service account, folders, systemd service, HTTP,
   automatic HTTPS (Let's Encrypt) or reverse-proxy mode. Re-running it upgrades and

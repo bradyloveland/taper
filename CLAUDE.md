@@ -4,7 +4,7 @@ Context for Claude Code sessions working on this repository.
 
 ## What this is
 
-eduk8 is a self-hosted learning platform for a Thomas Jefferson Education
+Taper is a self-hosted learning platform for a Thomas Jefferson Education
 (TJEd) commonwealth school. One school runs one copy on a Debian server. The roles are **admin**,
 **mentor** (teacher) and **scholar** (student). Use those words in the UI, never
 "teacher" or "student". There are no letter grades.
@@ -24,7 +24,7 @@ The plan and milestones are in `docs/plan.md`. User documentation is in
 - **Schema changes are new numbered files** in `internal/store/migrations/`. Never edit
   a migration that has been released. Upgrades must keep every school's data.
 - **No terminal needed after install**, except the first install and the account-recovery
-  commands (`eduk8 passwd`, `eduk8 setup-code`).
+  commands (`taper passwd`, `taper setup-code`).
 - **Privacy:** scholars are often minors. Never send personal data off the server
   except where the user chooses to (a bug report they write, a calendar link they share).
 - **User-facing text is plain and specific:** say what happened and what to do next.
