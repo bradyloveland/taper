@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
@@ -21,6 +22,7 @@ import (
 	"github.com/bradyloveland/taper/internal/config"
 	"github.com/bradyloveland/taper/internal/server"
 	"github.com/bradyloveland/taper/internal/store"
+	"github.com/bradyloveland/taper/internal/update"
 	"github.com/bradyloveland/taper/internal/version"
 )
 
@@ -31,6 +33,7 @@ Usage:
   taper setup-code          Show the one-time code for first-time setup
   taper passwd USERNAME     Give someone a new temporary password (and turn their account on)
   taper backup FILE         Write a copy of the database to FILE
+  taper rollback            Go back to the version from before the last update (with the service stopped)
   taper version             Print the version
 
 Settings come from TAPER_* environment variables, which the installer keeps in
@@ -60,6 +63,8 @@ func main() {
 		} else {
 			err = backup(os.Args[2])
 		}
+	case "rollback":
+		err = rollback(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Println(version.Version)
 	case "help", "--help", "-h":
@@ -175,32 +180,62 @@ func backup(dest string) error {
 	return nil
 }
 
+// brokenOnPurpose makes a build that refuses to start, for testing the
+// automatic rollback of updates (set with -X main.brokenOnPurpose=yes).
+var brokenOnPurpose string
+
+// settle is how long a newly installed version must stay up to count as working.
+const settle = time.Minute
+
 func serve() error {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 	cfg, err := config.FromEnv()
 	if err != nil {
 		return err
 	}
+	rollback, err := run(cfg)
+	if err != nil {
+		// Recorded so that, if this version was just installed and keeps
+		// failing, the rollback can say why.
+		update.RecordStartFailure(cfg.DataDir, version.Version, err)
+		return err
+	}
+	// Going back by hand replaces the database, so it waits until it's closed.
+	if rollback != "" {
+		if err := (update.Files{AppDir: cfg.AppDir, DataDir: cfg.DataDir}).Rollback(rollback, true); err != nil {
+			slog.Error("couldn't go back to the previous version", "err", err)
+		}
+	}
+	return nil
+}
+
+// run serves until it's stopped or restarted for an update. It returns the
+// reason to go back to the previous version, if that was asked for.
+func run(cfg *config.Config) (string, error) {
+	if brokenOnPurpose == "yes" {
+		return "", errors.New("this test build doesn't start, on purpose")
+	}
 	st, err := openStore(cfg)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer st.Close()
 	if n, err := st.CountUsers(); err == nil && n == 0 {
 		code, err := server.EnsureSetupCode(cfg.DataDir)
 		if err != nil {
-			return err
+			return "", err
 		}
 		slog.Info("waiting for first-time setup in the browser", "setup_code", code)
 	}
 	srv, err := server.New(server.Options{Config: cfg, Store: st})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go pruneSessions(ctx, st)
+	go srv.Run(ctx)
 
 	var servers []*http.Server
 	errc := make(chan error, 2)
@@ -241,18 +276,63 @@ func serve() error {
 		start(newServer(cfg.Listen(), srv), false)
 	}
 	slog.Info("Taper started", "version", version.Version, "address", cfg.Describe(), "data", cfg.DataDir)
+	srv.Started(settle)
+	defer srv.Stop()
 
 	select {
 	case <-ctx.Done():
+		slog.Info("shutting down")
+	case <-srv.Restarting():
+		slog.Info("restarting for an update")
 	case err := <-errc:
-		return err
+		return "", err
 	}
-	slog.Info("shutting down")
 	sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	for _, hs := range servers {
 		_ = hs.Shutdown(sctx)
 	}
+	return srv.RollbackRequested(), nil
+}
+
+// rollback puts back the version from before the last update. The service
+// runs "taper.prev rollback --after-failure" each time it stops, to undo an
+// update that keeps failing (see update.Files.AfterStop).
+func rollback(args []string) error {
+	cfg, err := config.FromEnv()
+	if err != nil {
+		return err
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	exe, _ = filepath.EvalSymlinks(exe)
+	files := update.Files{AppDir: filepath.Dir(exe), DataDir: cfg.DataDir}
+	if len(args) == 1 && args[0] == "--after-failure" {
+		rolled, err := files.AfterStop(os.Getenv("SERVICE_RESULT"))
+		if rolled {
+			fmt.Println("The new version kept failing, so the previous one was put back.")
+		}
+		return err
+	}
+	if len(args) != 0 {
+		return errors.New("usage: taper rollback")
+	}
+	s, err := update.ReadState(cfg.DataDir)
+	if err != nil {
+		return err
+	}
+	if s == nil || s.Phase == update.RolledBack {
+		return errors.New("there's no update to undo")
+	}
+	if exec.Command("systemctl", "is-active", "--quiet", "taper").Run() == nil {
+		return errors.New("stop the service first (sudo systemctl stop taper), or go back from the Updates page")
+	}
+	if err := files.Rollback("Rolled back with taper rollback.", true); err != nil {
+		return err
+	}
+	fmt.Printf("Version %s is back, with the database from before the update. Start it with: sudo systemctl start taper\n", s.From)
 	return nil
 }
 

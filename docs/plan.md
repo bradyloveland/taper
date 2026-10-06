@@ -70,7 +70,7 @@ updated documentation, and passes `make check`, before it's opened for review.
 ### M0: project setup (done in the first commit)
 - Public GitHub repository, plan (this file), README, license, changelog, working rules for contributors.
 
-### M1: foundation
+### M1: foundation (done)
 - One Go program: `taper serve`, plus a few commands for setup and recovering a locked-out admin account.
 - SQLite database with numbered migrations.
 - `install.sh` for Debian 12/13: service account, folders, systemd service, HTTP,
@@ -86,11 +86,12 @@ updated documentation, and passes `make check`, before it's opened for review.
 - The in-app **Guide** shows the same Markdown files that are in `docs/guide/` on GitHub.
 - GitHub Actions CI: formatting, vet, staticcheck, shellcheck, tests.
 
-### M2: updates and bug reports
+### M2: updates and bug reports (done)
 - Signed release builds from GitHub Actions on version tags.
 - Admin → Updates: check, see notes, install, automatic rollback if the new version fails, manual rollback.
 - Database backup before every update, plus a download-a-backup button.
 - Report a problem → GitHub issue (token stored encrypted), with a fallback link.
+  Reports are also kept in Taper for admins.
 
 ### M3: classes
 - Admins create classes (name, description, term, color) and archive old ones.

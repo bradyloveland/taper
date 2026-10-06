@@ -45,6 +45,31 @@
     }
   });
 
+  // After installing an update, wait for the new version to answer, then go on.
+  const wait = document.querySelector('[data-wait-version]');
+  if (wait) {
+    const target = wait.getAttribute('data-wait-version');
+    const started = Date.now();
+    let sawDown = false;
+    const poll = () => {
+      fetch('/healthz', { cache: 'no-store' })
+        .then((r) => r.text())
+        .then((t) => {
+          if (t.trim() === 'ok ' + target && (sawDown || Date.now() - started > 8000)) {
+            window.location.href = '/admin/updates';
+            return;
+          }
+          setTimeout(poll, 2000);
+        })
+        .catch(() => { sawDown = true; setTimeout(poll, 2000); });
+      if (Date.now() - started > 120000) {
+        const slow = wait.querySelector('[data-wait-slow]');
+        if (slow) slow.hidden = false;
+      }
+    };
+    setTimeout(poll, 2500);
+  }
+
   // Suggest a username from the name while adding a person.
   const name = document.querySelector('[data-username-source]');
   const user = document.querySelector('[data-username-target]');

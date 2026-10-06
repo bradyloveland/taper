@@ -1,0 +1,38 @@
+{{define "content"}}
+<section class="card readable">
+{{with .D.Sent}}
+  <h1>Thank you</h1>
+  {{if .IssueURL}}
+  <p>Your report is sent to the people who make Taper as <a href="{{.IssueURL}}" rel="noopener">issue #{{.IssueNumber}} on GitHub</a>. You can follow it there.</p>
+  {{else}}
+  <p>Your report is saved, and your school's admins can see it.</p>
+  {{with .Error}}<p class="help">It couldn't be sent to GitHub: {{.}}</p>{{end}}
+  {{if $.D.Fallback}}
+  <p>If you have a GitHub account, you can also send it to the people who make Taper yourself:</p>
+  <p><a class="button" href="{{$.D.Fallback}}" rel="noopener" target="_blank">Open it on GitHub</a></p>
+  {{end}}
+  {{end}}
+  <p class="actions"><a class="button primary" href="{{if $.D.Page}}{{$.D.Page}}{{else}}/{{end}}">Back to where I was</a></p>
+{{else}}
+  <h1>Report a problem</h1>
+  <p>Something not working, or confusing? Tell the people who make Taper.</p>
+  <div class="flash flash-warn" role="note"><strong>Reports are public.</strong> They're posted on GitHub where anyone can read them. Don't include names, passwords, or anything private about a scholar or your school.</div>
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/report" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="page" value="{{.D.Page}}">
+    <label for="title">Short title</label>
+    <input id="title" name="title" required maxlength="120" value="{{.D.Title}}" placeholder="The Save button on My account does nothing">
+    <label for="what">What happened?</label>
+    <textarea id="what" name="what" required rows="8" maxlength="5000" aria-describedby="what-help">{{.D.What}}</textarea>
+    <p id="what-help" class="help">What were you doing, what did you expect, and what happened instead?</p>
+    <label class="check">
+      <input type="checkbox" name="details" value="1" {{if .D.Details}}checked{{end}}>
+      <span>Include technical details</span>
+    </label>
+    <p class="help">The Taper version, {{if .D.Page}}the page you were on (<code>{{.D.Page}}</code>), {{end}}your browser, and your role. Never your name.</p>
+    <button type="submit" class="button primary">Send report</button>
+  </form>
+{{end}}
+</section>
+{{end}}

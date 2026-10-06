@@ -167,11 +167,15 @@ if ! [[ "$REL_DIR" -ef "$APP_DIR" ]]; then
   install -o "$USER_NAME" -g "$USER_NAME" -m 755 "$BIN" "$APP_DIR/taper.new"
   mv -f "$APP_DIR/taper.new" "$APP_DIR/taper"
   # Kept so the installer can be run again later without downloading it.
-  for f in install.sh uninstall.sh README.md CHANGELOG.md LICENSE; do
+  for f in install.sh uninstall.sh MANIFEST MANIFEST.sig README.md CHANGELOG.md LICENSE; do
     if [[ -f "$REL_DIR/$f" ]]; then
       install -o "$USER_NAME" -g "$USER_NAME" -m 644 "$REL_DIR/$f" "$APP_DIR/$f"
+    elif [[ "$f" == MANIFEST* ]]; then
+      rm -f "$APP_DIR/$f" # an unsigned build: don't keep a stale manifest
     fi
   done
+  # A version installed this way can't be undone from the Updates page.
+  rm -f "$APP_DIR"/*.prev
   chmod 755 "$APP_DIR/install.sh" "$APP_DIR/uninstall.sh" 2>/dev/null || true
 fi
 
@@ -202,8 +206,12 @@ Group=$USER_NAME
 EnvironmentFile=$CONF
 Environment=HOME=$DATA_DIR
 ExecStart=$APP_DIR/taper serve
+# After an update from the web interface, the previous version (taper.prev)
+# counts failed runs of the new one and puts itself back after three.
+# Otherwise it does nothing; the "-" ignores it being missing.
+ExecStopPost=-$APP_DIR/taper.prev rollback --after-failure
 Restart=always
-RestartSec=5
+RestartSec=3
 UMask=0077
 # Ports 80 and 443 (https mode) without running as root.
 AmbientCapabilities=CAP_NET_BIND_SERVICE
@@ -289,7 +297,7 @@ case "$MODE" in
     echo "run this installer again with --domain or --behind-proxy (see the install guide)."
     ;;
 esac
-SETUP_CODE="$(taper setup-code 2>/dev/null | grep -E '^[A-Z0-9]{4}-[A-Z0-9]{4}$' || true)"
+SETUP_CODE="$(/usr/local/bin/taper setup-code 2>/dev/null | grep -E '^[A-Z0-9]{4}-[A-Z0-9]{4}$' || true)"
 if [[ -n "$SETUP_CODE" ]]; then
   echo
   printf 'Setup code: \033[1m%s\033[0m\n' "$SETUP_CODE"

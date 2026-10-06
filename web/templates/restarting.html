@@ -1,0 +1,9 @@
+{{define "content"}}
+<section class="card narrow center" data-wait-version="{{.D.Target}}">
+  <h1>{{.D.Heading}}</h1>
+  <p class="spinner" aria-hidden="true"></p>
+  <p data-wait-status role="status">Taper is restarting. This page continues by itself when it's back, usually within a minute.</p>
+  <p class="help" data-wait-slow hidden>This is taking longer than usual. If it doesn't come back in a few minutes, check the server: <code>sudo journalctl -u taper -n 50</code></p>
+  <p><a class="button" href="/admin/updates">Go to Updates</a></p>
+</section>
+{{end}}

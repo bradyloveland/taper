@@ -59,7 +59,11 @@ const maxForm = 1 << 20
 
 func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, maxForm)
+		limit := int64(maxForm)
+		if r.URL.Path == "/admin/updates/upload" {
+			limit = maxUpload
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, limit)
 		h := w.Header()
 		h.Set("Content-Security-Policy", csp)
 		h.Set("X-Content-Type-Options", "nosniff")

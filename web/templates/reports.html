@@ -1,0 +1,38 @@
+{{define "content"}}
+<p class="crumbs"><a href="/admin/settings">Settings</a> /</p>
+<div class="page-head">
+  <h1>Problem reports</h1>
+  <p class="muted">What people at your school reported with <a href="/report">Report a problem</a>.{{if not .D.CanSend}} Reports aren't sent to GitHub until an admin adds a token under <a href="/admin/settings#reports">Settings</a>.{{end}}</p>
+</div>
+{{if .D.Reports}}
+<div class="table-wrap card">
+<table class="table">
+  <thead><tr><th>Report</th><th>From</th><th>When</th><th>GitHub</th></tr></thead>
+  <tbody>
+  {{range .D.Reports}}
+  <tr>
+    <td data-label="Report"><strong>{{.Title}}</strong>{{with .Page}}<div class="muted small">{{.}}</div>{{end}}</td>
+    <td data-label="From">{{if .Reporter}}{{.Reporter}}{{else}}<span class="muted">Removed account</span>{{end}}</td>
+    <td data-label="When">{{ago .CreatedAt}}</td>
+    <td data-label="GitHub">
+      {{if .IssueURL}}<a href="{{.IssueURL}}" rel="noopener">#{{.IssueNumber}}</a>
+      {{else}}
+        <span class="badge warn">Not sent</span>
+        {{with .Error}}<div class="muted small">{{.}}</div>{{end}}
+        <div class="row-actions">
+        {{if $.D.CanSend}}
+        <form method="post" action="/admin/reports/{{.ID}}/send"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="button small">Send</button></form>
+        {{end}}
+        <a class="button small" href="{{index $.D.Fallback .ID}}" rel="noopener" target="_blank">Open on GitHub</a>
+        </div>
+      {{end}}
+    </td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+{{else}}
+<div class="card empty"><p>No one has reported a problem yet.</p></div>
+{{end}}
+{{end}}

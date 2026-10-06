@@ -201,3 +201,39 @@ func TestSessions(t *testing.T) {
 		t.Fatal("prune left sessions")
 	}
 }
+
+func TestBugReports(t *testing.T) {
+	s := openTest(t)
+	u := &User{Username: "sam", DisplayName: "Sam Stone", Role: RoleScholar, PasswordHash: "x", Active: true}
+	if err := s.CreateUser(u); err != nil {
+		t.Fatal(err)
+	}
+	a := &BugReport{UserID: u.ID, Title: "Button broken", Body: "body", Page: "/account"}
+	if err := s.CreateBugReport(a); err != nil || a.ID == 0 {
+		t.Fatal(err)
+	}
+	b := &BugReport{Title: "Anonymous", Body: "x"}
+	if err := s.CreateBugReport(b); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := s.UnsentBugReports(); n != 2 {
+		t.Fatalf("unsent = %d", n)
+	}
+	if err := s.SetBugReportIssue(a.ID, "https://github.com/o/r/issues/7", 7, ""); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.GetBugReport(a.ID)
+	if err != nil || got.Reporter != "Sam Stone" || got.IssueNumber != 7 || got.Page != "/account" {
+		t.Fatalf("got %+v %v", got, err)
+	}
+	list, _ := s.ListBugReports(10)
+	if len(list) != 2 || list[0].ID != b.ID || list[1].Reporter != "Sam Stone" {
+		t.Fatalf("list %+v", list)
+	}
+	if n, _ := s.UnsentBugReports(); n != 1 {
+		t.Fatalf("unsent = %d", n)
+	}
+	if _, err := s.GetBugReport(999); !errors.Is(err, ErrNotFound) {
+		t.Fatal("missing report")
+	}
+}

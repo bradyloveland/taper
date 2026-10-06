@@ -10,11 +10,14 @@ import (
 
 	"github.com/bradyloveland/taper/internal/auth"
 	"github.com/bradyloveland/taper/internal/store"
+	"github.com/bradyloveland/taper/internal/version"
 )
 
 type homeData struct {
 	Greeting string
 	Counts   map[string]int
+	Update   string // a newer version, for admins
+	Unsent   int    // problem reports not on GitHub, for admins
 }
 
 func greeting(t time.Time) string {
@@ -37,6 +40,8 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		d.Counts = counts
+		d.Update = s.availableUpdate()
+		d.Unsent, _ = s.store.UnsentBugReports()
 	}
 	s.render(w, r, http.StatusOK, "home", "Home", "home", d)
 }
@@ -121,16 +126,27 @@ func (s *Server) handleRevokeSessions(w http.ResponseWriter, r *http.Request) {
 
 // ---------------------------------------------------------------- settings
 
-type settingsData struct {
-	Error   string
-	Network string
-	DataDir string
-	DBSize  string
-	Schema  int
+type settingsErrors struct {
+	School  string
+	Reports string
 }
 
-func (s *Server) renderSettings(w http.ResponseWriter, r *http.Request, status int, msg string) {
-	d := settingsData{Error: msg, Network: s.cfg.Describe(), DataDir: s.cfg.DataDir}
+type settingsData struct {
+	Errors      settingsErrors
+	Network     string
+	DataDir     string
+	DBSize      string
+	Schema      int
+	ReportRepo  string
+	DefaultRepo string
+	HasToken    bool
+	Reports     int
+	Unsent      int
+}
+
+func (s *Server) renderSettingsWith(w http.ResponseWriter, r *http.Request, status int, errs settingsErrors) {
+	d := settingsData{Errors: errs, Network: s.cfg.Describe(), DataDir: s.cfg.DataDir,
+		ReportRepo: s.reportRepo(), DefaultRepo: version.Repo, HasToken: s.reportToken() != ""}
 	d.Schema, _ = s.store.SchemaVersion()
 	var size int64
 	matches, _ := filepath.Glob(filepath.Join(s.cfg.DataDir, "taper.db*"))
@@ -140,17 +156,21 @@ func (s *Server) renderSettings(w http.ResponseWriter, r *http.Request, status i
 		}
 	}
 	d.DBSize = humanSize(size)
+	if list, err := s.store.ListBugReports(1000); err == nil {
+		d.Reports = len(list)
+	}
+	d.Unsent, _ = s.store.UnsentBugReports()
 	s.render(w, r, status, "settings", "Settings", "settings", d)
 }
 
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
-	s.renderSettings(w, r, http.StatusOK, "")
+	s.renderSettingsWith(w, r, http.StatusOK, settingsErrors{})
 }
 
 func (s *Server) handleSettingsSave(w http.ResponseWriter, r *http.Request) {
 	school, msg := cleanName(r.PostFormValue("school"), "school name")
 	if msg != "" {
-		s.renderSettings(w, r, http.StatusUnprocessableEntity, msg)
+		s.renderSettingsWith(w, r, http.StatusUnprocessableEntity, settingsErrors{School: msg})
 		return
 	}
 	if err := s.store.SetSetting("school_name", school); err != nil {

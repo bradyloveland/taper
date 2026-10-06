@@ -35,6 +35,7 @@
         {{if .User.IsAdmin}}
         <span class="nav-sep" aria-hidden="true"></span>
         <a href="/admin/people" {{if eq .Section "people"}}aria-current="page"{{end}}>People</a>
+        <a href="/admin/updates" {{if eq .Section "updates"}}aria-current="page"{{end}}>Updates</a>
         <a href="/admin/settings" {{if eq .Section "settings"}}aria-current="page"{{end}}>Settings</a>
         {{end}}
         <span class="nav-sep nav-push" aria-hidden="true"></span>
@@ -58,6 +59,7 @@
   <span class="footer-tagline">Light your taper at mine</span>
   <span>Taper {{.Version}}</span>
   <a href="/guide">Guide</a>
+  {{if .User}}<a href="/report?from={{.Path}}">Report a problem</a>{{end}}
   <a href="https://github.com/{{.Repo}}" rel="noopener">GitHub</a>
 </footer>
 </body>

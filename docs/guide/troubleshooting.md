@@ -28,6 +28,21 @@ clears the wait.
 sudo taper setup-code
 ```
 
+## An update went wrong
+
+If a new version doesn't start, Taper puts the previous one back on its own; the
+**Updates** page explains what happened. You can also go back from that page.
+If Taper doesn't come back at all, on the server:
+
+```bash
+sudo systemctl stop taper
+sudo taper rollback
+sudo systemctl start taper
+```
+
+This puts back the previous version and the database from just before the
+update. See [Updates and backups](updates.md).
+
 ## The page doesn't load
 
 1. Check the service is running: `sudo systemctl status taper`
@@ -50,6 +65,13 @@ Phones only offer it for `https://` addresses. See [HTTPS](install.md#https).
 
 ## Reporting a problem
 
-Open an issue on [GitHub](https://github.com/bradyloveland/taper/issues). A later
-version adds **Report a problem** inside Taper. Don't include names or other
-private details about scholars, because issues are public.
+Use **Report a problem** at the bottom of any page (see
+[Reporting a problem](reporting-problems.md)), or open an issue on
+[GitHub](https://github.com/bradyloveland/taper/issues). Don't include names or
+other private details about scholars, because issues are public.
+
+## "Not sent" problem reports
+
+The GitHub token may have expired or lost its permission. An admin can add a new
+one under **Settings → Problem reports**, then send the reports again from the
+reports list.

@@ -5,7 +5,7 @@
 <div class="grid-2">
 <section class="card">
   <h2>School</h2>
-  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  {{with .D.Errors.School}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
   <form method="post" action="/admin/settings" class="form">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <label for="school">School name</label>
@@ -18,12 +18,31 @@
 <section class="card">
   <h2>This server</h2>
   <dl class="facts">
-    <dt>Version</dt><dd>{{.Version}}</dd>
+    <dt>Version</dt><dd>{{.Version}} · <a href="/admin/updates">Updates</a></dd>
     <dt>Web address</dt><dd>{{.D.Network}}</dd>
     <dt>Data folder</dt><dd><code>{{.D.DataDir}}</code></dd>
     <dt>Database</dt><dd>{{.D.DBSize}} · schema {{.D.Schema}}</dd>
   </dl>
-  <p class="help">To change how Taper is reached (HTTPS, port, reverse proxy), run the installer again with new options. See <a href="/guide/install">Installing Taper</a>.</p>
+  <p><a class="button" href="/admin/backup">Download a backup</a></p>
+  <p class="help">A copy of the whole database: people, classes and everything else. Keep it somewhere safe and private. To change how Taper is reached (HTTPS, port, reverse proxy), run the installer again; see <a href="/guide/install">Installing Taper</a>.</p>
 </section>
 </div>
+
+<section class="card" id="reports">
+  <h2>Problem reports</h2>
+  <p>Anyone signed in can use <a href="/report">Report a problem</a>. Reports are saved here{{if .D.Reports}} (<a href="/admin/reports">{{.D.Reports}} so far{{if .D.Unsent}}, {{.D.Unsent}} not on GitHub{{end}}</a>){{end}}, and with a GitHub token they also become issues in the repository below, where the people who make Taper see them.</p>
+  {{with .D.Errors.Reports}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/admin/settings/reports" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="repo">GitHub repository</label>
+    <input id="repo" name="repo" value="{{.D.ReportRepo}}" placeholder="{{.D.DefaultRepo}}" autocapitalize="none" spellcheck="false">
+    <label for="token">GitHub token</label>
+    <input id="token" name="token" type="password" autocomplete="off" placeholder="{{if .D.HasToken}}A token is saved; leave empty to keep it{{else}}github_pat_…{{end}}" aria-describedby="token-help">
+    <p id="token-help" class="help">Create a <a href="https://github.com/settings/personal-access-tokens/new" rel="noopener">fine-grained token</a> for just this repository, with only the <strong>Issues: Read and write</strong> permission. It's stored encrypted and never shown again.</p>
+    {{if .D.HasToken}}
+    <label class="check"><input type="checkbox" name="remove_token" value="1"><span>Remove the saved token</span></label>
+    {{end}}
+    <button type="submit" class="button primary">Save</button>
+  </form>
+</section>
 {{end}}
