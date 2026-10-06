@@ -1,0 +1,59 @@
+{{define "content"}}
+<div class="page-head">
+  <h1>My account</h1>
+  <p class="muted">Signed in as <strong>{{.User.Username}}</strong> · {{.User.RoleLabel}}</p>
+</div>
+
+<div class="grid-2">
+<section class="card">
+  <h2>Profile</h2>
+  {{with .D.ProfileError}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/account/profile" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="display_name">Name</label>
+    <input id="display_name" name="display_name" required maxlength="100" autocomplete="name" value="{{.User.DisplayName}}">
+    <label for="email">Email <span class="muted">(optional)</span></label>
+    <input id="email" name="email" type="email" maxlength="200" autocomplete="email" value="{{.User.Email}}">
+    <p class="help">Only people at your school who manage accounts can see it. Taper doesn't send email yet.</p>
+    <button type="submit" class="button primary">Save profile</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Password</h2>
+  {{with .D.PasswordError}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/account/password" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="text" name="username" value="{{.User.Username}}" autocomplete="username" hidden>
+    <label for="current">Current password</label>
+    <input id="current" name="current" type="password" required autocomplete="current-password">
+    <label for="password">New password</label>
+    <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password">
+    <label for="confirm">Type the new password again</label>
+    <input id="confirm" name="confirm" type="password" required minlength="8" autocomplete="new-password">
+    <p class="help">Changing your password signs you out on your other devices.</p>
+    <button type="submit" class="button primary">Change password</button>
+  </form>
+</section>
+</div>
+
+<section class="card">
+  <h2>Where you're signed in</h2>
+  <ul class="list">
+    {{range .D.Sessions}}
+    <li class="list-row">
+      <div>
+        <strong>{{device .UserAgent}}</strong>{{if eq .TokenHash $.D.Current}} <span class="badge">This device</span>{{end}}
+        <div class="muted small">Last used {{ago .LastSeenAt}}{{with .IP}} · {{.}}{{end}}</div>
+      </div>
+    </li>
+    {{end}}
+  </ul>
+  {{if gt (len .D.Sessions) 1}}
+  <form method="post" action="/account/sessions/revoke" class="form-inline">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit" class="button">Sign out everywhere else</button>
+  </form>
+  {{end}}
+</section>
+{{end}}

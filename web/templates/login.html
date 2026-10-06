@@ -1,0 +1,24 @@
+{{define "content"}}
+<section class="auth-card card">
+  <p class="tagline">Light your taper at mine</p>
+  <h1>Sign in</h1>
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/login" class="form">
+    <input type="hidden" name="next" value="{{.D.Next}}">
+    <label for="username">Username</label>
+    <input id="username" name="username" required autocomplete="username" autocapitalize="none" spellcheck="false" autofocus value="{{.D.Username}}">
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required autocomplete="current-password">
+
+    <label class="check">
+      <input type="checkbox" name="remember" value="1" {{if .D.Remember}}checked{{end}}>
+      <span>Keep me signed in on this device</span>
+    </label>
+    <p class="help">Leave this off on a shared or school computer.</p>
+
+    <button type="submit" class="button primary block">Sign in</button>
+  </form>
+  <p class="muted small">Forgot your password? Ask a mentor or admin at your school to reset it.</p>
+</section>
+{{end}}

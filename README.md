@@ -1,12 +1,14 @@
 # Taper
 
+*Light your taper at mine.*
+
 A self-hosted learning platform for Thomas Jefferson Education (TJEd) commonwealth schools.
 
 Taper gives a school one place for its classes, school and class calendars,
 assignments and chat. Admins, mentors and scholars each get their own view. The
 school runs it on its own Debian server, so its data stays with the school.
 
-> **Status:** in early development. See the [plan and milestones](docs/plan.md).
+> **Status:** in early development (milestone 1: foundation). See the [plan and milestones](docs/plan.md).
 
 ## Features (planned for 1.0)
 
@@ -25,13 +27,27 @@ school runs it on its own Debian server, so its data stays with the school.
 
 ## Install
 
-Installation instructions arrive with milestone 1. They will be in
-[docs/guide/install.md](docs/guide/install.md).
+On a Debian 12 or 13 server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bradyloveland/taper/main/install.sh | sudo bash
+```
+
+Then open the address it prints and enter the setup code. HTTPS with a free
+Let's Encrypt certificate is one option away (`--domain learn.yourschool.org`).
+See the [install guide](docs/guide/install.md).
+
+## Documentation
+
+- [User guide](docs/guide/README.md), which is also built into the app
+- [Plan and milestones](docs/plan.md)
+- [Developing Taper](docs/development.md)
 
 ## Development
 
-Taper is written in Go with SQLite. See [docs/development.md](docs/development.md)
-once milestone 1 lands, and [CLAUDE.md](CLAUDE.md) for the project's working rules.
+Taper is written in Go with SQLite: one self-contained program, no build step
+for the web pages. `make dev` runs it locally, and `make check` runs the linters and
+tests. See [docs/development.md](docs/development.md) and [CLAUDE.md](CLAUDE.md).
 
 ## License
 

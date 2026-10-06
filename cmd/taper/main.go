@@ -1,0 +1,272 @@
+// Command taper runs the Taper learning platform.
+package main
+
+import (
+	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"time"
+
+	"golang.org/x/crypto/acme/autocert"
+
+	"github.com/bradyloveland/taper/internal/auth"
+	"github.com/bradyloveland/taper/internal/config"
+	"github.com/bradyloveland/taper/internal/server"
+	"github.com/bradyloveland/taper/internal/store"
+	"github.com/bradyloveland/taper/internal/version"
+)
+
+const usage = `Taper %s: a learning platform for TJEd commonwealth schools.
+
+Usage:
+  taper serve               Run the web server
+  taper setup-code          Show the one-time code for first-time setup
+  taper passwd USERNAME     Give someone a new temporary password (and turn their account on)
+  taper backup FILE         Write a copy of the database to FILE
+  taper version             Print the version
+
+Settings come from TAPER_* environment variables, which the installer keeps in
+/etc/taper/taper.conf. See https://github.com/%s/blob/main/docs/guide/install.md
+`
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, usage, version.Version, version.Repo)
+		os.Exit(2)
+	}
+	var err error
+	switch os.Args[1] {
+	case "serve":
+		err = serve()
+	case "setup-code":
+		err = setupCode()
+	case "passwd":
+		if len(os.Args) != 3 {
+			err = errors.New("usage: taper passwd USERNAME")
+		} else {
+			err = passwd(os.Args[2])
+		}
+	case "backup":
+		if len(os.Args) != 3 {
+			err = errors.New("usage: taper backup FILE")
+		} else {
+			err = backup(os.Args[2])
+		}
+	case "version", "--version", "-v":
+		fmt.Println(version.Version)
+	case "help", "--help", "-h":
+		fmt.Printf(usage, version.Version, version.Repo)
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown command %q.\n\n"+usage, os.Args[1], version.Version, version.Repo)
+		os.Exit(2)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "taper:", err)
+		os.Exit(1)
+	}
+}
+
+func openStore(cfg *config.Config) (*store.Store, error) {
+	if err := os.MkdirAll(cfg.DataDir, 0o700); err != nil {
+		return nil, fmt.Errorf("can't create the data folder %s: %w", cfg.DataDir, err)
+	}
+	st, err := store.Open(filepath.Join(cfg.DataDir, "taper.db"))
+	if err != nil {
+		return nil, fmt.Errorf("can't open the database in %s: %w", cfg.DataDir, err)
+	}
+	return st, nil
+}
+
+func setupCode() error {
+	cfg, err := config.FromEnv()
+	if err != nil {
+		return err
+	}
+	st, err := openStore(cfg)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	if n, err := st.CountUsers(); err != nil {
+		return err
+	} else if n > 0 {
+		fmt.Println("Setup is already done. To get into an account, use: sudo taper passwd USERNAME")
+		return nil
+	}
+	code, err := server.EnsureSetupCode(cfg.DataDir)
+	if err != nil {
+		return err
+	}
+	fmt.Println(code)
+	return nil
+}
+
+func passwd(username string) error {
+	cfg, err := config.FromEnv()
+	if err != nil {
+		return err
+	}
+	st, err := openStore(cfg)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	u, err := st.GetUserByUsername(username)
+	if errors.Is(err, store.ErrNotFound) {
+		admins, _ := st.ListUsers(store.UserFilter{Role: store.RoleAdmin, Status: "all"})
+		msg := fmt.Sprintf("there's no one with the username %q", username)
+		if len(admins) > 0 {
+			msg += ". Admins are:"
+			for _, a := range admins {
+				msg += " " + a.Username
+			}
+		}
+		return errors.New(msg)
+	}
+	if err != nil {
+		return err
+	}
+	temp := auth.TempPassword()
+	hash, err := auth.HashPassword(temp)
+	if err != nil {
+		return err
+	}
+	if err := st.SetPassword(u.ID, hash, true); err != nil {
+		return err
+	}
+	if !u.Active {
+		u.Active = true
+		if err := st.UpdateUser(u); err != nil {
+			return err
+		}
+	}
+	if err := st.DeleteUserSessions(u.ID, ""); err != nil {
+		return err
+	}
+	fmt.Printf("Temporary password for %s (%s): %s\nThey'll choose their own password when they sign in.\n", u.DisplayName, u.Username, temp)
+	return nil
+}
+
+func backup(dest string) error {
+	cfg, err := config.FromEnv()
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(dest); err == nil {
+		return fmt.Errorf("%s already exists; choose a new file name", dest)
+	}
+	st, err := openStore(cfg)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	if err := st.Backup(dest); err != nil {
+		return err
+	}
+	fmt.Println("Database copied to", dest)
+	return nil
+}
+
+func serve() error {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	cfg, err := config.FromEnv()
+	if err != nil {
+		return err
+	}
+	st, err := openStore(cfg)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	if n, err := st.CountUsers(); err == nil && n == 0 {
+		code, err := server.EnsureSetupCode(cfg.DataDir)
+		if err != nil {
+			return err
+		}
+		slog.Info("waiting for first-time setup in the browser", "setup_code", code)
+	}
+	srv, err := server.New(server.Options{Config: cfg, Store: st})
+	if err != nil {
+		return err
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go pruneSessions(ctx, st)
+
+	var servers []*http.Server
+	errc := make(chan error, 2)
+	start := func(hs *http.Server, tlsOn bool) {
+		servers = append(servers, hs)
+		go func() {
+			var err error
+			if tlsOn {
+				err = hs.ListenAndServeTLS("", "")
+			} else {
+				err = hs.ListenAndServe()
+			}
+			if !errors.Is(err, http.ErrServerClosed) {
+				errc <- fmt.Errorf("listening on %s: %w", hs.Addr, err)
+			}
+		}()
+	}
+	newServer := func(addr string, h http.Handler) *http.Server {
+		return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute,
+			MaxHeaderBytes: 64 << 10}
+	}
+
+	switch cfg.Mode {
+	case config.ModeHTTPS:
+		m := &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(cfg.Domain),
+			Cache:      autocert.DirCache(filepath.Join(cfg.DataDir, "certs")),
+			Email:      cfg.Email,
+		}
+		https := newServer(net.JoinHostPort(cfg.Bind, "443"), srv)
+		https.TLSConfig = &tls.Config{GetCertificate: m.GetCertificate, MinVersion: tls.VersionTLS12,
+			NextProtos: []string{"h2", "http/1.1", "acme-tls/1"}}
+		start(https, true)
+		// Port 80 answers Let's Encrypt's checks and sends everyone else to HTTPS.
+		start(newServer(net.JoinHostPort(cfg.Bind, "80"), m.HTTPHandler(nil)), false)
+	default:
+		start(newServer(cfg.Listen(), srv), false)
+	}
+	slog.Info("Taper started", "version", version.Version, "address", cfg.Describe(), "data", cfg.DataDir)
+
+	select {
+	case <-ctx.Done():
+	case err := <-errc:
+		return err
+	}
+	slog.Info("shutting down")
+	sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	for _, hs := range servers {
+		_ = hs.Shutdown(sctx)
+	}
+	return nil
+}
+
+func pruneSessions(ctx context.Context, st *store.Store) {
+	t := time.NewTicker(time.Hour)
+	defer t.Stop()
+	for {
+		if err := st.PruneSessions(); err != nil {
+			slog.Error("removing expired sessions", "err", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
+}

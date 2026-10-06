@@ -1,0 +1,63 @@
+{{define "content"}}
+<p class="crumbs"><a href="/admin/people">People</a> /</p>
+<div class="page-head">
+  <h1>{{if .D.IsNew}}Add a person{{else}}{{.D.Form.display_name}}{{end}}</h1>
+  {{if not .D.IsNew}}<p class="muted">Added {{date .D.Person.CreatedAt}} · {{if .D.Person.LastLoginAt}}last signed in {{ago .D.Person.LastLoginAt}}{{else}}hasn't signed in yet{{end}}</p>{{end}}
+</div>
+
+<div class="grid-2">
+<section class="card">
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="{{if .D.IsNew}}/admin/people/new{{else}}/admin/people/{{.D.Person.ID}}{{end}}" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="display_name">Name</label>
+    <input id="display_name" name="display_name" required maxlength="100" value="{{.D.Form.display_name}}" {{if .D.IsNew}}autofocus{{end}} data-username-source>
+
+    <label for="username">Username</label>
+    <input id="username" name="username" required maxlength="40" autocapitalize="none" spellcheck="false" value="{{.D.Form.username}}" aria-describedby="username-help" {{if .D.IsNew}}data-username-target{{end}}>
+    <p id="username-help" class="help">What they type to sign in. Letters, numbers, dots, dashes and underscores.</p>
+
+    <label for="email">Email <span class="muted">(optional)</span></label>
+    <input id="email" name="email" type="email" maxlength="200" value="{{.D.Form.email}}">
+
+    <label for="role">Role</label>
+    {{if .D.Self}}
+    <input type="hidden" name="role" value="{{.D.Form.role}}">
+    <input id="role" value="{{roleLabel .D.Form.role}}" disabled>
+    <p class="help">You can't change your own role. Another admin can.</p>
+    {{else}}
+    <select id="role" name="role" aria-describedby="role-help">
+      {{range .D.Roles}}<option value="{{.}}" {{if eq . $.D.Form.role}}selected{{end}}>{{roleLabel .}}</option>{{end}}
+    </select>
+    <p id="role-help" class="help">Scholars take part in classes. Mentors run classes. Admins also manage people and settings.</p>
+    {{end}}
+
+    {{if and (not .D.IsNew) (not .D.Self)}}
+    <label class="check">
+      <input type="checkbox" name="active" value="1" {{if eq .D.Form.active "1"}}checked{{end}}>
+      <span>Can sign in</span>
+    </label>
+    <p class="help">Turn this off when someone leaves the school. Their work is kept, and you can turn it back on.</p>
+    {{else if not .D.IsNew}}
+    <input type="hidden" name="active" value="1">
+    {{end}}
+
+    <button type="submit" class="button primary">{{if .D.IsNew}}Add and create a temporary password{{else}}Save changes{{end}}</button>
+  </form>
+</section>
+
+{{if not .D.IsNew}}
+<section class="card">
+  <h2>Password</h2>
+  {{if .D.Person.MustChangePassword}}
+  <p><span class="badge warn">Temporary password</span> They haven't chosen their own password yet.</p>
+  {{end}}
+  <p>If {{.D.Form.display_name}} forgot their password, create a new temporary one. They'll choose their own when they sign in, and they're signed out everywhere now.</p>
+  <form method="post" action="/admin/people/{{.D.Person.ID}}/reset-password" data-confirm="Create a new temporary password for {{.D.Form.display_name}}? Their current password stops working.">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit" class="button">Reset password</button>
+  </form>
+</section>
+{{end}}
+</div>
+{{end}}

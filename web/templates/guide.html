@@ -1,0 +1,16 @@
+{{define "content"}}
+<div class="guide">
+  <nav class="guide-nav card" aria-label="Guide pages">
+    <h2 class="guide-nav-title"><a href="/guide">Guide</a></h2>
+    <ul>
+      {{range .D.Pages}}
+      <li><a href="/guide/{{.Slug}}" {{if eq .Slug $.D.Slug}}aria-current="page"{{end}}>{{.Title}}</a></li>
+      {{end}}
+    </ul>
+    <p class="small"><a href="https://github.com/{{.Repo}}/tree/main/docs/guide" rel="noopener">This guide on GitHub</a></p>
+  </nav>
+  <article class="card prose">
+    {{.D.HTML}}
+  </article>
+</div>
+{{end}}
