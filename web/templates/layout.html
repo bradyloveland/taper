@@ -31,6 +31,7 @@
     <label for="nav-toggle" class="nav-button"><span class="hamburger" aria-hidden="true"></span><span class="sr-only">Menu</span></label>
       <nav class="nav" aria-label="Main">
         <a href="/" {{if eq .Section "home"}}aria-current="page"{{end}}>Home</a>
+        <a href="/classes" {{if eq .Section "classes"}}aria-current="page"{{end}}>Classes</a>
         <a href="/guide" {{if eq .Section "guide"}}aria-current="page"{{end}}>Guide</a>
         {{if .User.IsAdmin}}
         <span class="nav-sep" aria-hidden="true"></span>
@@ -64,4 +65,17 @@
 </footer>
 </body>
 </html>
+{{end}}
+
+{{/* Shared pieces used by several pages. */}}
+{{define "class-card"}}
+<a class="class-card card" href="/classes/{{.ID}}">
+  <span class="class-card-band c-{{.Color}}" aria-hidden="true"></span>
+  <span class="class-card-body">
+    <strong class="class-card-name">{{.Name}}</strong>
+    {{if .Meets}}<span class="muted small">{{.Meets}}</span>{{end}}
+    {{if eq .MyRole "mentor"}}<span class="small">{{.Scholars}} scholar{{if ne .Scholars 1}}s{{end}} · you mentor</span>
+    {{else if .Mentors}}<span class="small">With {{.MentorNames}}</span>{{end}}
+  </span>
+</a>
 {{end}}

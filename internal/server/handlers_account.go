@@ -15,6 +15,8 @@ import (
 
 type homeData struct {
 	Greeting string
+	Classes  []*store.Class // the person's own classes
+	NClasses int            // current classes at the school, for admins
 	Counts   map[string]int
 	Update   string // a newer version, for admins
 	Unsent   int    // problem reports not on GitHub, for admins
@@ -33,7 +35,13 @@ func greeting(t time.Time) string {
 
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	d := homeData{Greeting: greeting(time.Now())}
+	var err error
+	if d.Classes, err = s.store.ListClassesFor(current(r).user.ID); err != nil {
+		s.serverError(w, r, "listing classes", err)
+		return
+	}
 	if current(r).user.IsAdmin() {
+		d.NClasses, _ = s.store.CountClasses()
 		counts, err := s.store.RoleCounts()
 		if err != nil {
 			s.serverError(w, r, "counting people", err)

@@ -7,8 +7,27 @@
 {{if .User.IsAdmin}}
 {{with .D.Update}}<div class="flash flash-ok banner" role="status"><span>Taper {{.}} is available.</span> <a href="/admin/updates">See what's new and install it</a></div>{{end}}
 {{with .D.Unsent}}<div class="flash flash-warn" role="status">{{.}} problem report{{if gt . 1}}s{{end}} from your school {{if gt . 1}}aren't{{else}}isn't{{end}} on GitHub yet. <a href="/admin/reports">See reports</a></div>{{end}}
-<section class="stats" aria-label="People">
-  <a class="stat card" href="/admin/people?role=admin"><span class="stat-num">{{index .D.Counts "admin"}}</span><span class="stat-label">Admins</span></a>
+{{end}}
+
+{{if .D.Classes}}
+<h2 class="section-title">Your classes</h2>
+<div class="class-grid">
+  {{range .D.Classes}}{{template "class-card" .}}{{end}}
+</div>
+{{else if not .User.IsAdmin}}
+<section class="card">
+  <h2>Your classes</h2>
+  {{if .User.IsMentor}}
+  <p class="muted">You're not mentoring any classes yet. An admin adds mentors to classes. <a href="/classes">See all classes</a>.</p>
+  {{else}}
+  <p class="muted">You're not in any classes yet. Your mentors or an admin will add you.</p>
+  {{end}}
+</section>
+{{end}}
+
+{{if .User.IsAdmin}}
+<section class="stats" aria-label="School">
+  <a class="stat card" href="/classes"><span class="stat-num">{{.D.NClasses}}</span><span class="stat-label">Classes</span></a>
   <a class="stat card" href="/admin/people?role=mentor"><span class="stat-num">{{index .D.Counts "mentor"}}</span><span class="stat-label">Mentors</span></a>
   <a class="stat card" href="/admin/people?role=scholar"><span class="stat-num">{{index .D.Counts "scholar"}}</span><span class="stat-label">Scholars</span></a>
 </section>
@@ -17,16 +36,13 @@
   <h2>Getting started</h2>
   <ol class="checklist">
     <li class="{{if gt (index .D.Counts "mentor") 0}}done{{end}}"><a href="/admin/people/new?role=mentor">Add your mentors</a> <span class="muted">and give each one their temporary password.</span></li>
-    <li class="{{if gt (index .D.Counts "scholar") 0}}done{{end}}"><a href="/admin/people/new?role=scholar">Add your scholars</a>.</li>
+    <li class="{{if gt (index .D.Counts "scholar") 0}}done{{end}}"><a href="/admin/people/new?role=scholar">Add your scholars</a>, or <a href="/admin/people/import">import them from a spreadsheet</a>.</li>
+    <li class="{{if gt .D.NClasses 0}}done{{end}}"><a href="/classes/new">Create your classes</a> <span class="muted">and add their mentors and scholars.</span></li>
     <li><a href="/guide/phone-app">Show everyone how to add Taper to their phone</a>.</li>
-    <li class="muted">Classes, calendars, assignments and chat come in the next versions. <a href="/guide">See the guide</a>.</li>
+    <li class="muted">Calendars, assignments and chat come in the next versions. <a href="/guide">See the guide</a>.</li>
   </ol>
 </section>
 {{else}}
-<section class="card">
-  <h2>Your classes</h2>
-  <p class="muted">Your classes, calendar, assignments and chat will show up here. Taper is new at {{.School}}, and these arrive in upcoming versions.</p>
-</section>
 <section class="card">
   <h2>Get the app</h2>
   <p>Add Taper to your phone's home screen, so it opens like any other app. <a href="/guide/phone-app">Here's how</a>.</p>

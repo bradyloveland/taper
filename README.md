@@ -8,7 +8,7 @@ Taper gives a school one place for its classes, school and class calendars,
 assignments and chat. Admins, mentors and scholars each get their own view. The
 school runs it on its own Debian server, so its data stays with the school.
 
-> **Status:** in early development (milestones 1 to 3 of 8). See the [plan and milestones](docs/plan.md).
+> **Status:** in early development (milestones 1 to 4 of 8). See the [plan and milestones](docs/plan.md).
 
 ## Features (planned for 1.0)
 

@@ -1,0 +1,38 @@
+{{define "content"}}
+<p class="crumbs"><a href="/classes">Classes</a> /{{if not .D.IsNew}} <a href="/classes/{{.D.Class.ID}}">{{.D.Class.Name}}</a> /{{end}}</p>
+<div class="page-head"><h1>{{if .D.IsNew}}New class{{else}}Edit class{{end}}</h1></div>
+<section class="card readable">
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="{{if .D.IsNew}}/classes/new{{else}}/classes/{{.D.Class.ID}}/edit{{end}}" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="name">Name</label>
+    <input id="name" name="name" required maxlength="100" value="{{.D.Form.name}}" {{if .D.IsNew}}autofocus{{end}} placeholder="Liberty and Leadership">
+
+    <label for="term">Term <span class="muted">(optional)</span></label>
+    <input id="term" name="term" maxlength="40" value="{{.D.Form.term}}" list="terms" placeholder="2026–27" aria-describedby="term-help">
+    <datalist id="terms">{{range .D.Terms}}<option value="{{.}}">{{end}}</datalist>
+    <p id="term-help" class="help">Groups classes, like "2026–27" or "Fall 2026". Use the same words for every class in a term.</p>
+
+    <label for="meets">When it meets <span class="muted">(optional)</span></label>
+    <input id="meets" name="meets" maxlength="100" value="{{.D.Form.meets}}" placeholder="Tuesdays and Thursdays, 10–11:30">
+
+    <fieldset class="colors">
+      <legend>Color</legend>
+      <div class="swatches">
+      {{range .D.Colors}}
+        <label class="swatch c-{{.}}"><input type="radio" name="color" value="{{.}}" {{if eq . $.D.Form.color}}checked{{end}}><span class="sr-only">{{.}}</span></label>
+      {{end}}
+      </div>
+    </fieldset>
+
+    <label for="description">Description <span class="muted">(optional)</span></label>
+    <textarea id="description" name="description" rows="10" maxlength="20000" aria-describedby="desc-help">{{.D.Form.description}}</textarea>
+    <p id="desc-help" class="help">What the class is about, what to bring, how it runs. Formatting: <code>**bold**</code>, <code>*italic*</code>, <code>- list items</code>, <code>[link text](https://…)</code>, and a blank line between paragraphs.</p>
+
+    <div class="actions">
+      <button type="submit" class="button primary">{{if .D.IsNew}}Create class{{else}}Save{{end}}</button>
+      <a class="button" href="{{if .D.IsNew}}/classes{{else}}/classes/{{.D.Class.ID}}{{end}}">Cancel</a>
+    </div>
+  </form>
+</section>
+{{end}}

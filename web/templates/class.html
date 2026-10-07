@@ -1,0 +1,61 @@
+{{define "content"}}
+<p class="crumbs"><a href="/classes">Classes</a> /</p>
+<div class="class-head c-{{.D.Class.Color}}">
+  <div>
+    <h1>{{.D.Class.Name}}</h1>
+    <p>{{with .D.Class.Term}}{{.}}{{end}}{{if and .D.Class.Term .D.Class.Meets}} · {{end}}{{with .D.Class.Meets}}{{.}}{{end}}{{if .D.Class.Archived}} <span class="badge">Archived</span>{{end}}</p>
+  </div>
+  {{if .D.Access.CanEdit}}
+  <div class="actions">
+    <a class="button" href="/classes/{{.D.Class.ID}}/edit">Edit</a>
+    <a class="button" href="/classes/{{.D.Class.ID}}/members">Members</a>
+  </div>
+  {{end}}
+</div>
+
+<div class="grid-2 class-layout">
+<section class="card">
+  <h2>About this class</h2>
+  {{if .D.Description}}<div class="prose">{{.D.Description}}</div>
+  {{else}}<p class="muted">No description yet.{{if .D.Access.CanEdit}} <a href="/classes/{{.D.Class.ID}}/edit">Add one</a>.{{end}}</p>{{end}}
+  <p class="muted small coming">The class calendar, assignments and chat come in the next versions of Taper.</p>
+</section>
+
+<section class="card">
+  <h2>Mentor{{if ne (len .D.Mentors) 1}}s{{end}}</h2>
+  {{if .D.Mentors}}
+  <ul class="people">{{range .D.Mentors}}<li>{{template "person-chip" (pair . $.D.Access.ShowAccount)}}</li>{{end}}</ul>
+  {{else}}<p class="muted">None yet.</p>{{end}}
+  <h2>Scholars <span class="muted">({{len .D.Scholars}})</span></h2>
+  {{if .D.Scholars}}
+  <ul class="people">{{range .D.Scholars}}<li>{{template "person-chip" (pair . $.D.Access.ShowAccount)}}</li>{{end}}</ul>
+  {{else}}<p class="muted">None yet.</p>{{end}}
+</section>
+</div>
+
+{{if .D.Access.CanMentors}}
+<section class="card">
+  <h2>{{if .D.Class.Archived}}Archived{{else}}At the end of the term{{end}}</h2>
+  {{if .D.Class.Archived}}
+  <p>This class is archived: it's kept, read-only, and hidden from the current classes.</p>
+  <div class="actions">
+    <form method="post" action="/classes/{{.D.Class.ID}}/unarchive"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit" class="button">Bring it back</button></form>
+  </div>
+  <form method="post" action="/classes/{{.D.Class.ID}}/delete" class="form danger-zone">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="confirm">To delete it for good, type its name: <strong>{{.D.Class.Name}}</strong></label>
+    <input id="confirm" name="confirm" autocomplete="off" required>
+    <button type="submit" class="button danger">Delete class</button>
+  </form>
+  {{else}}
+  <p>Archive the class when it's over. It's kept, read-only, with its members, and hidden from the current classes.</p>
+  <form method="post" action="/classes/{{.D.Class.ID}}/archive" data-confirm="Archive {{.D.Class.Name}}?"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit" class="button">Archive class</button></form>
+  {{end}}
+</section>
+{{end}}
+{{end}}
+
+{{define "person-chip"}}
+<span class="chip"><span class="avatar small" aria-hidden="true">{{.A.Initials}}</span>
+{{if .B}}{{.A.DisplayName}} <span class="muted small">{{.A.Username}}</span>{{else}}{{.A.DisplayName}}{{end}}</span>
+{{end}}

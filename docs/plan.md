@@ -107,7 +107,7 @@ updated documentation, and passes `make check`, before it's opened for review.
 - **Email (SMTP):** server settings with a test button. Used for "forgot password" by
   email, and to tell admins about new versions, failed updates and problem reports.
 
-### M4: classes
+### M4: classes (done)
 - Admins create classes (name, description, term, color) and archive old ones.
 - Assign one or more mentors; enroll scholars (by hand, or a CSV list of scholars).
 - Class page with members and, later, its calendar, assignments and chat.

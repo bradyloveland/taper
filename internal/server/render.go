@@ -40,8 +40,12 @@ func (s *Server) templateFuncs() template.FuncMap {
 		"ago":       func(unix int64) string { return ago(time.Unix(unix, 0), time.Now()) },
 		"date":      func(unix int64) string { return time.Unix(unix, 0).Format("January 2, 2006") },
 		"device":    device,
+		"pair":      func(a, b any) pairT { return pairT{a, b} },
 	}
 }
+
+// pairT passes two values to a sub-template.
+type pairT struct{ A, B any }
 
 // parseTemplates builds one template set per page, each with the layout.
 func (s *Server) parseTemplates(fsys fs.FS) (map[string]*template.Template, error) {

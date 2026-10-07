@@ -1,0 +1,65 @@
+{{define "content"}}
+<p class="crumbs"><a href="/classes">Classes</a> / <a href="/classes/{{.D.Class.ID}}">{{.D.Class.Name}}</a> /</p>
+<div class="page-head"><h1>Members</h1><p class="muted">{{.D.Class.Name}}{{with .D.Class.Term}} · {{.}}{{end}}</p></div>
+
+<div class="grid-2">
+<section class="card">
+  <h2>Mentors</h2>
+  {{if .D.Mentors}}
+  <ul class="list">
+    {{range .D.Mentors}}
+    <li class="list-row member-row">
+      <span>{{.DisplayName}} <span class="muted small">{{.Username}}</span>{{if not .Active}} <span class="badge muted">Deactivated</span>{{end}}</span>
+      {{if $.D.Access.CanMentors}}
+      <form method="post" action="/classes/{{$.D.Class.ID}}/members/{{.ID}}/remove" data-confirm="Remove {{.DisplayName}} from {{$.D.Class.Name}}?"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="button small">Remove</button></form>
+      {{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}<p class="muted">No mentors yet.</p>{{end}}
+
+  {{if .D.Access.CanMentors}}
+  <h3>Add mentors</h3>
+  {{template "picker" (pair . "mentor")}}
+  {{end}}
+</section>
+
+<section class="card">
+  <h2>Scholars <span class="muted">({{len .D.Scholars}})</span></h2>
+  {{if .D.Scholars}}
+  <ul class="list">
+    {{range .D.Scholars}}
+    <li class="list-row member-row">
+      <span>{{.DisplayName}} <span class="muted small">{{.Username}}</span>{{if not .Active}} <span class="badge muted">Deactivated</span>{{end}}</span>
+      <form method="post" action="/classes/{{$.D.Class.ID}}/members/{{.ID}}/remove" data-confirm="Remove {{.DisplayName}} from {{$.D.Class.Name}}?"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="button small">Remove</button></form>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}<p class="muted">No scholars yet.</p>{{end}}
+  <h3>Add scholars</h3>
+  {{template "picker" (pair . "scholar")}}
+</section>
+</div>
+<p><a class="button" href="/classes/{{.D.Class.ID}}">Done</a></p>
+{{end}}
+
+{{define "picker"}}
+{{$page := .A}}{{$role := .B}}
+{{$list := $page.D.AddScholr}}{{if eq $role "mentor"}}{{$list = $page.D.AddMentor}}{{end}}
+{{if $list}}
+<form method="post" action="/classes/{{$page.D.Class.ID}}/members/add" class="picker">
+  <input type="hidden" name="csrf" value="{{$page.CSRF}}">
+  <input type="hidden" name="role" value="{{$role}}">
+  <label class="sr-only" for="filter-{{$role}}">Find</label>
+  <input id="filter-{{$role}}" type="search" placeholder="Type to find people" data-filter="list-{{$role}}" autocomplete="off">
+  <ul class="pick-list" id="list-{{$role}}">
+    {{range $list}}
+    <li data-search="{{.Search}}"><label class="check"><input type="checkbox" name="user" value="{{.ID}}"><span>{{.DisplayName}} <span class="muted small">{{.Username}}{{if eq $role "mentor"}} · {{.RoleLabel}}{{end}}</span></span></label></li>
+    {{end}}
+  </ul>
+  <button type="submit" class="button primary">Add selected {{$role}}s</button>
+</form>
+{{else}}
+<p class="muted small">Everyone who could be added is already in the class.{{if eq $role "scholar"}} Add new scholars under <a href="/admin/people">People</a>.{{end}}</p>
+{{end}}
+{{end}}

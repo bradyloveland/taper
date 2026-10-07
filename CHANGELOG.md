@@ -6,6 +6,19 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Milestone 4, classes:
+  - **Classes**: name, term, meeting time, color and a description (with simple
+    formatting). Admins create, archive, bring back and delete them; a class's mentors can
+    edit it and its scholars. Scholars see only their own classes.
+  - **Members**: add mentors (admins and mentors) and scholars from a list you can search,
+    and remove them.
+  - **Import people from a spreadsheet** (CSV or pasted cells): check the list first, with
+    problem rows shown and skipped, usernames made from names, and optional class
+    enrollment. The temporary passwords are shown once, to print or download.
+  - Home pages show each person's classes; admins get a classes count and an updated
+    getting-started list. People pages list each person's classes.
+
 ## [0.3.0] - 2026-10-06
 
 The first release of Taper: milestones 1 to 3 of the [plan](https://github.com/bradyloveland/taper/blob/main/docs/plan.md).

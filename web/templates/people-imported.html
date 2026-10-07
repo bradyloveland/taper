@@ -1,0 +1,33 @@
+{{define "content"}}
+<p class="crumbs"><a href="/admin/people">People</a> /</p>
+<section class="card">
+  <h1>{{len .D.Created}} {{if eq (len .D.Created) 1}}person{{else}}people{{end}} added</h1>
+  <p>Give each person their username and temporary password. They choose their own password when they first sign in at <code>{{.D.URL}}</code>.</p>
+  <p class="help"><strong>These passwords are shown only once.</strong> Download or print the list now. If one is lost, reset that person's password.</p>
+  <div class="actions">
+    <form method="post" action="/admin/people/import/accounts.csv">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <textarea name="csv" hidden>{{.D.CSV}}</textarea>
+      <button type="submit" class="button primary">Download the list</button>
+    </form>
+    <button type="button" class="button" data-print>Print</button>
+    <a class="button" href="/admin/people">Back to people</a>
+  </div>
+  <div class="table-wrap">
+  <table class="table credentials-table">
+    <thead><tr><th>Name</th><th>Username</th><th>Temporary password</th><th>Role</th><th>Classes</th></tr></thead>
+    <tbody>
+    {{range .D.Created}}
+    <tr>
+      <td data-label="Name">{{.Name}}</td>
+      <td data-label="Username"><code>{{.Username}}</code></td>
+      <td data-label="Temporary password"><code>{{.Password}}</code></td>
+      <td data-label="Role">{{.Role}}</td>
+      <td data-label="Classes">{{.Classes}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{end}}

@@ -75,6 +75,18 @@
     setTimeout(poll, 2500);
   }
 
+  // Filter boxes for long lists of people.
+  document.querySelectorAll('[data-filter]').forEach((box) => {
+    const list = document.getElementById(box.getAttribute('data-filter'));
+    if (!list) return;
+    box.addEventListener('input', () => {
+      const q = box.value.toLowerCase().trim();
+      list.querySelectorAll('[data-search]').forEach((li) => {
+        li.hidden = q !== '' && !li.getAttribute('data-search').includes(q);
+      });
+    });
+  });
+
   // Suggest a username from the name while adding a person.
   const name = document.querySelector('[data-username-source]');
   const user = document.querySelector('[data-username-target]');
