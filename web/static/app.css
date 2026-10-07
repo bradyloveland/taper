@@ -532,3 +532,11 @@ label.check { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .feed h2 { font-size: 1.05rem; }
 .feed-url { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
 .feed-url code { overflow-wrap: anywhere; font-size: .8rem; }
+.feed-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.feed-actions form { margin: 0 0 0 auto; }
+.link-button.small { font-size: .85rem; }
+input.invalid, select.invalid, textarea.invalid { border-color: var(--error-text); box-shadow: 0 0 0 2px var(--error-bg); }
+.stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.stack > .card { margin: 0; }
+.class-upcoming { border-top: 4px solid var(--cc, var(--primary)); }
+.class-upcoming .actions { margin-top: 12px; }

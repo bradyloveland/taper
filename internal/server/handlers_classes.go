@@ -135,7 +135,7 @@ func (s *Server) handleClass(w http.ResponseWriter, r *http.Request) {
 	}
 	d := classData{Class: c, Access: a}
 	d.Mentors, d.Scholars = splitMembers(members)
-	d.Upcoming = s.upcoming(store.EventQuery{ClassIDs: []int64{c.ID}}, 60, 5)
+	d.Upcoming = s.upcoming(store.EventQuery{ClassIDs: []int64{c.ID}}, 31, 6)
 	if c.Description != "" {
 		d.Description, _ = markdown.Render([]byte(c.Description), markdown.Options{})
 	}

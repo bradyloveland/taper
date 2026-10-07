@@ -247,43 +247,50 @@ func (s *Store) fillSkips(list []*CalEvent) error {
 	return rows.Err()
 }
 
-// ------------------------------------------------------------ feeds
+// ------------------------------------------------------------ links
 
-// SetCalendarFeed stores a person's (new) subscription token.
-func (s *Store) SetCalendarFeed(userID int64, tokenHash, sealed string) error {
-	_, err := s.db.Exec(`INSERT INTO calendar_feeds (user_id, token_hash, token_sealed, created_at) VALUES (?, ?, ?, ?)
-		ON CONFLICT (user_id) DO UPDATE SET token_hash = excluded.token_hash, token_sealed = excluded.token_sealed,
-		created_at = excluded.created_at`, userID, tokenHash, sealed, s.now())
-	return err
-}
-
-// CalendarFeed returns a person's sealed subscription token, or "" if they
-// don't have one yet.
-func (s *Store) CalendarFeed(userID int64) (string, error) {
+// CalendarLink returns a person's sealed link token for a calendar, or "".
+func (s *Store) CalendarLink(userID int64, scope string) (string, error) {
 	var sealed string
-	err := s.db.QueryRow(`SELECT token_sealed FROM calendar_feeds WHERE user_id = ?`, userID).Scan(&sealed)
+	err := s.db.QueryRow(`SELECT token_sealed FROM calendar_links WHERE user_id = ? AND scope = ?`, userID, scope).Scan(&sealed)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
 	return sealed, err
 }
 
-// UserByCalendarFeed returns the active user a subscription token belongs to.
-func (s *Store) UserByCalendarFeed(tokenHash string) (*User, error) {
+// SetCalendarLink stores a person's (new) link token for a calendar.
+func (s *Store) SetCalendarLink(userID int64, scope, tokenHash, sealed string) error {
+	_, err := s.db.Exec(`INSERT INTO calendar_links (user_id, scope, token_hash, token_sealed, created_at) VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT (user_id, scope) DO UPDATE SET token_hash = excluded.token_hash, token_sealed = excluded.token_sealed,
+		created_at = excluded.created_at`, userID, scope, tokenHash, sealed, s.now())
+	return err
+}
+
+// DeleteCalendarLinks removes all of a person's links (new ones are made
+// when they next look).
+func (s *Store) DeleteCalendarLinks(userID int64) error {
+	_, err := s.db.Exec(`DELETE FROM calendar_links WHERE user_id = ?`, userID)
+	return err
+}
+
+// CalendarLinkByToken returns the active user and calendar a link token is for.
+func (s *Store) CalendarLinkByToken(tokenHash string) (*User, string, error) {
 	var id int64
-	err := s.db.QueryRow(`SELECT user_id FROM calendar_feeds WHERE token_hash = ?`, tokenHash).Scan(&id)
+	var scope string
+	err := s.db.QueryRow(`SELECT user_id, scope FROM calendar_links WHERE token_hash = ?`, tokenHash).Scan(&id, &scope)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, "", ErrNotFound
 	}
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	u, err := s.GetUser(id)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if !u.Active {
-		return nil, ErrNotFound
+		return nil, "", ErrNotFound
 	}
-	return u, nil
+	return u, scope, nil
 }

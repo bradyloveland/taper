@@ -14,9 +14,13 @@ All notable changes to Taper are recorded here. The format follows
     their classes'. All-day, timed and multi-day events, with a place and formatted details.
   - **Repeating events**: every day, every week on chosen days, every month or every year,
     with an optional end date; remove a single date, or change every date.
-  - **Coming up** on the home page (two weeks) and each class's page.
+  - **Coming up** on the home page (two weeks), and a **Coming up** card at the top of each
+    class's page (that class's next month, Add event, Subscribe to this class).
   - **Subscribe**: private iCal links for Google Calendar, Apple Calendar and Outlook (my
-    whole calendar, the school calendar, or one class), which can be reset.
+    whole calendar, the school calendar, and each class). Each link has its own address
+    and can be reset on its own, or all at once.
+  - The event form moves the end with the start (keeping the length) and won't save an end
+    before the start; the problem field is highlighted.
   - **Settings → School → Time zone**, so calendars use the school's local time across
     daylight saving changes. The time zone database is built in.
 

@@ -95,19 +95,53 @@
     };
     [allDay, repeat, cal].forEach((el) => el && el.addEventListener('change', update));
     update();
-    // Moving the start date moves the end date with it, keeping the length.
-    const startDate = eventForm.querySelector('#start_date');
-    const endDate = eventForm.querySelector('#end_date');
-    let previous = startDate.value;
-    startDate.addEventListener('change', () => {
-      const from = Date.parse(previous), to = Date.parse(startDate.value), end = Date.parse(endDate.value);
-      if (!isNaN(from) && !isNaN(to) && !isNaN(end)) {
-        endDate.value = new Date(end + (to - from)).toISOString().slice(0, 10);
-      } else if (!isNaN(to)) {
-        endDate.value = startDate.value;
+    // Moving the start moves the end with it, keeping the event's length
+    // (a 9–10 AM event moved to 6 PM becomes 6–7 PM).
+    const sd = eventForm.querySelector('#start_date'), st = eventForm.querySelector('#start_time');
+    const ed = eventForm.querySelector('#end_date'), et = eventForm.querySelector('#end_time');
+    const pad = (n) => String(n).padStart(2, '0');
+    const at = (d, t) => (d ? new Date(d + 'T' + (allDay.checked || !t ? '00:00' : t)) : null);
+    const ok = (x) => x && !isNaN(x);
+    const day = (x) => x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate());
+    const clock = (x) => pad(x.getHours()) + ':' + pad(x.getMinutes());
+    let before = at(sd.value, st.value);
+    const follow = () => {
+      const start = at(sd.value, st.value), end = at(ed.value, et.value);
+      if (ok(start) && ok(before)) {
+        let length = ok(end) ? end - before : 0;
+        if (!(length > 0) && !allDay.checked) length = 60 * 60 * 1000;
+        if (length < 0) length = 0;
+        const moved = new Date(start.getTime() + length);
+        ed.value = day(moved);
+        if (!allDay.checked) et.value = clock(moved);
       }
-      previous = startDate.value;
-    });
+      before = start;
+      check();
+    };
+    // An end before the start can't be saved; say so on the field itself.
+    const check = () => {
+      const start = at(sd.value, st.value), end = at(ed.value, et.value);
+      let msg = '';
+      if (ok(start) && ok(end)) {
+        if (allDay.checked ? end < start : end <= start) {
+          msg = allDay.checked
+            ? 'The last day is before the first day.'
+            : 'It ends before it starts. Choose a later end time, or a later end date if it goes past midnight.';
+        }
+      }
+      const field = allDay.checked ? ed : et;
+      [ed, et].forEach((f) => { f.setCustomValidity(''); f.classList.remove('invalid'); f.removeAttribute('aria-invalid'); });
+      if (msg) {
+        field.setCustomValidity(msg);
+        field.classList.add('invalid');
+        field.setAttribute('aria-invalid', 'true');
+      }
+    };
+    sd.addEventListener('change', follow);
+    st.addEventListener('change', follow);
+    [ed, et, allDay].forEach((f) => f.addEventListener('change', check));
+    [ed, et].forEach((f) => f.addEventListener('input', check));
+    check();
   }
 
   // Filter boxes for long lists of people.

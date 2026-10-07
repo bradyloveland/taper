@@ -5,30 +5,36 @@
   <p class="muted">See Taper's events in Google Calendar, Apple Calendar or Outlook, kept up to date automatically.</p>
 </div>
 {{if not .D.HTTPS}}<div class="flash flash-warn">Google Calendar and Outlook can only subscribe to an <code>https://</code> address. Ask an admin to set up HTTPS (Settings → Network &amp; HTTPS).</div>{{end}}
-<div class="flash flash-warn"><strong>These links are private.</strong> Anyone with one can see that calendar. Don't share them; if one gets out, reset them below.</div>
+<div class="flash flash-warn"><strong>These links are private to you.</strong> Anyone with one can see that calendar. If one gets out, reset just that link; the others keep working.</div>
 
 {{range $i, $l := .D.Links}}
-<section class="card feed">
+<section class="card feed" id="{{$l.Anchor}}">
   <h2>{{if $l.Color}}<span class="dot c-{{$l.Color}}" aria-hidden="true"></span>{{end}}{{$l.Label}}</h2>
   <div class="feed-url"><code id="feed-{{$i}}">{{$l.HTTPS}}</code> <button type="button" class="button small" data-copy="feed-{{$i}}">Copy</button></div>
-  <p class="actions">
+  <div class="feed-actions">
     <a class="button small" href="{{$l.Webcal}}">Apple Calendar</a>
     <a class="button small" href="{{$l.Google}}" rel="noopener" target="_blank">Google Calendar</a>
-  </p>
+    <form method="post" action="/calendar/subscribe/reset" data-confirm="Make a new link for {{$l.Label}}? The old one stops working, so anywhere you subscribed to it has to subscribe again.">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}">
+      <input type="hidden" name="scope" value="{{$l.Scope}}">
+      <button type="submit" class="link-button small">Reset this link</button>
+    </form>
+  </div>
 </section>
 {{end}}
 
 <section class="card">
   <h2>How to add it</h2>
   <ul>
-    <li><strong>iPhone, iPad and Mac:</strong> tap <em>Apple Calendar</em> above, then Subscribe.</li>
-    <li><strong>Google Calendar:</strong> tap <em>Google Calendar</em> above, or copy the link and, on a computer, go to Other calendars → + → From URL.</li>
+    <li><strong>iPhone, iPad and Mac:</strong> tap <em>Apple Calendar</em>, then Subscribe.</li>
+    <li><strong>Google Calendar:</strong> tap <em>Google Calendar</em>, or copy the link and, on a computer, go to Other calendars → + → From URL.</li>
     <li><strong>Outlook:</strong> copy the link, then Add calendar → Subscribe from web.</li>
   </ul>
   <p class="help">Calendar apps check for changes on their own schedule: Apple every hour or so, Google and Outlook less often (up to a day).</p>
-  <form method="post" action="/calendar/subscribe/reset" data-confirm="Make new links? The old ones stop working, so anywhere you subscribed has to subscribe again.">
+  <form method="post" action="/calendar/subscribe/reset" data-confirm="Make new links for all your calendars? All the old ones stop working.">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <button type="submit" class="button">Reset my links</button>
+    <input type="hidden" name="scope" value="all">
+    <button type="submit" class="button">Reset all my links</button>
   </form>
 </section>
 {{end}}

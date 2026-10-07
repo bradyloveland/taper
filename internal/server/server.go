@@ -197,7 +197,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /events/{id}/edit", s.signedIn(s.handleEventEditForm))
 	mux.HandleFunc("POST /events/{id}/edit", s.signedIn(s.handleEventUpdate))
 	mux.HandleFunc("POST /events/{id}/delete", s.signedIn(s.handleEventDelete))
-	mux.HandleFunc("GET /ical/{token}/{file}", s.handleFeed)
+	mux.HandleFunc("GET /ical/{file}", s.handleFeed)
 	mux.HandleFunc("GET /report", s.signedIn(s.handleReportForm))
 	mux.HandleFunc("POST /report", s.signedIn(s.handleReport))
 

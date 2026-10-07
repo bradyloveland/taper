@@ -61,9 +61,9 @@ func TestCalendarEvents(t *testing.T) {
 	// Validation.
 	expect(t, a.postForm("/events/new", url.Values{"calendar": {"school"}, "title": {""}, "start_date": {c.today}}), http.StatusUnprocessableEntity, "Enter a title")
 	expect(t, a.postForm("/events/new", url.Values{"calendar": {"school"}, "title": {"X"}, "start_date": {c.tomorrow}, "end_date": {c.today}, "all_day": {"1"}}),
-		http.StatusUnprocessableEntity, "can't end before")
-	expect(t, a.postForm("/events/new", url.Values{"calendar": {"school"}, "title": {"X"}, "start_date": {c.today}, "start_time": {"10:00"}, "end_time": {"09:00"}}),
-		http.StatusUnprocessableEntity, "end after it starts")
+		http.StatusUnprocessableEntity, "end date is before the start date", `id="end_date" name="end_date" class="invalid"`)
+	expect(t, a.postForm("/events/new", url.Values{"calendar": {"school"}, "title": {"X"}, "start_date": {c.today}, "start_time": {"18:00"}, "end_time": {"10:00"}}),
+		http.StatusUnprocessableEntity, "It ends (10:00 AM) before it starts (6:00 PM)", `id="end_time" name="end_time" class="invalid"`)
 	expect(t, a.postForm("/events/new", url.Values{"calendar": {"school"}, "title": {"X"}, "start_date": {c.today}, "end_date": {c.tomorrow}, "all_day": {"1"}, "repeat": {"weekly"}}),
 		http.StatusUnprocessableEntity, "same day")
 
@@ -142,13 +142,22 @@ func TestCalendarFeeds(t *testing.T) {
 		"start_time": {"10:00"}, "end_time": {"11:00"}, "repeat": {"daily"}, "until": {cal.FormatDate(c.srv.today().AddDate(0, 0, 2))}}))
 
 	s := c.signedIn("sam", "scholar-password")
-	page := s.get("/calendar/subscribe")
-	expect(t, page, http.StatusOK, "These links are private", "School calendar only", "History of Liberty", "webcal://")
-	links := regexp.MustCompile(`<code id="feed-\d+">(http://[^<]+)</code>`).FindAllStringSubmatch(page.Body, -1)
-	if len(links) != 3 {
-		t.Fatalf("feed links: %v", links)
+	linkRE := regexp.MustCompile(`<code id="feed-\d+">(http://[^<]+)</code>`)
+	links := func() []string {
+		var out []string
+		for _, m := range linkRE.FindAllStringSubmatch(s.get("/calendar/subscribe").Body, -1) {
+			out = append(out, m[1])
+		}
+		return out
 	}
-	if page2 := s.get("/calendar/subscribe"); !strings.Contains(page2.Body, links[0][1]) {
+	page := s.get("/calendar/subscribe")
+	expect(t, page, http.StatusOK, "These links are private", "School calendar only", "History of Liberty", "webcal://",
+		`id="class-`+classKey+`"`, "Reset this link", "Reset all my links")
+	first := links()
+	if len(first) != 3 || first[0] == first[1] || !strings.HasSuffix(first[0], ".ics") {
+		t.Fatalf("each calendar should have its own link: %v", first)
+	}
+	if again := links(); strings.Join(again, " ") != strings.Join(first, " ") {
 		t.Fatal("the links should stay the same until reset")
 	}
 	fetch := func(u string) (int, string) {
@@ -160,7 +169,7 @@ func TestCalendarFeeds(t *testing.T) {
 		b, _ := io.ReadAll(res.Body)
 		return res.StatusCode, string(b)
 	}
-	code, mine := fetch(links[0][1])
+	code, mine := fetch(first[0])
 	if code != 200 || !strings.Contains(mine, "BEGIN:VCALENDAR") || !strings.Contains(mine, "SUMMARY:Winter break") ||
 		!strings.Contains(mine, `SUMMARY:Seminar\, part 1 (History of Liberty)`) || strings.Count(mine, "BEGIN:VEVENT") != 4 ||
 		!strings.Contains(mine, "X-WR-CALNAME:Liberty Commonwealth: My calendar") || !strings.Contains(mine, "CATEGORIES:No school") {
@@ -169,41 +178,57 @@ func TestCalendarFeeds(t *testing.T) {
 	if !regexp.MustCompile(`UID:\d{4}-\d\d-\d\d-[a-z0-9_-]+@taper`).MatchString(mine) {
 		t.Fatal("repeating occurrences need their own UIDs")
 	}
-	_, school := fetch(links[1][1])
+	_, school := fetch(first[1])
 	if strings.Contains(school, "Seminar") || !strings.Contains(school, "Winter break") {
 		t.Fatalf("school feed:\n%s", school)
 	}
-	_, class := fetch(links[2][1])
+	_, class := fetch(first[2])
 	if strings.Contains(class, "Winter break") || !strings.Contains(class, "SUMMARY:Seminar\\, part 1\r\n") {
 		t.Fatalf("class feed:\n%s", class)
 	}
 
-	// Wrong tokens, files and other people's classes are not found.
-	base := c.ts.URL + "/ical/"
-	tok := strings.TrimPrefix(links[0][1], c.ts.URL+"/ical/")
-	tok = strings.TrimSuffix(tok, "/mine.ics")
-	for _, u := range []string{base + "nope/mine.ics", base + tok + "/mine", base + tok + "/class-9999.ics", base + tok + "/whatever.ics"} {
+	// Wrong tokens are not found.
+	for _, u := range []string{c.ts.URL + "/ical/nope.ics", strings.TrimSuffix(first[0], ".ics"), c.ts.URL + "/ical/.ics"} {
 		if code, _ := fetch(u); code != 404 {
 			t.Errorf("%s: %d", u, code)
 		}
 	}
-	z := c.signedIn("zoe", "scholar-password")
-	zpage := z.get("/calendar/subscribe")
-	ztok := regexp.MustCompile(`/ical/([^/]+)/mine\.ics`).FindStringSubmatch(zpage.Body)[1]
-	if code, _ := fetch(base + ztok + "/class-" + classKey + ".ics"); code != 404 {
-		t.Fatal("a class feed only works for its members")
+	// Leaving the class stops its link.
+	c.store.RemoveMember(c.class.ID, c.sam.ID)
+	if code, _ := fetch(first[2]); code != 404 {
+		t.Fatal("a class link stops when its owner leaves the class")
 	}
+	c.store.AddMembers(c.class.ID, store.ClassScholar, []int64{c.sam.ID})
 
-	// Resetting stops the old links.
-	expectRedirect(t, s.postForm("/calendar/subscribe/reset", nil), "/calendar/subscribe")
-	if code, _ := fetch(links[0][1]); code != 404 {
-		t.Fatal("the old link should stop working")
+	// Resetting one link stops only that one.
+	expectRedirect(t, s.postForm("/calendar/subscribe/reset", url.Values{"scope": {"school"}}), "/calendar/subscribe#school")
+	expect(t, s.get("/calendar/subscribe"), http.StatusOK, "The link for School calendar only is new", "other links are unchanged")
+	second := links()
+	if second[1] == first[1] || second[0] != first[0] || second[2] != first[2] {
+		t.Fatalf("only the school link should change:\n%v\n%v", first, second)
+	}
+	if code, _ := fetch(first[1]); code != 404 {
+		t.Fatal("the old school link should stop working")
+	}
+	if code, _ := fetch(first[0]); code != 200 {
+		t.Fatal("the other links should keep working")
+	}
+	expect(t, s.postForm("/calendar/subscribe/reset", url.Values{"scope": {"class:9999"}}), http.StatusNotFound)
+	// Resetting all.
+	expectRedirect(t, s.postForm("/calendar/subscribe/reset", url.Values{"scope": {"all"}}), "/calendar/subscribe")
+	third := links()
+	for i := range third {
+		if third[i] == second[i] {
+			t.Fatal("every link should be new")
+		}
+		if code, _ := fetch(second[i]); code != 404 {
+			t.Fatal("every old link should stop")
+		}
 	}
 	// Deactivating stops them too.
-	newTok := regexp.MustCompile(`/ical/([^/]+)/mine\.ics`).FindStringSubmatch(s.get("/calendar/subscribe").Body)[1]
 	c.sam.Active = false
 	c.store.UpdateUser(c.sam)
-	if code, _ := fetch(base + newTok + "/mine.ics"); code != 404 {
+	if code, _ := fetch(third[0]); code != 404 {
 		t.Fatal("a deactivated person's links should stop")
 	}
 }

@@ -2,7 +2,7 @@
 <p class="crumbs"><a href="/calendar">Calendar</a> /{{if not .D.IsNew}} <a href="/events/{{.D.Event.ID}}">{{.D.Event.Title}}</a> /{{end}}</p>
 <div class="page-head"><h1>{{if .D.IsNew}}New event{{else}}Edit event{{end}}</h1>{{if and (not .D.IsNew) .D.Event.Repeat}}<p class="muted">Changes apply to every date.</p>{{end}}</div>
 <section class="card readable">
-  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  {{with .D.Error}}<div class="flash flash-error" role="alert" id="form-error">{{.}}</div>{{end}}
   <form method="post" action="{{if .D.IsNew}}/events/new{{else}}/events/{{.D.Event.ID}}/edit{{end}}" class="form event-form">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     {{if .D.IsNew}}
@@ -16,15 +16,15 @@
     {{end}}
 
     <label for="title">Title</label>
-    <input id="title" name="title" required maxlength="100" value="{{.D.Form.title}}" {{if .D.IsNew}}autofocus{{end}} placeholder="Field trip to the museum">
+    <input id="title" name="title" {{if eq $.D.Field "title"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} required maxlength="100" value="{{.D.Form.title}}" {{if .D.IsNew}}autofocus{{end}} placeholder="Field trip to the museum">
 
     <label class="check"><input type="checkbox" name="all_day" value="1" {{if eq .D.Form.all_day "1"}}checked{{end}} data-allday><span>All day</span></label>
 
     <div class="when-grid">
-      <div><label for="start_date">Starts</label><input id="start_date" name="start_date" type="date" required value="{{.D.Form.start_date}}"></div>
-      <div class="time-field"><label for="start_time">at</label><input id="start_time" name="start_time" type="time" value="{{.D.Form.start_time}}"></div>
-      <div><label for="end_date">Ends</label><input id="end_date" name="end_date" type="date" value="{{.D.Form.end_date}}"></div>
-      <div class="time-field"><label for="end_time">at</label><input id="end_time" name="end_time" type="time" value="{{.D.Form.end_time}}"></div>
+      <div><label for="start_date">Starts</label><input id="start_date" name="start_date" {{if eq $.D.Field "start_date"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} type="date" required value="{{.D.Form.start_date}}"></div>
+      <div class="time-field"><label for="start_time">at</label><input id="start_time" name="start_time" {{if eq $.D.Field "start_time"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} type="time" value="{{.D.Form.start_time}}"></div>
+      <div><label for="end_date">Ends</label><input id="end_date" name="end_date" {{if eq $.D.Field "end_date"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} type="date" value="{{.D.Form.end_date}}"></div>
+      <div class="time-field"><label for="end_time">at</label><input id="end_time" name="end_time" {{if eq $.D.Field "end_time"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} type="time" value="{{.D.Form.end_time}}"></div>
     </div>
 
     <label for="repeat">Repeats</label>
@@ -45,7 +45,7 @@
     </fieldset>
     <div data-repeating>
       <label for="until">Until <span class="muted">(optional)</span></label>
-      <input id="until" name="until" type="date" value="{{.D.Form.until}}">
+      <input id="until" name="until" {{if eq $.D.Field "until"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} type="date" value="{{.D.Form.until}}">
       <p class="help">The last day it can happen, such as the end of the term.</p>
     </div>
 

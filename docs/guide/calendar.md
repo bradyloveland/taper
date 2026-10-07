@@ -10,13 +10,15 @@ just the school calendar, or one class.
 - Use **‹** and **›** to move back and forward, and **Today** to come back.
 
 Days without school (holidays, breaks) are shaded and marked **No school**.
-The home page shows what's coming up in the next two weeks, and each class's
-page shows its next few events.
+The home page shows what's coming up in the next two weeks. Each class's page
+has a **Coming up** card with that class's events for the next month, a link
+to its calendar, and **Add event** for its mentors.
 
 ## Subscribing in Google, Apple or Outlook calendars
 
-Select **Subscribe** on the calendar page. You get a private link for your
-whole calendar, the school calendar alone, and each of your classes.
+Select **Subscribe** on the calendar page (or **Subscribe to this class** on a
+class's page). You get a private link for your whole calendar, the school
+calendar alone, and each of your classes. Every person's links are their own.
 
 - **iPhone, iPad and Mac:** tap **Apple Calendar**, then Subscribe.
 - **Google Calendar:** tap **Google Calendar**, or copy the link and, on a
@@ -28,8 +30,10 @@ Google and Outlook less often (up to a day). Google and Outlook need Taper to
 have an `https://` address.
 
 **The links are private:** anyone with one can see that calendar. If one gets
-out, select **Reset my links**. The old links stop working, and you subscribe
-again with the new ones.
+out, select **Reset this link** next to it: that link stops working and gets
+a new address, and your other links keep working. **Reset all my links**
+replaces every one. Subscribe again with the new address wherever you used the
+old one. A class's link stops working if you leave the class.
 
 ## Adding events
 
@@ -40,7 +44,9 @@ Select **Add event** (on the calendar, or on a class's page) and choose:
 
 - **Calendar:** the school calendar or one of your classes.
 - **Title**, and whether it's **all day** or has start and end times. An event
-  can last several days (a trip, a break).
+  can last several days (a trip, a break). Changing the start moves the end
+  with it, keeping the same length; an end before the start is marked and
+  can't be saved.
 - **Repeats:** every day, every week on the days you pick (such as Tuesday and
   Thursday), every month on the same date, or every year. Add **Until** to stop
   it, such as at the end of the term.

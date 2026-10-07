@@ -533,25 +533,31 @@ func TestEvents(t *testing.T) {
 		t.Fatal("delete")
 	}
 
-	// Subscription tokens.
-	if sealed, _ := s.CalendarFeed(u.ID); sealed != "" {
-		t.Fatal("no feed yet")
+	// Calendar links, one per calendar.
+	if sealed, _ := s.CalendarLink(u.ID, "mine"); sealed != "" {
+		t.Fatal("no link yet")
 	}
-	s.SetCalendarFeed(u.ID, "hash1", "sealed1")
-	s.SetCalendarFeed(u.ID, "hash2", "sealed2")
-	if sealed, _ := s.CalendarFeed(u.ID); sealed != "sealed2" {
-		t.Fatal("feed replaced")
+	s.SetCalendarLink(u.ID, "mine", "h-mine", "s-mine")
+	s.SetCalendarLink(u.ID, "school", "h-school", "s-school")
+	s.SetCalendarLink(u.ID, "mine", "h-mine2", "s-mine2")
+	if sealed, _ := s.CalendarLink(u.ID, "mine"); sealed != "s-mine2" {
+		t.Fatal("link replaced")
 	}
-	if _, err := s.UserByCalendarFeed("hash1"); err == nil {
-		t.Fatal("old token still works")
+	if _, _, err := s.CalendarLinkByToken("h-mine"); err == nil {
+		t.Fatal("the old token still works")
 	}
-	if got, err := s.UserByCalendarFeed("hash2"); err != nil || got.ID != u.ID {
-		t.Fatal("token lookup")
+	if got, scope, err := s.CalendarLinkByToken("h-school"); err != nil || got.ID != u.ID || scope != "school" {
+		t.Fatal("resetting one link shouldn't touch the others")
 	}
+	s.DeleteCalendarLinks(u.ID)
+	if _, _, err := s.CalendarLinkByToken("h-school"); err == nil {
+		t.Fatal("reset all")
+	}
+	s.SetCalendarLink(u.ID, "mine", "h3", "s3")
 	u.Active = false
 	s.UpdateUser(u)
-	if _, err := s.UserByCalendarFeed("hash2"); err == nil {
-		t.Fatal("deactivated people's feeds stop")
+	if _, _, err := s.CalendarLinkByToken("h3"); err == nil {
+		t.Fatal("deactivated people's links stop")
 	}
 }
 

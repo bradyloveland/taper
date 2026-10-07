@@ -440,6 +440,7 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 type eventFormData struct {
+	Field     string // the field the error is about
 	IsNew     bool
 	Event     *store.CalEvent
 	Form      map[string]string
@@ -473,7 +474,7 @@ func eventForm(e *store.CalEvent) (map[string]string, map[string]bool) {
 
 // readEvent validates the event form into e. It returns the form values to
 // show again and a message if something's wrong.
-func readEvent(r *http.Request, e *store.CalEvent) (map[string]string, map[string]bool, string) {
+func readEvent(r *http.Request, e *store.CalEvent) (map[string]string, map[string]bool, string, string) {
 	f := formValues(r, "title", "location", "start_date", "start_time", "end_date", "end_time", "repeat", "until", "calendar", "all_day", "closed")
 	f["description"] = strings.TrimSpace(strings.ReplaceAll(r.PostFormValue("description"), "\r\n", "\n"))
 	_ = r.ParseForm()
@@ -487,26 +488,26 @@ func readEvent(r *http.Request, e *store.CalEvent) (map[string]string, map[strin
 	}
 	title, msg := cleanName(f["title"], "title")
 	if msg != "" {
-		return f, days, msg
+		return f, days, msg, "title"
 	}
 	if utf8.RuneCountInString(f["location"]) > 200 || utf8.RuneCountInString(f["description"]) > 20000 {
-		return f, days, "The location or description is too long."
+		return f, days, "The place or details are too long.", ""
 	}
 	start, err := cal.ParseDate(f["start_date"])
 	if err != nil {
-		return f, days, "Choose the day it starts."
+		return f, days, "Choose the day it starts.", "start_date"
 	}
 	end := start
 	if f["end_date"] != "" {
 		if end, err = cal.ParseDate(f["end_date"]); err != nil {
-			return f, days, "The end date doesn't look right."
+			return f, days, "The end date doesn't look right.", "end_date"
 		}
 	}
 	if end.Before(start) {
-		return f, days, "It can't end before it starts."
+		return f, days, "The end date is before the start date. Choose a later end date.", "end_date"
 	}
 	if end.Sub(start) > 366*24*time.Hour {
-		return f, days, "An event can last a year at most."
+		return f, days, "An event can last a year at most.", "end_date"
 	}
 	allDay := f["all_day"] == "1"
 	startTime, endTime := "", ""
@@ -514,10 +515,11 @@ func readEvent(r *http.Request, e *store.CalEvent) (map[string]string, map[strin
 		sm, err1 := cal.ParseClock(f["start_time"])
 		em, err2 := cal.ParseClock(f["end_time"])
 		if err1 != nil || err2 != nil {
-			return f, days, "Enter a start and end time, or tick All day."
+			return f, days, "Enter a start and end time, or tick All day.", "start_time"
 		}
 		if end.Equal(start) && em <= sm {
-			return f, days, "It has to end after it starts."
+			return f, days, fmt.Sprintf("It ends (%s) before it starts (%s). Choose a later end time, or a later end date if it goes past midnight.",
+				clock12(em), clock12(sm)), "end_time"
 		}
 		startTime, endTime = fmt.Sprintf("%02d:%02d", sm/60, sm%60), fmt.Sprintf("%02d:%02d", em/60, em%60)
 	}
@@ -530,12 +532,12 @@ func readEvent(r *http.Request, e *store.CalEvent) (map[string]string, map[strin
 	until := ""
 	if repeat != cal.None {
 		if !end.Equal(start) && (allDay || !end.Equal(start.AddDate(0, 0, 1))) {
-			return f, days, "Repeating events must start and end on the same day (or end overnight)."
+			return f, days, "Repeating events must start and end on the same day (or end overnight). Change the end date.", "end_date"
 		}
 		if f["until"] != "" {
 			u, err := cal.ParseDate(f["until"])
 			if err != nil || u.Before(start) {
-				return f, days, "The repeat should end on or after the first day."
+				return f, days, "The repeat should end on or after the first day.", "until"
 			}
 			until = cal.FormatDate(u)
 		}
@@ -551,7 +553,7 @@ func readEvent(r *http.Request, e *store.CalEvent) (map[string]string, map[strin
 		e.RepeatDays = cal.FormatDays(weekdays)
 	}
 	e.Closed = f["closed"] == "1" && e.ClassID == 0
-	return f, days, ""
+	return f, days, "", ""
 }
 
 func (s *Server) renderEventForm(w http.ResponseWriter, r *http.Request, status int, d eventFormData) {
@@ -607,9 +609,9 @@ func (s *Server) handleEventCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	e := &store.CalEvent{ClassID: classID, CreatedBy: u.ID}
-	f, days, msg := readEvent(r, e)
+	f, days, msg, field := readEvent(r, e)
 	if msg != "" {
-		s.renderEventForm(w, r, http.StatusUnprocessableEntity, eventFormData{IsNew: true, Form: f, Days: days, Error: msg})
+		s.renderEventForm(w, r, http.StatusUnprocessableEntity, eventFormData{IsNew: true, Form: f, Days: days, Error: msg, Field: field})
 		return
 	}
 	if err := s.store.CreateEvent(e); err != nil {
@@ -643,9 +645,9 @@ func (s *Server) handleEventUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	updated := *e
-	f, days, msg := readEvent(r, &updated)
+	f, days, msg, field := readEvent(r, &updated)
 	if msg != "" {
-		s.renderEventForm(w, r, http.StatusUnprocessableEntity, eventFormData{Event: e, Form: f, Days: days, Error: msg})
+		s.renderEventForm(w, r, http.StatusUnprocessableEntity, eventFormData{Event: e, Form: f, Days: days, Error: msg, Field: field})
 		return
 	}
 	if err := s.store.UpdateEvent(&updated); err != nil {
@@ -689,4 +691,9 @@ func (s *Server) handleEventDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("event deleted", "by", current(r).user.Username, "event", e.ID)
 	s.redirect(w, r, back, e.Title+" is deleted.")
+}
+
+// clock12 writes minutes after midnight as "6:00 PM".
+func clock12(m int) string {
+	return time.Date(2000, 1, 1, m/60, m%60, 0, 0, time.UTC).Format("3:04 PM")
 }
