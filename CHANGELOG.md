@@ -6,6 +6,8 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-07
+
 ### Added
 - Milestone 4, classes:
   - **Classes**: name, term, meeting time, color and a description (with simple
