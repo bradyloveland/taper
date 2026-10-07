@@ -15,6 +15,11 @@
   });
 
   document.addEventListener('click', (e) => {
+    const ask = e.target.closest ? e.target.closest('[data-confirm-click]') : null;
+    if (ask && !window.confirm(ask.getAttribute('data-confirm-click'))) {
+      e.preventDefault();
+      return;
+    }
     const t = e.target.closest ? e.target.closest('[data-copy],[data-print],[data-reload]') : null;
     if (t) {
       if (t.hasAttribute('data-copy')) {

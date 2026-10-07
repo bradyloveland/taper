@@ -27,7 +27,9 @@ make check   # gofmt, go vet, staticcheck, shellcheck, and go test -race ./...
 drives it like a browser (cookies, forms, CSRF tokens). Add tests there for every
 new page or form.
 
-CI also builds the release archives and runs `scripts/ci-install-test.sh` on a
+CI also runs `scripts/ci-network-test.sh` (network changes from the web interface:
+confirm, restart, automatic undo, installer override) and `scripts/ci-update-test.sh`.
+It builds the release archives and runs `scripts/ci-install-test.sh` on a
 real systemd machine: fresh install, first-time setup, re-running with new
 options, uninstall and reinstall, and purge. To run that locally without touching
 your machine, use a systemd container:
@@ -45,7 +47,7 @@ docker exec taper-it bash /scripts/ci-install-test.sh /dist
 | Path | What |
 |------|------|
 | `cmd/taper/` | The program: `serve`, `setup-code`, `passwd`, `backup`, `rollback`, `version` |
-| `internal/config/` | Settings from `TAPER_*` environment variables (`/etc/taper/taper.conf`) |
+| `internal/config/` | Settings from `TAPER_*` environment variables (`/etc/taper/taper.conf`), with `network.json` on top |
 | `internal/store/` | SQLite access and numbered migrations (`migrations/NNNN_name.sql`) |
 | `internal/auth/` | Password hashing, tokens, sign-in throttling |
 | `internal/server/` | HTTP handlers, middleware, rendering |
@@ -54,6 +56,8 @@ docker exec taper-it bash /scripts/ci-install-test.sh /dist
 | `internal/update/` | Checking GitHub, staging, installing and rolling back releases |
 | `internal/secret/` | Encrypting saved secrets (GitHub token) with `secret.key` |
 | `internal/github/` | Filing problem reports as GitHub issues |
+| `internal/mail/` | Sending email over SMTP; `mailtest` is a fake server for tests |
+| `internal/qr/` | QR codes (SVG) for setting up two-step sign-in |
 | `tools/taper-sign/` | Signs release folders; makes signing keys |
 | `web/templates/` | Page templates (`layout.html` wraps every page) |
 | `web/static/` | CSS, JS, icons, the service worker |

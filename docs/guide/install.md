@@ -32,7 +32,10 @@ Open the address, enter the code, name your school, and create your admin
 account. To see the code again: `sudo taper setup-code`.
 
 A new install uses plain HTTP on port 8088, which is fine for trying Taper out on
-your network. Before inviting everyone, set up HTTPS.
+your network. Before inviting everyone, set up HTTPS. The easiest way is in the
+web interface, under **Settings → Network & HTTPS** (see
+[Network and HTTPS](network.md)). The installer options below do the same from
+the server.
 
 ## HTTPS
 
@@ -113,7 +116,9 @@ To go back to plain HTTP: `sudo /opt/taper/install.sh --http`.
 | `--version X.Y.Z` | Install a specific release |
 
 Running the installer again keeps your data and settings. Only the options you
-pass change. The current settings are in `/etc/taper/taper.conf`.
+pass change. The installer's settings are in `/etc/taper/taper.conf`. Settings
+changed in the web interface are saved in `/var/lib/taper/network.json` and take
+precedence. Running the installer with network options replaces them.
 
 ## Upgrading
 
@@ -152,7 +157,8 @@ sudo /opt/taper/uninstall.sh --purge  # deletes everything
 | Path | What |
 |------|------|
 | `/opt/taper/` | The program and the installer |
-| `/etc/taper/taper.conf` | How Taper is reached (HTTP, HTTPS, proxy) |
+| `/etc/taper/taper.conf` | How Taper is reached, as set by the installer |
+| `/var/lib/taper/network.json` | How Taper is reached, if changed in the web interface |
 | `/var/lib/taper/taper.db` | The database: people, settings and everything else |
 | `/var/lib/taper/backups/` | Database copies from before each update (the last five) |
 | `/var/lib/taper/secret.key` | Encrypts saved secrets such as the GitHub token; keep it with backups |

@@ -34,12 +34,13 @@ func (s *Server) handlePeople(w http.ResponseWriter, r *http.Request) {
 }
 
 type personData struct {
-	IsNew  bool
-	Self   bool
-	Person *store.User
-	Form   map[string]string
-	Roles  []string
-	Error  string
+	IsNew           bool
+	Self            bool
+	TwoStepRequired bool
+	Person          *store.User
+	Form            map[string]string
+	Roles           []string
+	Error           string
 }
 
 func (s *Server) handlePersonNewForm(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +129,7 @@ func (s *Server) handlePersonForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, http.StatusOK, "person", u.DisplayName, "people",
-		personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: store.Roles})
+		personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: store.Roles, TwoStepRequired: s.mfaRequired(u)})
 }
 
 func (s *Server) handlePersonUpdate(w http.ResponseWriter, r *http.Request) {

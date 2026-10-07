@@ -95,6 +95,7 @@ func (e *env) addUser(username, name, role, password string, mustChange bool) *s
 // browser is a client with its own cookies that doesn't follow redirects.
 type browser struct {
 	e      *env
+	base   string // the server's address; e.ts.URL by default
 	c      *http.Client
 	last   string // body of the last response
 	header http.Header
@@ -131,18 +132,25 @@ func (b *browser) do(req *http.Request) *resp {
 
 func (b *browser) get(path string) *resp {
 	b.e.t.Helper()
-	req, _ := http.NewRequest("GET", b.e.ts.URL+path, nil)
+	req, _ := http.NewRequest("GET", b.url()+path, nil)
 	return b.do(req)
 }
 
 func (b *browser) post(path string, form url.Values) *resp {
 	b.e.t.Helper()
-	req, _ := http.NewRequest("POST", b.e.ts.URL+path, strings.NewReader(form.Encode()))
+	req, _ := http.NewRequest("POST", b.url()+path, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	return b.do(req)
 }
 
 var csrfRE = regexp.MustCompile(`name="csrf" value="([^"]+)"`)
+
+func (b *browser) url() string {
+	if b.base != "" {
+		return b.base
+	}
+	return b.e.ts.URL
+}
 
 // csrf returns the token from the last page fetched, or fetches /account.
 func (b *browser) csrf() string {

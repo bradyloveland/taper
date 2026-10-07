@@ -56,3 +56,17 @@ jobs:
           go-version-file: go.mod
       - name: Update, roll back, and recover from a broken update
         run: scripts/ci-update-test.sh
+
+  # Changing network settings from the web interface on a real systemd
+  # machine: confirm, restart, automatic undo, installer override.
+  network:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+      - name: Change the network settings from the web interface
+        run: scripts/ci-network-test.sh dist

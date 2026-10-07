@@ -51,7 +51,10 @@ type User struct {
 	Active             bool
 	CreatedAt          int64
 	UpdatedAt          int64
-	LastLoginAt        int64 // 0 if never
+	LastLoginAt        int64  // 0 if never
+	TOTPSecret         string // encrypted; "" if two-step sign-in was never set up
+	TOTPEnabled        bool
+	TOTPLastStep       int64
 }
 
 // IsAdmin reports whether the user is an admin.
@@ -79,12 +82,13 @@ func (u *User) Initials() string {
 }
 
 const userCols = `id, username, display_name, email, role, password_hash, must_change_password, active,
-	created_at, updated_at, COALESCE(last_login_at, 0)`
+	created_at, updated_at, COALESCE(last_login_at, 0), totp_secret, totp_enabled, totp_last_step`
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	u := &User{}
 	err := row.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Email, &u.Role, &u.PasswordHash,
-		&u.MustChangePassword, &u.Active, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt)
+		&u.MustChangePassword, &u.Active, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt, &u.TOTPSecret, &u.TOTPEnabled,
+		&u.TOTPLastStep)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -237,4 +241,124 @@ func (s *Store) ActiveAdmins() (int, error) {
 	var n int
 	err := s.db.QueryRow(`SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1`).Scan(&n)
 	return n, err
+}
+
+// ------------------------------------------------------- two-step sign-in
+
+// EnableTOTP turns on two-step sign-in with an (encrypted) secret, replacing
+// any recovery codes with the given hashes.
+func (s *Store) EnableTOTP(id int64, sealedSecret string, step int64, codeHashes []string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE users SET totp_secret = ?, totp_enabled = 1, totp_last_step = ?, updated_at = ? WHERE id = ?`,
+		sealedSecret, step, s.now(), id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	if err := replaceCodes(tx, id, codeHashes); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// DisableTOTP turns off two-step sign-in and removes the recovery codes.
+func (s *Store) DisableTOTP(id int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`UPDATE users SET totp_secret = '', totp_enabled = 0, totp_last_step = 0, updated_at = ? WHERE id = ?`,
+		s.now(), id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM recovery_codes WHERE user_id = ?`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// UseTOTPStep records that the code for step was used. It reports false if
+// that step (or a later one) was already used, so a code works only once.
+func (s *Store) UseTOTPStep(id, step int64) (bool, error) {
+	res, err := s.db.Exec(`UPDATE users SET totp_last_step = ? WHERE id = ? AND totp_last_step < ?`, step, id, step)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n == 1, nil
+}
+
+// ReplaceRecoveryCodes swaps a user's recovery codes for new ones.
+func (s *Store) ReplaceRecoveryCodes(id int64, codeHashes []string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := replaceCodes(tx, id, codeHashes); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func replaceCodes(tx *sql.Tx, id int64, hashes []string) error {
+	if _, err := tx.Exec(`DELETE FROM recovery_codes WHERE user_id = ?`, id); err != nil {
+		return err
+	}
+	for _, h := range hashes {
+		if _, err := tx.Exec(`INSERT INTO recovery_codes (user_id, code_hash) VALUES (?, ?)`, id, h); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// UseRecoveryCode marks a recovery code used. It reports false if the code
+// isn't one of the user's unused codes.
+func (s *Store) UseRecoveryCode(id int64, codeHash string) (bool, error) {
+	res, err := s.db.Exec(`UPDATE recovery_codes SET used_at = ? WHERE user_id = ? AND code_hash = ? AND used_at IS NULL`,
+		s.now(), id, codeHash)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n == 1, nil
+}
+
+// RecoveryCodesLeft counts a user's unused recovery codes.
+func (s *Store) RecoveryCodesLeft(id int64) (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM recovery_codes WHERE user_id = ? AND used_at IS NULL`, id).Scan(&n)
+	return n, err
+}
+
+// ListAdmins returns active admins, for notices sent to all of them.
+func (s *Store) ListAdmins() ([]*User, error) {
+	return s.ListUsers(UserFilter{Role: RoleAdmin})
+}
+
+// UsersByEmail returns active users with that email address (any case).
+func (s *Store) UsersByEmail(email string) ([]*User, error) {
+	rows, err := s.db.Query(`SELECT `+userCols+` FROM users WHERE active = 1 AND email <> '' AND email = ? COLLATE NOCASE`,
+		strings.TrimSpace(email))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
 }

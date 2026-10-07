@@ -29,8 +29,12 @@ The plan and milestones are in `docs/plan.md`. User documentation is in
 - **Schema changes are new numbered files** in `internal/store/migrations/`. Never edit
   a migration that has been released. Upgrades must keep every school's data.
 - **No terminal needed after install**, except the first install and the recovery
-  commands (`taper passwd`, `taper setup-code`, `taper rollback`).
-- **Secrets are write-only.** Tokens are encrypted with `internal/secret`, never shown
+  commands (`taper passwd`, `taper setup-code`, `taper rollback`, `taper mfa-reset`,
+  `taper network --reset`).
+- **Network changes that could lock people out are tried first** (`internal/server/network.go`):
+  new listeners run beside the old until confirmed from the new address, and are undone
+  if not. Only confirmed settings are saved (`network.json`).
+- **Secrets are write-only.** Tokens, the SMTP password and TOTP secrets are encrypted with `internal/secret`, never shown
   again, never logged, and an empty field on save keeps the stored value.
 - **Releases are signed.** Never weaken the signature check in `internal/release`; see
   "Release signing" in `docs/development.md`.
@@ -61,7 +65,7 @@ make dist     # linux amd64/arm64 release archives in dist/
 
 ## Versions and releases
 
-- Before 1.0, each milestone is a minor pre-release (0.1.0 = M1, 0.2.0 = M2, ...).
+- Before 1.0, each milestone is a minor version (0.2.0 = M1 and M2, 0.3.0 = M3, ...).
 - The version lives in `internal/version/VERSION`.
 - To release: in a pull request, bump `VERSION` and rename `## [Unreleased]` to
   `## [X.Y.Z] - YYYY-MM-DD`. After merge, the owner tags `vX.Y.Z` and pushes it.

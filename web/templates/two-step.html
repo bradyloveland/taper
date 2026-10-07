@@ -1,0 +1,74 @@
+{{define "content"}}
+<p class="crumbs"><a href="/account">My account</a> /</p>
+<div class="page-head">
+  <h1>Two-step sign-in</h1>
+  <p class="muted">A code from an app on your phone, as well as your password, so a stolen password isn't enough to get in.</p>
+</div>
+{{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+
+{{if .D.Codes}}
+<section class="card readable">
+  <h2>Your recovery codes</h2>
+  <p>If you lose your phone, sign in with one of these instead of a code. <strong>Each works once.</strong> Keep them somewhere safe: print them, or save them in a password manager. They won't be shown again.</p>
+  <ol class="codes" id="codes">
+    {{range .D.Codes}}<li><code>{{.}}</code></li>
+    {{end}}
+  </ol>
+  <p class="actions">
+    <button type="button" class="button" data-copy="codes">Copy</button>
+    <button type="button" class="button" data-print>Print</button>
+    <a class="button primary" href="/">I've saved them</a>
+  </p>
+</section>
+{{else if .D.Enabled}}
+<div class="grid-2">
+<section class="card">
+  <h2><span class="badge ok">On</span> Two-step sign-in is on</h2>
+  <p>You have <strong>{{.D.Left}}</strong> unused recovery code{{if ne .D.Left 1}}s{{end}}.{{if le .D.Left 3}} Make new ones soon.{{end}}</p>
+  <form method="post" action="/account/two-step/recovery" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="text" name="username" value="{{.User.Username}}" autocomplete="username" hidden>
+    <label for="pw1">Your password</label>
+    <input id="pw1" name="password" type="password" required autocomplete="current-password">
+    <p class="help">New codes replace the old ones.</p>
+    <button type="submit" class="button">Make new recovery codes</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Turn it off</h2>
+  {{if .D.Required}}
+  <p>Your school requires two-step sign-in for {{lower .User.RoleLabel}}s, so it stays on. If you have a new phone, ask an admin to turn it off for you, then set it up again.</p>
+  {{else}}
+  <p>You'll sign in with just your password.</p>
+  <form method="post" action="/account/two-step/disable" class="form" data-confirm="Turn off two-step sign-in?">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="text" name="username" value="{{.User.Username}}" autocomplete="username" hidden>
+    <label for="pw2">Your password</label>
+    <input id="pw2" name="password" type="password" required autocomplete="current-password">
+    <button type="submit" class="button danger">Turn off two-step sign-in</button>
+  </form>
+  {{end}}
+</section>
+</div>
+{{else}}
+{{if .D.Required}}<div class="flash flash-warn" role="status">Your school requires two-step sign-in for {{lower .User.RoleLabel}}s. Set it up to continue.</div>{{end}}
+<section class="card readable">
+  <h2>Set it up</h2>
+  <ol class="steps">
+    <li>Install an authenticator app on your phone if you don't have one: Google Authenticator, Microsoft Authenticator, 1Password, Authy and others all work.</li>
+    <li>In the app, add an account and scan this code:
+      <div class="qr">{{.D.QR}}</div>
+      <p class="help">Can't scan it? Choose "enter a setup key" in the app and type: <code class="big">{{.D.Grouped}}</code></p>
+    </li>
+    <li>Enter the 6-digit code the app shows:</li>
+  </ol>
+  <form method="post" action="/account/two-step/enable" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="secret" value="{{.D.Secret}}">
+    <label for="code">Code from the app</label>
+    <input id="code" name="code" required autocomplete="one-time-code" inputmode="numeric" maxlength="7" class="code-input">
+    <button type="submit" class="button primary">Turn on two-step sign-in</button>
+  </form>
+</section>
+{{end}}
+{{end}}

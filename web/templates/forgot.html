@@ -1,0 +1,19 @@
+{{define "content"}}
+<section class="auth-card card">
+  <h1>Forgot your password?</h1>
+  {{if .D.Sent}}
+  <p>If that account has an email address, a link to choose a new password is on its way. It works for an hour.</p>
+  <p class="help">Nothing after a few minutes? Check the spam folder. If your account has no email address, ask a mentor or admin at your school to reset your password.</p>
+  <p><a class="button" href="/login">Back to sign in</a></p>
+  {{else}}
+  <p class="muted">Enter your username or email address. If your account has an email address, we'll send a link to choose a new password.</p>
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/forgot" class="form">
+    <label for="who">Username or email address</label>
+    <input id="who" name="who" required autocomplete="username" autocapitalize="none" spellcheck="false" autofocus value="{{.D.Who}}">
+    <button type="submit" class="button primary block">Send the link</button>
+  </form>
+  <p class="small"><a href="/login">Back to sign in</a></p>
+  {{end}}
+</section>
+{{end}}

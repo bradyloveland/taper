@@ -30,8 +30,10 @@ on scholars' work.
 
 ## Forgot your password?
 
-Ask a mentor or admin at your school. An admin can create a new temporary
-password for you (see [Managing people](people.md)).
+If your school has set up email and your account has an email address, use
+**Forgot your password?** on the sign-in page. Otherwise, ask a mentor or admin
+at your school. An admin can create a new temporary password for you (see
+[Managing people](people.md)).
 
 ## Getting around
 

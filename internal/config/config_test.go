@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func env(m map[string]string) func(string) string {
 	return func(k string) string { return m[k] }
@@ -68,5 +71,62 @@ func TestErrors(t *testing.T) {
 	c, err := Parse(env(map[string]string{"TAPER_MODE": "HTTPS", "TAPER_DOMAIN": "Learn.Example.org"}))
 	if err != nil || c.Domain != "learn.example.org" || c.Mode != ModeHTTPS {
 		t.Fatalf("https: %+v %v", c, err)
+	}
+}
+
+func TestSavedNetwork(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("TAPER_DATA_DIR", dir)
+	t.Setenv("TAPER_MODE", "http")
+	t.Setenv("TAPER_PORT", "8088")
+	c, err := Load()
+	if err != nil || c.Port != 8088 {
+		t.Fatalf("env only: %+v %v", c, err)
+	}
+	vals := map[string]string{"TAPER_MODE": "proxy", "TAPER_PORT": "9000", "TAPER_BIND": "127.0.0.1",
+		"TAPER_TRUSTED_PROXIES": "10.0.0.0/8,192.168.1.2"}
+	if err := SaveNetwork(dir, vals); err != nil {
+		t.Fatal(err)
+	}
+	c, err = Load()
+	if err != nil || c.Mode != ModeProxy || c.Port != 9000 || c.Bind != "127.0.0.1" || !c.Trusted("10.1.2.3:4") || c.DataDir != dir {
+		t.Fatalf("saved: %+v %v", c, err)
+	}
+	if got := c.NetworkValues()["TAPER_TRUSTED_PROXIES"]; got != "10.0.0.0/8,192.168.1.2" {
+		t.Fatalf("values: %q", got)
+	}
+	if c.ConfirmTimeout.Minutes() != 3 {
+		t.Fatalf("confirm timeout %v", c.ConfirmTimeout)
+	}
+	// Bad saved settings are reported with how to fix them.
+	SaveNetwork(dir, map[string]string{"TAPER_MODE": "nope"})
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "taper network --reset") {
+		t.Fatalf("bad saved settings: %v", err)
+	}
+	if err := ResetNetwork(dir); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := Load(); c.Mode != ModeHTTP {
+		t.Fatal("reset should go back to the environment")
+	}
+	if err := ResetNetwork(dir); err != nil {
+		t.Fatal("resetting twice is fine")
+	}
+}
+
+func TestSameListeners(t *testing.T) {
+	a, _ := Parse(env(map[string]string{"TAPER_PORT": "8088"}))
+	b, _ := Parse(env(map[string]string{"TAPER_PORT": "8088", "TAPER_TRUSTED_PROXIES": "10.0.0.1"}))
+	c, _ := Parse(env(map[string]string{"TAPER_PORT": "9000"}))
+	d, _ := Parse(env(map[string]string{"TAPER_MODE": "https", "TAPER_DOMAIN": "a.example.org"}))
+	e, _ := Parse(env(map[string]string{"TAPER_MODE": "https", "TAPER_DOMAIN": "a.example.org", "TAPER_PORT": "1"}))
+	if !a.SameListeners(b) || a.SameListeners(c) || a.SameListeners(d) || !d.SameListeners(e) {
+		t.Fatal("SameListeners")
+	}
+	if len(d.Ports()) != 2 || c.Ports()[0] != 9000 {
+		t.Fatal("Ports")
+	}
+	if _, err := Parse(env(map[string]string{"TAPER_CONFIRM_SECONDS": "2"})); err == nil {
+		t.Fatal("tiny confirm timeout accepted")
 	}
 }

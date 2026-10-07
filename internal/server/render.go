@@ -95,7 +95,10 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, status int, page
 	pd := &pageData{Title: title, Section: section, AppName: name, ShortName: short, School: s.store.SchoolName(),
 		Version: version.Version, Repo: version.Repo, Path: r.URL.Path, Flash: s.takeFlash(w, r), D: d}
 	if ri := current(r); ri.user != nil {
-		pd.User, pd.CSRF = ri.user, ri.sess.CSRF
+		pd.CSRF = ri.sess.CSRF
+		if !ri.sess.MFAPending { // not signed in until the second step
+			pd.User = ri.user
+		}
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout", pd); err != nil {

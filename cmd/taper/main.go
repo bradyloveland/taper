@@ -3,20 +3,15 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
 	"time"
-
-	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/bradyloveland/taper/internal/auth"
 	"github.com/bradyloveland/taper/internal/config"
@@ -33,7 +28,10 @@ Usage:
   taper setup-code          Show the one-time code for first-time setup
   taper passwd USERNAME     Give someone a new temporary password (and turn their account on)
   taper backup FILE         Write a copy of the database to FILE
+  taper mfa-reset USERNAME  Turn off someone's two-step sign-in (a lost phone and recovery codes)
   taper rollback            Go back to the version from before the last update (with the service stopped)
+  taper network             Show the network settings in use
+  taper network --reset     Forget network settings changed in the web interface (then restart the service)
   taper version             Print the version
 
 Settings come from TAPER_* environment variables, which the installer keeps in
@@ -63,6 +61,14 @@ func main() {
 		} else {
 			err = backup(os.Args[2])
 		}
+	case "mfa-reset":
+		if len(os.Args) != 3 {
+			err = errors.New("usage: taper mfa-reset USERNAME")
+		} else {
+			err = mfaReset(os.Args[2])
+		}
+	case "network":
+		err = network(os.Args[2:])
 	case "rollback":
 		err = rollback(os.Args[2:])
 	case "version", "--version", "-v":
@@ -91,7 +97,7 @@ func openStore(cfg *config.Config) (*store.Store, error) {
 }
 
 func setupCode() error {
-	cfg, err := config.FromEnv()
+	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
@@ -115,7 +121,7 @@ func setupCode() error {
 }
 
 func passwd(username string) error {
-	cfg, err := config.FromEnv()
+	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
@@ -161,7 +167,7 @@ func passwd(username string) error {
 }
 
 func backup(dest string) error {
-	cfg, err := config.FromEnv()
+	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
@@ -189,7 +195,7 @@ const settle = time.Minute
 
 func serve() error {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
-	cfg, err := config.FromEnv()
+	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
@@ -236,70 +242,77 @@ func run(cfg *config.Config) (string, error) {
 	defer stop()
 	go pruneSessions(ctx, st)
 	go srv.Run(ctx)
-
-	var servers []*http.Server
-	errc := make(chan error, 2)
-	start := func(hs *http.Server, tlsOn bool) {
-		servers = append(servers, hs)
-		go func() {
-			var err error
-			if tlsOn {
-				err = hs.ListenAndServeTLS("", "")
-			} else {
-				err = hs.ListenAndServe()
-			}
-			if !errors.Is(err, http.ErrServerClosed) {
-				errc <- fmt.Errorf("listening on %s: %w", hs.Addr, err)
-			}
-		}()
-	}
-	newServer := func(addr string, h http.Handler) *http.Server {
-		return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute,
-			MaxHeaderBytes: 64 << 10}
-	}
-
-	switch cfg.Mode {
-	case config.ModeHTTPS:
-		m := &autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(cfg.Domain),
-			Cache:      autocert.DirCache(filepath.Join(cfg.DataDir, "certs")),
-			Email:      cfg.Email,
-		}
-		https := newServer(net.JoinHostPort(cfg.Bind, "443"), srv)
-		https.TLSConfig = &tls.Config{GetCertificate: m.GetCertificate, MinVersion: tls.VersionTLS12,
-			NextProtos: []string{"h2", "http/1.1", "acme-tls/1"}}
-		start(https, true)
-		// Port 80 answers Let's Encrypt's checks and sends everyone else to HTTPS.
-		start(newServer(net.JoinHostPort(cfg.Bind, "80"), m.HTTPHandler(nil)), false)
-	default:
-		start(newServer(cfg.Listen(), srv), false)
-	}
-	slog.Info("Taper started", "version", version.Version, "address", cfg.Describe(), "data", cfg.DataDir)
+	slog.Info("Taper started", "version", version.Version, "data", cfg.DataDir)
 	srv.Started(settle)
 	defer srv.Stop()
+	return srv.Serve(ctx)
+}
 
-	select {
-	case <-ctx.Done():
-		slog.Info("shutting down")
-	case <-srv.Restarting():
-		slog.Info("restarting for an update")
-	case err := <-errc:
-		return "", err
+func mfaReset(username string) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
 	}
-	sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	for _, hs := range servers {
-		_ = hs.Shutdown(sctx)
+	st, err := openStore(cfg)
+	if err != nil {
+		return err
 	}
-	return srv.RollbackRequested(), nil
+	defer st.Close()
+	u, err := st.GetUserByUsername(username)
+	if errors.Is(err, store.ErrNotFound) {
+		return fmt.Errorf("there's no one with the username %q", username)
+	}
+	if err != nil {
+		return err
+	}
+	if err := st.DisableTOTP(u.ID); err != nil {
+		return err
+	}
+	if err := st.DeleteUserSessions(u.ID, ""); err != nil {
+		return err
+	}
+	fmt.Printf("Two-step sign-in is off for %s (%s). They can sign in with just their password", u.DisplayName, u.Username)
+	fmt.Println(", and turn it on again under My account (or they'll be asked to, if your school requires it).")
+	return nil
+}
+
+// network shows the network settings, as "MODE PORT BIND DOMAIN" with "-"
+// for empty values (the installer reads it), or resets those saved from the
+// web interface.
+func network(args []string) error {
+	env, err := config.FromEnv()
+	if err != nil {
+		return err
+	}
+	switch {
+	case len(args) == 1 && args[0] == "--reset":
+		if err := config.ResetNetwork(env.DataDir); err != nil {
+			return err
+		}
+		fmt.Println("Network settings changed in the web interface are removed. Restart Taper to use the installer's settings: sudo systemctl restart taper")
+		return nil
+	case len(args) != 0:
+		return errors.New("usage: taper network [--reset]")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	dash := func(s string) string {
+		if s == "" {
+			return "-"
+		}
+		return s
+	}
+	fmt.Println(cfg.Mode, cfg.Port, dash(cfg.Bind), dash(cfg.Domain))
+	return nil
 }
 
 // rollback puts back the version from before the last update. The service
 // runs "taper.prev rollback --after-failure" each time it stops, to undo an
 // update that keeps failing (see update.Files.AfterStop).
 func rollback(args []string) error {
-	cfg, err := config.FromEnv()
+	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}

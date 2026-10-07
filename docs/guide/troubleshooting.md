@@ -16,11 +16,36 @@ sudo taper passwd USERNAME
 This also turns the account back on if it was deactivated. If you don't remember
 the username, run it with any name, and it lists the admins.
 
+## Locked out by a network change
+
+Network changes made in the web interface are undone by themselves if they
+aren't confirmed from the new address within a few minutes. If you're still
+locked out, on the server:
+
+```bash
+sudo taper network --reset
+sudo systemctl restart taper
+```
+
+This goes back to the installer's settings.
+
+## Lost phone with two-step sign-in
+
+Use a recovery code, or ask an admin to turn two-step sign-in off for you (see
+[Two-step sign-in](two-step.md#lost-your-phone)). If the only admin is locked
+out: `sudo taper mfa-reset USERNAME`.
+
 ## "Too many tries"
 
 After 5 wrong passwords for an account within 15 minutes, Taper makes that
 account wait. Wait the time it shows, or have an admin reset the password, which
 clears the wait.
+
+## Password reset emails don't arrive
+
+Check the spam folder. An admin can check the settings with **Send test email**
+under **Settings → Email**. The account needs an email address under My account.
+See [Email](email.md).
 
 ## I lost the setup code
 

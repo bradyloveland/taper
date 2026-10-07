@@ -239,7 +239,7 @@ input, select, textarea {
   width: 100%;
 }
 input:disabled { background: var(--surface-2); color: var(--muted); }
-input[type=checkbox] { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--primary); }
+input[type=checkbox], input[type=radio] { width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; accent-color: var(--primary); flex: none; }
 .form label.check { display: flex; align-items: center; gap: 10px; font-weight: 500; margin-top: 16px; }
 .help { color: var(--muted); font-size: .875rem; }
 
@@ -293,6 +293,7 @@ input[type=file] { padding: 8px; }
   display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;
   background: var(--surface-2); color: var(--text); vertical-align: middle;
 }
+.badge.ok { background: var(--ok-bg); color: var(--ok-text); }
 .badge.warn { background: var(--warn-bg); color: var(--warn-text); }
 .badge.muted { color: var(--muted); }
 
@@ -374,3 +375,21 @@ code.big { font-size: 1.15rem; padding: .2em .5em; }
   body { background: #fff; color: #000; }
   .card { box-shadow: none; border: 0; }
 }
+
+/* ------------------------------------------------------- two-step sign-in */
+
+.qr { width: 200px; max-width: 70vw; margin: 12px 0; background: #fff; padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+.qr svg { display: block; width: 100%; height: auto; }
+.steps { padding-left: 1.3em; }
+.steps li { margin-bottom: 10px; }
+.codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; padding-left: 1.6em; margin: 0 0 16px; }
+.codes code { font-size: 1.05rem; }
+.code-input { font-family: var(--mono); font-size: 1.3rem; letter-spacing: .15em; }
+.help-details { margin: 16px 0 8px; color: var(--muted); font-size: .9rem; }
+.help-details summary { cursor: pointer; color: var(--link); }
+.section-gap { margin-top: 1.5em; }
+.callout { border-color: var(--accent); border-width: 2px; }
+fieldset.choices { margin: 0 0 8px; }
+fieldset.choices .check { align-items: flex-start; margin-top: 10px; }
+fieldset.choices .check input { margin-top: 3px; flex: none; }
+.card form + h3, .card form + h2 { margin-top: 1.4em; }

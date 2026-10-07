@@ -237,3 +237,126 @@ func TestBugReports(t *testing.T) {
 		t.Fatal("missing report")
 	}
 }
+
+func TestTwoStepStore(t *testing.T) {
+	s := openTest(t)
+	u := &User{Username: "ann", DisplayName: "Ann", Role: RoleMentor, PasswordHash: "x", Active: true}
+	if err := s.CreateUser(u); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.EnableTOTP(u.ID, "sealed", 100, []string{"h1", "h2"}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := s.GetUser(u.ID)
+	if !got.TOTPEnabled || got.TOTPSecret != "sealed" || got.TOTPLastStep != 100 {
+		t.Fatalf("user %+v", got)
+	}
+	if ok, _ := s.UseTOTPStep(u.ID, 100); ok {
+		t.Fatal("a used step was accepted again")
+	}
+	if ok, _ := s.UseTOTPStep(u.ID, 101); !ok {
+		t.Fatal("a new step was refused")
+	}
+	if ok, _ := s.UseRecoveryCode(u.ID, "h1"); !ok {
+		t.Fatal("recovery code refused")
+	}
+	if ok, _ := s.UseRecoveryCode(u.ID, "h1"); ok {
+		t.Fatal("recovery code used twice")
+	}
+	if ok, _ := s.UseRecoveryCode(u.ID, "nope"); ok {
+		t.Fatal("unknown recovery code accepted")
+	}
+	if n, _ := s.RecoveryCodesLeft(u.ID); n != 1 {
+		t.Fatalf("left %d", n)
+	}
+	if err := s.ReplaceRecoveryCodes(u.ID, []string{"a", "b", "c"}); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := s.RecoveryCodesLeft(u.ID); n != 3 {
+		t.Fatalf("left %d", n)
+	}
+	if err := s.DisableTOTP(u.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = s.GetUser(u.ID)
+	if got.TOTPEnabled || got.TOTPSecret != "" {
+		t.Fatal("not disabled")
+	}
+	if n, _ := s.RecoveryCodesLeft(u.ID); n != 0 {
+		t.Fatal("codes left after disabling")
+	}
+}
+
+func TestPendingSessions(t *testing.T) {
+	s := openTest(t)
+	now := time.Unix(1_700_000_000, 0)
+	s.Now = func() time.Time { return now }
+	u := &User{Username: "ann", DisplayName: "Ann", Role: RoleMentor, PasswordHash: "x", Active: true}
+	s.CreateUser(u)
+	tok, sess, err := s.CreatePendingSession(u.ID, true, "ua", "ip")
+	if err != nil || !sess.MFAPending {
+		t.Fatal(err)
+	}
+	got, _, err := s.LookupSession(tok)
+	if err != nil || !got.MFAPending {
+		t.Fatalf("pending lookup: %+v %v", got, err)
+	}
+	if list, _ := s.UserSessions(u.ID); len(list) != 0 {
+		t.Fatal("pending sessions aren't listed as signed in")
+	}
+	if err := s.CompleteMFA(sess.TokenHash); err != nil {
+		t.Fatal(err)
+	}
+	got, _, _ = s.LookupSession(tok)
+	if got.MFAPending || got.ExpiresAt-now.Unix() < int64(29*24*time.Hour/time.Second) {
+		t.Fatalf("completed session: %+v", got)
+	}
+	if err := s.CompleteMFA(sess.TokenHash); !errors.Is(err, ErrNotFound) {
+		t.Fatal("completing twice")
+	}
+	// An unfinished one expires after ten minutes.
+	tok2, _, _ := s.CreatePendingSession(u.ID, true, "ua", "ip")
+	now = now.Add(11 * time.Minute)
+	if _, _, err := s.LookupSession(tok2); !errors.Is(err, ErrNotFound) {
+		t.Fatal("pending session should expire")
+	}
+}
+
+func TestPasswordResets(t *testing.T) {
+	s := openTest(t)
+	now := time.Unix(1_700_000_000, 0)
+	s.Now = func() time.Time { return now }
+	u := &User{Username: "ann", DisplayName: "Ann", Role: RoleMentor, PasswordHash: "x", Active: true}
+	s.CreateUser(u)
+	first, _ := s.CreatePasswordReset(u.ID)
+	tok, err := s.CreatePasswordReset(u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PasswordResetUser(first); err == nil {
+		t.Fatal("an older link should stop working")
+	}
+	if got, err := s.PasswordResetUser(tok); err != nil || got.ID != u.ID {
+		t.Fatalf("lookup: %v", err)
+	}
+	if ok, _ := s.UsePasswordReset(tok); !ok {
+		t.Fatal("use refused")
+	}
+	if ok, _ := s.UsePasswordReset(tok); ok {
+		t.Fatal("used twice")
+	}
+	if _, err := s.PasswordResetUser(tok); err == nil {
+		t.Fatal("a used link still works")
+	}
+	tok, _ = s.CreatePasswordReset(u.ID)
+	now = now.Add(61 * time.Minute)
+	if _, err := s.PasswordResetUser(tok); err == nil {
+		t.Fatal("an expired link still works")
+	}
+	tok, _ = s.CreatePasswordReset(u.ID)
+	u.Active = false
+	s.UpdateUser(u)
+	if _, err := s.PasswordResetUser(tok); err == nil {
+		t.Fatal("a deactivated account's link still works")
+	}
+}

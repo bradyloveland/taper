@@ -129,6 +129,11 @@ func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("problem reported", "by", ri.user.Username, "report", rep.ID)
 	s.sendReport(r.Context(), rep)
+	where := "It's saved in Taper under Settings → Problem reports."
+	if rep.IssueURL != "" {
+		where = "It's on GitHub: " + rep.IssueURL
+	}
+	s.notifyAdmins("Problem report: "+rep.Title, ri.user.DisplayName+" reported a problem in Taper.\n\n"+d.What+"\n\n"+where)
 	d.Sent = rep
 	if rep.IssueURL == "" {
 		d.Fallback = github.NewIssueURL(s.reportRepo(), rep.Title, rep.Body, reportLabels)
