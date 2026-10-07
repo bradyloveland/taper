@@ -6,6 +6,11 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-06
+
+The first release of Taper: milestones 1 to 3 of the [plan](https://github.com/bradyloveland/taper/blob/main/docs/plan.md).
+Install it with `curl -fsSL https://raw.githubusercontent.com/bradyloveland/taper/main/install.sh | sudo bash`.
+
 ### Added
 - Milestone 3, security and server settings:
   - **Two-step sign-in**: codes from an authenticator app, set up with a QR code under
