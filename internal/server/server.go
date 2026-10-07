@@ -146,6 +146,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /offline", s.handleOffline)
 	mux.HandleFunc("GET /favicon.ico", s.assets.file("icons/favicon-32.png"))
 	mux.HandleFunc("GET /apple-touch-icon.png", s.assets.file("icons/apple-touch-icon.png"))
+	mux.HandleFunc("GET /apple-touch-icon-precomposed.png", s.assets.file("icons/apple-touch-icon.png"))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
