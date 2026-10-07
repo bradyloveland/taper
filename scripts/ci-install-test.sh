@@ -41,6 +41,28 @@ status="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8088/l
   --data-urlencode "username=ciadmin" --data-urlencode "password=ci-password-1")"
 [[ "$status" == 303 ]] || die "sign-in answered $status"
 
+step "Uploading a file works under the service's sandbox"
+jar="$WORK/cookies"
+base=http://127.0.0.1:8088
+curl -fsS -c "$jar" -o /dev/null -X POST "$base/login" \
+  --data-urlencode "username=ciadmin" --data-urlencode "password=ci-password-1"
+csrf() { curl -fsS -b "$jar" "$base/account" | grep -o 'name="csrf" value="[^"]*"' | head -1 | cut -d'"' -f4; }
+token="$(csrf)"
+[[ -n "$token" ]] || die "no CSRF token"
+status="$(curl -s -o /dev/null -w '%{http_code}' -b "$jar" -X POST "$base/classes/new" \
+  --data-urlencode "csrf=$token" --data-urlencode "name=CI Class")"
+[[ "$status" == 303 ]] || die "creating a class answered $status"
+echo "Light your taper at mine." > "$WORK/reading.txt"
+loc="$(curl -s -o /dev/null -w '%{redirect_url}' -b "$jar" -X POST "$base/classes/1/assignments/new" \
+  -F "csrf=$token" -F "title=CI reading" -F "publish=now" -F "files=@$WORK/reading.txt")"
+[[ "$loc" == */assignments/1 ]] || die "creating an assignment went to '$loc'"
+stored="$(find /var/lib/taper/files -type f | head -1)"
+[[ -n "$stored" && "$(stat -c %U "$stored")" == taper ]] || die "uploaded file not stored under /var/lib/taper/files"
+link="$(curl -fsS -b "$jar" "$base/assignments/1" | grep -o 'href="/files/[^"]*"' | head -1 | cut -d'"' -f2)"
+curl -fsS -b "$jar" "$base$link" | grep -q "Light your taper" || die "the uploaded file didn't download"
+curl -fsS -b "$jar" -o "$WORK/backup.tar.gz" "$base/admin/backup?files=1"
+tar -tzf "$WORK/backup.tar.gz" | grep -q '^files/' || die "the backup lacks the uploaded files"
+
 step "Re-run with a new port: settings change, data kept"
 "$rel/install.sh" --port 8090 | tee "$WORK/out2"
 grep -q "reinstalled" "$WORK/out2" || die "re-run didn't say it reinstalled"
