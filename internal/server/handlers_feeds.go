@@ -180,10 +180,15 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 	school, _ := s.appNames()
 	base := s.baseURL(r)
 	var items []cal.FeedItem
-	for _, o := range s.expand(events, from, to) {
+	occ := append(s.expand(events, from, to), s.dueOccurrences(q.ClassIDs, from, to)...)
+	sortOccurrences(occ)
+	for _, o := range occ {
 		e := o.Event
 		it := cal.FeedItem{UID: e.UID, Sequence: e.Sequence, AllDay: o.AllDay, Summary: e.Title, Location: e.Location,
 			Description: e.Description, Updated: time.Unix(e.UpdatedAt, 0), URL: base + o.Link()}
+		if o.Due {
+			it.Description = "Due date for an assignment in " + e.ClassName + "."
+		}
 		if o.Repeats {
 			it.UID = cal.FormatDate(o.Date) + "-" + e.UID
 		}

@@ -6,6 +6,24 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Milestone 6, assignments:
+  - **Assignments** for each class: a title, formatted instructions, attached files (up to
+    25 MB each), an optional due date and time, and how work is turned in (written in Taper,
+    as files, both, or on paper). Publish now, from a day and time, or keep a draft.
+  - **Scholars** download the files, write in a box that saves as they type, attach files,
+    and **turn in** their work. They can take it back until their mentor looks at it.
+  - **Mentors** see every scholar's work and status, write feedback, and mark it
+    **Complete** or **Needs another look**; the scholar can then turn it in again. Each
+    piece of work keeps a history. No grades.
+  - An **Assignments** page in the menu: to do, turned in and complete for scholars; work
+    to review first for mentors. The home page shows **Due soon** for scholars and work
+    **waiting for review** for mentors; each class's page has an **Assignments** card.
+  - **Due dates** on the class calendar, My calendar, the Coming up cards and calendar
+    subscriptions.
+  - **Settings → Download database and files**: a `.tar.gz` with the database and every
+    uploaded file. Settings shows how much space uploads use.
+
 ## [0.5.0] - 2026-10-07
 
 ### Added

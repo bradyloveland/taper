@@ -1,0 +1,108 @@
+{{define "content"}}
+<p class="crumbs"><a href="/classes/{{.D.A.ClassID}}">{{.D.A.ClassName}}</a> / <a href="/classes/{{.D.A.ClassID}}/assignments">Assignments</a> /</p>
+<section class="card readable">
+  <div class="event-head">
+    <span class="bar tall c-{{.D.A.ClassColor}}" aria-hidden="true"></span>
+    <div>
+      <h1>{{.D.A.Title}}</h1>
+      <p class="muted"><span class="{{if and .D.Overdue .D.Access.Scholar (or (eq .D.State.Kind "late") (eq .D.State.Kind "needs"))}}late-text{{end}}">{{.D.Due}}</span>{{if .D.Access.Scholar}} · <span class="badge state-{{.D.State.Kind}}">{{if eq .D.State.Kind "late"}}Past due{{else}}{{.D.State.Label}}{{end}}</span>{{end}}</p>
+    </div>
+  </div>
+  {{with .D.Status}}{{if $.D.Access.CanReview}}<div class="flash flash-warn" role="status">{{.}}</div>{{end}}{{end}}
+  {{if .D.Instructions}}<div class="prose">{{.D.Instructions}}</div>{{else}}<p class="muted">No instructions.</p>{{end}}
+  {{if .D.Files}}
+  <h2 class="small-head">Files</h2>
+  <ul class="file-list">{{range .D.Files}}<li><a href="{{.Link}}" download>{{.Name}}</a> <span class="muted small">{{.Size}}</span></li>{{end}}</ul>
+  {{end}}
+  {{if .D.Access.CanEdit}}<div class="actions spaced"><a class="button" href="/assignments/{{.D.A.ID}}/edit">Edit</a></div>{{end}}
+</section>
+
+{{if .D.Access.Scholar}}
+<section class="card readable" id="work">
+  <h2>Your work</h2>
+  {{if .D.Feedback}}
+  <div class="feedback{{if eq .D.State.Kind "needs"}} needs{{end}}">
+    <p class="small"><strong>Feedback from your mentor</strong>{{with .D.Work}} · {{when .FeedbackAt}}{{end}}</p>
+    <div class="prose">{{.D.Feedback}}</div>
+  </div>
+  {{end}}
+
+  {{if .D.Editable}}
+  {{if .D.WorkFiles}}
+  <ul class="file-list">
+    {{range .D.WorkFiles}}
+    <li><a href="{{.Link}}">{{.Name}}</a> <span class="muted small">{{.Size}}</span>
+      <form method="post" action="/assignments/{{$.D.A.ID}}/work/files/{{.ID}}/delete" class="inline-form" data-confirm="Remove {{.Name}}?">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="link-button danger-text">Remove</button>
+      </form></li>
+    {{end}}
+  </ul>
+  {{end}}
+  <form method="post" enctype="multipart/form-data" action="/assignments/{{.D.A.ID}}/work" class="form work-form" {{if .D.A.WorkOnline}}data-autosave="/assignments/{{.D.A.ID}}/work/autosave"{{end}}>
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    {{if .D.A.WorkOnline}}
+    <label for="body" class="sr-only">Your work</label>
+    <textarea id="body" name="body" rows="14" maxlength="100000" placeholder="Write here. It saves as you go.">{{.D.Body}}</textarea>
+    <p class="help"><span data-save-status aria-live="polite"></span></p>
+    {{end}}
+    {{if .D.A.AllowFiles}}
+    <label for="files">{{if .D.WorkFiles}}Attach more files{{else}}Attach files{{end}}</label>
+    <input id="files" name="files" type="file" multiple>
+    <p class="help">Documents, photos of handwritten work, recordings: up to 25 MB each.</p>
+    {{end}}
+    {{if and (not .D.A.WorkOnline) (not .D.A.AllowFiles)}}<p class="muted">Do this one on paper or in person, then mark it turned in here.</p>{{end}}
+    <div class="actions">
+      <button type="submit" name="action" value="turn_in" class="button primary">{{if eq .D.State.Kind "needs"}}Turn in again{{else}}Turn in{{end}}</button>
+      {{if or .D.A.WorkOnline .D.A.AllowFiles}}<button type="submit" name="action" value="save" class="button">Save without turning in</button>{{end}}
+    </div>
+  </form>
+  {{else}}
+  {{if .D.BodyHTML}}<div class="prose work-body">{{.D.BodyHTML}}</div>{{end}}
+  {{if .D.WorkFiles}}<ul class="file-list">{{range .D.WorkFiles}}<li><a href="{{.Link}}">{{.Name}}</a> <span class="muted small">{{.Size}}</span></li>{{end}}</ul>{{end}}
+  {{if and .D.Work (eq .D.Work.Status "turned_in")}}
+  <p class="muted">Turned in {{when .D.Work.TurnedInAt}}{{if .D.State.Late}}, after the due time{{end}}. Your mentor will look at it.</p>
+  {{if not .D.Access.Class.Archived}}
+  <form method="post" action="/assignments/{{.D.A.ID}}/work/take-back">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit" class="button">Take it back to change it</button>
+  </form>
+  {{end}}
+  {{else if and .D.Work (eq .D.Work.Status "complete")}}
+  <p class="muted">Your mentor marked this complete. Well done.</p>
+  {{else if .D.Access.Class.Archived}}
+  <p class="muted">This class is archived, so work can't be turned in any more.</p>
+  {{end}}
+  {{end}}
+
+  {{if .D.History}}
+  <details class="history">
+    <summary class="small">History</summary>
+    <ul class="history-list">{{range .D.History}}<li><span class="muted small">{{when .At}}</span> {{happened .Kind}}{{if and .By (or (eq .Kind "needs_work") (eq .Kind "complete"))}} by {{.By}}{{end}}</li>{{end}}</ul>
+  </details>
+  {{end}}
+</section>
+{{end}}
+
+{{if .D.Access.CanReview}}
+<section class="card" id="roster">
+  <div class="row-head"><h2>Scholars' work</h2><span class="muted small">{{.D.TurnedIn}} to review · {{.D.Needs}} sent back · {{.D.Done}} of {{len .D.Roster}} complete</span></div>
+  {{if .D.Roster}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Scholar</th><th>Status</th><th>Turned in</th><th><span class="sr-only">Open</span></th></tr></thead>
+    <tbody>
+    {{range .D.Roster}}
+    <tr>
+      <td data-label="Scholar"><a href="/assignments/{{$.D.A.ID}}/work/{{.Scholar.ID}}">{{.Scholar.DisplayName}}</a></td>
+      <td data-label="Status"><span class="badge state-{{.State.Kind}}">{{if eq .State.Kind "late"}}Past due{{else}}{{.State.Label}}{{end}}</span></td>
+      <td data-label="Turned in">{{if .When}}{{when .When}}{{if .State.Late}} <span class="late-text small">late</span>{{end}}{{else}}<span class="muted">Not yet</span>{{end}}</td>
+      <td><a class="button small{{if eq .State.Kind "in"}} primary{{end}}" href="/assignments/{{$.D.A.ID}}/work/{{.Scholar.ID}}">{{if eq .State.Kind "in"}}Review{{else}}Open{{end}}</a></td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="muted">No scholars in this class yet.</p>{{end}}
+</section>
+{{end}}
+{{end}}

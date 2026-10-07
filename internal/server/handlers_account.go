@@ -15,6 +15,8 @@ import (
 
 type homeData struct {
 	Upcoming []occurrence
+	DueSoon  []assignItem // for scholars: work due in the next week, or past due
+	ToReview int          // for mentors: work turned in and waiting
 	Greeting string
 	Classes  []*store.Class // the person's own classes
 	NClasses int            // current classes at the school, for admins
@@ -46,6 +48,8 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		q.ClassIDs = append(q.ClassIDs, c.ID)
 	}
 	d.Upcoming = s.upcoming(q, 14, 8)
+	d.DueSoon = s.dueSoon(current(r).user, d.Classes)
+	d.ToReview = s.toReview(current(r).user, d.Classes)
 	if current(r).user.IsAdmin() {
 		d.NClasses, _ = s.store.CountClasses()
 		counts, err := s.store.RoleCounts()
@@ -151,6 +155,7 @@ type settingsData struct {
 	Network     string
 	DataDir     string
 	DBSize      string
+	FilesSize   string // uploaded files
 	Schema      int
 	ReportRepo  string
 	DefaultRepo string
@@ -177,6 +182,9 @@ func (s *Server) renderSettingsWith(w http.ResponseWriter, r *http.Request, stat
 		}
 	}
 	d.DBSize = humanSize(size)
+	if n, err := s.store.FilesSize(); err == nil {
+		d.FilesSize = humanSize(n)
+	}
 	if list, err := s.store.ListBugReports(1000); err == nil {
 		d.Reports = len(list)
 	}

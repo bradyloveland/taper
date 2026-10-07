@@ -44,9 +44,13 @@ select **Upload and check**.
 
 - Before every update, Taper saves a copy of the database in
   `/var/lib/taper/backups/`. It keeps the last five.
-- **Settings → Download a backup** (or the link at the bottom of the Updates page)
-  downloads a copy of the whole database at any time. Keep it somewhere safe and
-  private, because it holds everyone's accounts and work.
+- **Settings → Download database and files** (also linked at the bottom of the
+  Updates page) downloads the whole database and every file attached to
+  assignments and work, as one `.tar.gz`, at any time. **Database only** leaves
+  out the files. Keep backups somewhere safe and private: they hold everyone's
+  accounts and work.
+- Updates don't touch the uploaded files, so the copies made before an update
+  are of the database only.
 - From the server: `sudo taper backup /var/lib/taper/backup-$(date +%F).db`
 
 To restore a backup, see [Installing Taper](install.md#backups).

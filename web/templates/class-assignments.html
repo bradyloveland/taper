@@ -1,0 +1,18 @@
+{{define "content"}}
+<p class="crumbs"><a href="/classes">Classes</a> / <a href="/classes/{{.D.Class.ID}}">{{.D.Class.Name}}</a> /</p>
+<div class="page-head row-head">
+  <h1>Assignments</h1>
+  {{if .D.Access.CanEdit}}<a class="button primary" href="/classes/{{.D.Class.ID}}/assignments/new">New assignment</a>{{end}}
+</div>
+<section class="card">
+  {{if .D.Upcoming}}
+  <ul class="agenda-list">{{range .D.Upcoming}}{{template "assign-item" (pair . $.D.Reviewer)}}{{end}}</ul>
+  {{else}}<p class="muted">{{if .D.Past}}Nothing coming up.{{else}}No assignments yet.{{end}}</p>{{end}}
+</section>
+{{if .D.Past}}
+<section class="card">
+  <h2>Earlier</h2>
+  <ul class="agenda-list">{{range .D.Past}}{{template "assign-item" (pair . $.D.Reviewer)}}{{end}}</ul>
+</section>
+{{end}}
+{{end}}

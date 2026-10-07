@@ -568,3 +568,105 @@ func mustDate(s string) time.Time {
 	}
 	return t
 }
+
+func TestAssignments(t *testing.T) {
+	s := openTest(t)
+	mentor := &User{Username: "mia", DisplayName: "Mia", Role: RoleMentor, PasswordHash: "x", Active: true}
+	sam := &User{Username: "sam", DisplayName: "Sam", Role: RoleScholar, PasswordHash: "x", Active: true}
+	for _, u := range []*User{mentor, sam} {
+		if err := s.CreateUser(u); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c := &Class{Name: "Logic", Color: "blue"}
+	if err := s.CreateClass(c); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().Unix()
+	a1 := &Assignment{ClassID: c.ID, Title: "Later", DueDate: "2026-11-02", PublishAt: now - 10, CreatedBy: mentor.ID}
+	a2 := &Assignment{ClassID: c.ID, Title: "Sooner", DueDate: "2026-11-01", DueTime: "09:00", PublishAt: now - 10}
+	a3 := &Assignment{ClassID: c.ID, Title: "Draft"}
+	a4 := &Assignment{ClassID: c.ID, Title: "Undated", PublishAt: now - 10}
+	for _, a := range []*Assignment{a1, a2, a3, a4} {
+		if err := s.CreateAssignment(a); err != nil {
+			t.Fatal(err)
+		}
+	}
+	list, err := s.ListAssignments(AssignmentQuery{ClassIDs: []int64{c.ID}, PublishedOnly: true, Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var titles []string
+	for _, a := range list {
+		titles = append(titles, a.Title)
+	}
+	if strings.Join(titles, ",") != "Sooner,Later,Undated" || list[0].ClassName != "Logic" {
+		t.Fatalf("published, by due date: %v", titles)
+	}
+	if list, _ := s.ListAssignments(AssignmentQuery{ClassIDs: []int64{c.ID}, DueFrom: "2026-11-02", DueTo: "2026-11-30"}); len(list) != 1 || list[0].ID != a1.ID {
+		t.Fatalf("due range: %v", list)
+	}
+
+	// Work moves draft → turned in → needs work → turned in → complete.
+	w, err := s.StartSubmission(a1.ID, sam.ID)
+	if err != nil || w.Status != WorkDraft {
+		t.Fatal(w, err)
+	}
+	if again, _ := s.StartSubmission(a1.ID, sam.ID); again.ID != w.ID {
+		t.Fatal("starting twice must return the same work")
+	}
+	if err := s.SaveWork(w.ID, "first"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetWorkStatus(w.ID, []string{WorkDraft}, WorkTurnedIn, sam.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveWork(w.ID, "changed"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("saving turned-in work: %v", err)
+	}
+	if err := s.SetWorkStatus(w.ID, []string{WorkDraft}, WorkTurnedIn, sam.ID, nil); !errors.Is(err, ErrWrongStatus) {
+		t.Fatalf("turning in twice: %v", err)
+	}
+	note := "More, please."
+	if err := s.SetWorkStatus(w.ID, []string{WorkTurnedIn}, WorkNeedsWork, mentor.ID, &note); err != nil {
+		t.Fatal(err)
+	}
+	counts, _ := s.StatusCounts([]int64{a1.ID, a2.ID})
+	if counts[a1.ID][WorkNeedsWork] != 1 || len(counts[a2.ID]) != 0 {
+		t.Fatalf("counts: %v", counts)
+	}
+	w, _ = s.GetSubmission(a1.ID, sam.ID)
+	if w.Feedback != note || w.FeedbackBy != mentor.ID || w.TurnedInAt == 0 || !w.Editable() {
+		t.Fatalf("after feedback: %+v", w)
+	}
+	hist, _ := s.SubmissionHistory(w.ID)
+	if len(hist) != 2 || hist[0].Kind != WorkTurnedIn || hist[1].By != "Mia" || hist[1].Note != note {
+		t.Fatalf("history: %+v", hist)
+	}
+
+	// Files: deleting the assignment leaves its files' records to clean up.
+	f1 := &File{OwnerKind: FileForAssignment, OwnerID: a1.ID, Name: "a.pdf", Size: 10, ContentType: "application/pdf", Stored: "aa/a1"}
+	f2 := &File{OwnerKind: FileForSubmission, OwnerID: w.ID, Name: "b.txt", Size: 5, ContentType: "text/plain", Stored: "bb/b1"}
+	f3 := &File{OwnerKind: FileForAssignment, OwnerID: a2.ID, Name: "c.txt", Size: 7, ContentType: "text/plain", Stored: "cc/c1"}
+	for _, f := range []*File{f1, f2, f3} {
+		if err := s.AddFile(f); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n, _ := s.FilesSize(); n != 22 {
+		t.Fatalf("files size %d", n)
+	}
+	if err := s.DeleteAssignment(a1.ID); err != nil {
+		t.Fatal(err)
+	}
+	paths, err := s.OrphanFiles()
+	if err != nil || strings.Join(paths, ",") != "aa/a1,bb/b1" {
+		t.Fatalf("orphans: %v %v", paths, err)
+	}
+	if left, _ := s.ListFiles(FileForAssignment, a2.ID); len(left) != 1 {
+		t.Fatal("other files must stay")
+	}
+	if _, err := s.GetSubmissionByID(w.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatal("work goes with its assignment")
+	}
+}

@@ -27,9 +27,13 @@
     <dt>Data folder</dt><dd><code>{{.D.DataDir}}</code></dd>
     <dt>Email</dt><dd>{{if .D.Email}}Set up{{else}}Not set up{{end}} · <a href="/admin/email">{{if .D.Email}}Email settings{{else}}Set up email{{end}}</a></dd>
     <dt>Database</dt><dd>{{.D.DBSize}} · schema {{.D.Schema}}</dd>
+    <dt>Uploaded files</dt><dd>{{.D.FilesSize}}</dd>
   </dl>
-  <p><a class="button" href="/admin/backup">Download a backup</a></p>
-  <p class="help">A copy of the whole database: people, classes and everything else. Keep it somewhere safe and private.</p>
+  <div class="actions">
+    <a class="button" href="/admin/backup?files=1">Download database and files</a>
+    <a class="button" href="/admin/backup">Database only</a>
+  </div>
+  <p class="help">The database holds people, classes, calendars, assignments and written work. Files attached to assignments and work are kept beside it; the first button includes them in one <code>.tar.gz</code> file. Keep backups somewhere safe and private.</p>
 </section>
 </div>
 

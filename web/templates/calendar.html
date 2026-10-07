@@ -44,7 +44,7 @@
     <div class="day{{if not .InMonth}} out{{end}}{{if .Today}} today{{end}}{{if .Closed}} closed{{end}}" role="cell">
       <a class="day-num" href="/calendar?view=week&amp;cal={{$.D.Key}}&amp;date={{.Date.Format "2006-01-02"}}" aria-label="{{.Date.Format "Monday, January 2"}}">{{.Date.Day}}</a>
       {{range .Items}}
-      <a class="chip-event c-{{if .Event.ClassColor}}{{.Event.ClassColor}}{{else}}school{{end}}{{if .Event.Closed}} closed{{end}}" href="{{.Link}}" title="{{.Event.Title}}">{{with .StartClock}}<span class="t">{{.}}</span> {{end}}{{.Event.Title}}</a>
+      <a class="chip-event c-{{if .Event.ClassColor}}{{.Event.ClassColor}}{{else}}school{{end}}{{if .Event.Closed}} closed{{end}}{{if .Due}} due{{end}}" href="{{.Link}}" title="{{.Event.Title}}">{{with .StartClock}}<span class="t">{{.}}</span> {{end}}{{.Event.Title}}</a>
       {{end}}
     </div>
     {{end}}

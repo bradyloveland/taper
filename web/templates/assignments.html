@@ -1,0 +1,44 @@
+{{define "content"}}
+<div class="page-head"><h1>Assignments</h1></div>
+{{if not .D.Classes}}
+<section class="card"><p class="muted">{{if .User.IsMentor}}You're not mentoring any classes yet, so there are no assignments here. Assignments are set from each class's page. <a href="/classes">See all classes</a>.{{else}}You're not in any classes yet. Your mentors or an admin will add you.{{end}}</p></section>
+{{end}}
+
+{{if .D.Reviewer}}
+<section class="card">
+  <h2>Your classes' assignments</h2>
+  {{if .D.Mentored}}
+  <ul class="agenda-list">{{range .D.Mentored}}{{template "assign-item" (pair . true)}}{{end}}</ul>
+  {{else}}<p class="muted">Nothing coming up. Add assignments from a class's page.</p>{{end}}
+</section>
+{{if .D.Past}}
+<details class="card">
+  <summary><h2 class="inline">Past due dates ({{len .D.Past}})</h2></summary>
+  <ul class="agenda-list">{{range .D.Past}}{{template "assign-item" (pair . true)}}{{end}}</ul>
+</details>
+{{end}}
+{{end}}
+
+{{if or .D.ToDo .D.Waiting .D.Done}}
+<section class="card">
+  <h2>To do</h2>
+  {{if .D.ToDo}}<ul class="agenda-list">{{range .D.ToDo}}{{template "assign-item" (pair . false)}}{{end}}</ul>
+  {{else}}<p class="muted">Nothing to do right now.</p>{{end}}
+</section>
+{{if .D.Waiting}}
+<section class="card">
+  <h2>Turned in</h2>
+  <p class="muted small">Waiting for your mentor to look at it. You can take work back to change it until they do.</p>
+  <ul class="agenda-list">{{range .D.Waiting}}{{template "assign-item" (pair . false)}}{{end}}</ul>
+</section>
+{{end}}
+{{if .D.Done}}
+<details class="card">
+  <summary><h2 class="inline">Complete ({{len .D.Done}})</h2></summary>
+  <ul class="agenda-list">{{range .D.Done}}{{template "assign-item" (pair . false)}}{{end}}</ul>
+</details>
+{{end}}
+{{else if and .D.Classes (not .D.Reviewer)}}
+<section class="card"><p class="muted">No assignments yet. They'll show here when your mentors set them.</p></section>
+{{end}}
+{{end}}

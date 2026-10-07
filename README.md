@@ -8,7 +8,7 @@ Taper gives a school one place for its classes, school and class calendars,
 assignments and chat. Admins, mentors and scholars each get their own view. The
 school runs it on its own Debian server, so its data stays with the school.
 
-> **Status:** in early development (milestones 1 to 5 of 8). See the [plan and milestones](docs/plan.md).
+> **Status:** in early development (milestones 1 to 6 of 8). See the [plan and milestones](docs/plan.md).
 
 ## Features (planned for 1.0)
 
@@ -20,7 +20,7 @@ school runs it on its own Debian server, so its data stays with the school.
   online and turn it in; mentors give written feedback. No letter grades.
 - **Chat:** a community channel and a channel for each class.
 - **Works on phones:** add it to the home screen on Android and iOS (PWA).
-- **Easy to run:** one program and one database file, a one-line installer,
+- **Easy to run:** one program, one database file and a folder of uploads, a one-line installer,
   updates from GitHub in the web interface, and in-app bug reports that go to
   GitHub issues.
 - **Built-in guide:** the [user guide](docs/guide/) is also in the app.

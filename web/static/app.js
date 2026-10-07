@@ -144,6 +144,63 @@
     check();
   }
 
+  // Assignment form: the publish day and time show only for "Later".
+  const publish = document.querySelector('[data-publish]');
+  if (publish) {
+    const later = publish.querySelector('[data-publish-later]');
+    const update = () => {
+      const on = publish.querySelector('input[name=publish]:checked');
+      later.hidden = !(on && on.value === 'later');
+    };
+    publish.addEventListener('change', update);
+    update();
+  }
+
+  // Scholars' writing saves itself a few seconds after they stop typing,
+  // and at least every 20 seconds while they type.
+  const work = document.querySelector('form[data-autosave]');
+  if (work) {
+    const box = work.querySelector('textarea[name=body]');
+    const status = work.querySelector('[data-save-status]');
+    const url = work.getAttribute('data-autosave');
+    let saved = box.value, timer = null, first = 0, busy = false;
+    const say = (t) => { if (status) status.textContent = t; };
+    const payload = () => {
+      const fd = new FormData();
+      fd.append('csrf', work.querySelector('input[name=csrf]').value);
+      fd.append('body', box.value);
+      return fd;
+    };
+    const save = () => {
+      clearTimeout(timer);
+      timer = null;
+      first = 0;
+      if (busy || box.value === saved) return;
+      busy = true;
+      const text = box.value;
+      say('Saving…');
+      fetch(url, { method: 'POST', body: payload(), credentials: 'same-origin' })
+        .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+        .then(({ ok, j }) => {
+          if (ok) { saved = text; say('Saved at ' + j.saved + '. Not turned in yet.'); }
+          else say('Not saved: ' + (j.error || 'try the Save button.'));
+        })
+        .catch(() => say('Not saved: you may be offline. Keep this page open and try again.'))
+        .finally(() => { busy = false; if (box.value !== saved && !timer) timer = setTimeout(save, 3000); });
+    };
+    box.addEventListener('input', () => {
+      say('');
+      const now = Date.now();
+      if (!first) first = now;
+      clearTimeout(timer);
+      timer = setTimeout(save, now - first > 20000 ? 0 : 3000);
+    });
+    work.addEventListener('submit', () => { clearTimeout(timer); saved = box.value; });
+    window.addEventListener('pagehide', () => {
+      if (box.value !== saved && navigator.sendBeacon) navigator.sendBeacon(url, payload());
+    });
+  }
+
   // Filter boxes for long lists of people.
   document.querySelectorAll('[data-filter]').forEach((box) => {
     const list = document.getElementById(box.getAttribute('data-filter'));

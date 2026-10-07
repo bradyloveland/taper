@@ -11,6 +11,8 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
+	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 )
 
@@ -21,6 +23,7 @@ type LinkFunc func(dest string) string
 type Options struct {
 	Links      LinkFunc // rewrites link and image destinations
 	HeadingIDs bool     // add id attributes to headings (for the guide)
+	HardWraps  bool     // keep single line breaks, for writing that isn't Markdown-aware
 }
 
 // Render converts src to HTML.
@@ -29,9 +32,14 @@ func Render(src []byte, opt Options) (template.HTML, error) {
 	if opt.HeadingIDs {
 		popts = append(popts, parser.WithAutoHeadingID())
 	}
+	var ropts []renderer.Option
+	if opt.HardWraps {
+		ropts = append(ropts, html.WithHardWraps())
+	}
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithParserOptions(popts...),
+		goldmark.WithRendererOptions(ropts...),
 	)
 	doc := md.Parser().Parse(text.NewReader(src))
 	if opt.Links != nil {

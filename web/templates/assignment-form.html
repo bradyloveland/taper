@@ -1,0 +1,71 @@
+{{define "content"}}
+<p class="crumbs"><a href="/classes/{{.D.Class.ID}}">{{.D.Class.Name}}</a> / <a href="/classes/{{.D.Class.ID}}/assignments">Assignments</a> /{{if not .D.IsNew}} <a href="/assignments/{{.D.A.ID}}">{{.D.A.Title}}</a> /{{end}}</p>
+<div class="page-head"><h1>{{if .D.IsNew}}New assignment{{else}}Edit assignment{{end}}</h1></div>
+<section class="card readable">
+  {{with .D.Error}}<div class="flash flash-error" role="alert" id="form-error">{{.}}</div>{{end}}
+  <form method="post" enctype="multipart/form-data" action="{{if .D.IsNew}}/classes/{{.D.Class.ID}}/assignments/new{{else}}/assignments/{{.D.A.ID}}/edit{{end}}" class="form assign-form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="title">Title</label>
+    <input id="title" name="title" {{if eq .D.Field "title"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} required maxlength="100" value="{{.D.Form.title}}" {{if .D.IsNew}}autofocus{{end}} placeholder="Read chapter 3 and respond">
+
+    <label for="instructions">Instructions <span class="muted">(optional)</span></label>
+    <textarea id="instructions" name="instructions" {{if eq .D.Field "instructions"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} rows="10" maxlength="50000">{{.D.Form.instructions}}</textarea>
+    <p class="help">Formatting: <code>**bold**</code>, <code>*italic*</code>, <code>- list items</code>, <code>[link text](https://…)</code>, and a blank line between paragraphs.</p>
+
+    <label for="files">Attach files <span class="muted">(optional)</span></label>
+    {{if .D.Files}}<p class="help">Attached now: {{range $i, $f := .D.Files}}{{if $i}}, {{end}}{{$f.Name}}{{end}}. Remove them below the form.</p>{{end}}
+    <input id="files" name="files" type="file" multiple>
+    <p class="help">Readings, worksheets, templates: up to 25 MB each. Scholars download them from the assignment.</p>
+
+    <div class="when-grid two">
+      <div><label for="due_date">Due <span class="muted">(optional)</span></label><input id="due_date" name="due_date" type="date" {{if eq .D.Field "due_date"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} value="{{.D.Form.due_date}}"></div>
+      <div><label for="due_time">by <span class="muted">(optional)</span></label><input id="due_time" name="due_time" type="time" {{if eq .D.Field "due_time"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} value="{{.D.Form.due_time}}"></div>
+    </div>
+    <p class="help">Without a time, it's due by the end of the day. Due dates show on the class calendar.</p>
+
+    <fieldset class="choices">
+      <legend>How scholars turn it in</legend>
+      <label class="check"><input type="checkbox" name="work_online" value="1" {{if eq .D.Form.work_online "1"}}checked{{end}}><span><strong>Write it in Taper</strong>, in a box that saves as they type</span></label>
+      <label class="check"><input type="checkbox" name="allow_files" value="1" {{if eq .D.Form.allow_files "1"}}checked{{end}}><span><strong>Attach files</strong>, such as a document, photos of handwritten work, or a recording</span></label>
+      <p class="help">With neither, scholars just mark it turned in, for work done on paper or in person.</p>
+    </fieldset>
+
+    <fieldset class="choices" data-publish>
+      <legend>When scholars see it</legend>
+      <label class="check"><input type="radio" name="publish" value="now" {{if eq .D.Form.publish "now"}}checked{{end}}><span><strong>{{if and .D.A (eq .D.Form.publish "now")}}Published{{else}}Now{{end}}</strong></span></label>
+      <label class="check"><input type="radio" name="publish" value="later" {{if eq .D.Form.publish "later"}}checked{{end}}><span><strong>Later</strong>, from a day and time</span></label>
+      <div class="when-grid two indent" data-publish-later>
+        <div><label for="publish_date">On</label><input id="publish_date" name="publish_date" type="date" {{if eq .D.Field "publish_date"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} value="{{.D.Form.publish_date}}"></div>
+        <div><label for="publish_time">at</label><input id="publish_time" name="publish_time" type="time" {{if eq .D.Field "publish_time"}}class="invalid" aria-invalid="true" aria-describedby="form-error"{{end}} value="{{or .D.Form.publish_time "07:00"}}"></div>
+      </div>
+      <label class="check"><input type="radio" name="publish" value="draft" {{if eq .D.Form.publish "draft"}}checked{{end}}><span><strong>Not yet</strong>: keep it as a draft</span></label>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" class="button primary">{{if .D.IsNew}}Save assignment{{else}}Save{{end}}</button>
+      <a class="button" href="{{if .D.IsNew}}/classes/{{.D.Class.ID}}{{else}}/assignments/{{.D.A.ID}}{{end}}">Cancel</a>
+    </div>
+  </form>
+
+  {{if .D.Files}}
+  <h2>Attached files</h2>
+  <ul class="file-list">
+    {{range .D.Files}}
+    <li><a href="{{.Link}}">{{.Name}}</a> <span class="muted small">{{.Size}}</span>
+      <form method="post" action="/assignments/{{$.D.A.ID}}/files/{{.ID}}/delete" class="inline-form" data-confirm="Remove {{.Name}}?">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="link-button danger-text">Remove</button>
+      </form></li>
+    {{end}}
+  </ul>
+  {{end}}
+
+  {{if not .D.IsNew}}
+  <h2>Delete</h2>
+  <form method="post" action="/assignments/{{.D.A.ID}}/delete" data-confirm="Delete {{.D.A.Title}}, with all the work scholars turned in for it? This can't be undone.">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <p class="muted">Deleting it removes the work scholars turned in for it too.</p>
+    <button type="submit" class="button danger">Delete assignment</button>
+  </form>
+  {{end}}
+</section>
+{{end}}

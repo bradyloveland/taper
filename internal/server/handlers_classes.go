@@ -105,6 +105,9 @@ func (s *Server) handleClasses(w http.ResponseWriter, r *http.Request) {
 
 type classData struct {
 	Upcoming    []occurrence
+	Assignments []assignItem
+	NAssign     int // all the assignments the viewer can see
+	Reviewer    bool
 	Class       *store.Class
 	Access      classAccess
 	Description template.HTML
@@ -136,6 +139,9 @@ func (s *Server) handleClass(w http.ResponseWriter, r *http.Request) {
 	d := classData{Class: c, Access: a}
 	d.Mentors, d.Scholars = splitMembers(members)
 	d.Upcoming = s.upcoming(store.EventQuery{ClassIDs: []int64{c.ID}}, 31, 6)
+	u := current(r).user
+	d.Reviewer = u.IsAdmin() || a.Role == store.ClassMentor
+	d.Assignments, d.NAssign = s.classAssignments(c, a, u, 6)
 	if c.Description != "" {
 		d.Description, _ = markdown.Render([]byte(c.Description), markdown.Options{})
 	}
@@ -300,6 +306,7 @@ func (s *Server) handleClassDelete(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, "deleting class", err)
 		return
 	}
+	s.cleanFiles()
 	slog.Info("class deleted", "by", current(r).user.Username, "class", c.Name)
 	s.redirect(w, r, "/classes?archived=1", c.Name+" is deleted.")
 }

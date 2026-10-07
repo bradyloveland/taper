@@ -9,6 +9,7 @@ guide is in the app (under **Guide**) and on GitHub.
 
 - [Getting started](getting-started.md): signing in for the first time, and what admins, mentors and scholars can do.
 - [Classes](classes.md): your classes, and how admins and mentors set them up.
+- [Assignments](assignments.md): setting work, turning it in, and feedback without grades.
 - [Calendars](calendar.md): the school and class calendars, adding events, and subscribing in Google, Apple or Outlook.
 - [Your account](account.md): your name, password, and signing out on other devices.
 - [Two-step sign-in](two-step.md): add a code from your phone, and what to do if you lose it.
@@ -26,5 +27,4 @@ guide is in the app (under **Guide**) and on GitHub.
 
 ## Coming in later versions
 
-Assignments and chat. See the
-[plan and milestones](../plan.md).
+Community and class chat. See the [plan and milestones](../plan.md).
