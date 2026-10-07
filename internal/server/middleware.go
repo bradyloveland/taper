@@ -176,7 +176,8 @@ func (s *Server) loadSession(next http.Handler) http.Handler {
 // public paths work before setup and while a password change is pending.
 func public(path string) bool {
 	switch path {
-	case "/manifest.webmanifest", "/sw.js", "/offline", "/favicon.ico", "/apple-touch-icon.png", "/healthz":
+	case "/manifest.webmanifest", "/sw.js", "/offline", "/favicon.ico", "/apple-touch-icon.png",
+		"/apple-touch-icon-precomposed.png", "/healthz":
 		return true
 	}
 	return strings.HasPrefix(path, "/static/")

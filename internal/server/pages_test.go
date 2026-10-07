@@ -162,6 +162,13 @@ func TestPWA(t *testing.T) {
 	if !has192 || !has512 || !maskable {
 		t.Fatalf("manifest icons incomplete: %+v", m.Icons)
 	}
+	// iOS shows a letter instead of an SVG icon, so the manifest has PNGs only.
+	for _, ic := range m.Icons {
+		if !strings.Contains(ic.Src, ".png") {
+			t.Errorf("manifest icon %s isn't a PNG", ic.Src)
+		}
+	}
+	expect(t, b.get("/apple-touch-icon-precomposed.png"), http.StatusOK)
 
 	sw := b.get("/sw.js")
 	expect(t, sw, http.StatusOK, "taper-", "/static/app.css?v=")
@@ -188,7 +195,8 @@ func TestPWA(t *testing.T) {
 
 	// The layout links everything a phone needs.
 	page := b.get("/login")
-	expect(t, page, http.StatusOK, `rel="manifest"`, `rel="apple-touch-icon"`, `name="theme-color"`, `name="viewport"`)
+	expect(t, page, http.StatusOK, `rel="manifest"`, `rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png?v=`,
+		`name="theme-color"`, `name="viewport"`)
 }
 
 func TestBehindProxy(t *testing.T) {

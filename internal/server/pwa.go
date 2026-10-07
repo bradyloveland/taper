@@ -31,11 +31,13 @@ func (s *Server) handleManifest(w http.ResponseWriter, r *http.Request) {
 		"orientation":      "any",
 		"theme_color":      themeColor,
 		"background_color": backgroundColor,
+		// PNG only: iOS can't use an SVG home-screen icon and shows a
+		// letter instead, if it picks one from the manifest.
 		"icons": []map[string]string{
+			icon("icons/apple-touch-icon.png", "180x180", "any", "image/png"),
 			icon("icons/icon-192.png", "192x192", "any", "image/png"),
 			icon("icons/icon-512.png", "512x512", "any", "image/png"),
 			icon("icons/icon-maskable-512.png", "512x512", "maskable", "image/png"),
-			icon("icons/icon.svg", "any", "any", "image/svg+xml"),
 		},
 	}
 	w.Header().Set("Content-Type", "application/manifest+json")
