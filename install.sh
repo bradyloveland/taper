@@ -284,7 +284,14 @@ fi
 # ---- done ------------------------------------------------------------------------------
 say "Done."
 if [[ -n "$OLD_VERSION" && "$OLD_VERSION" != "$NEW_VERSION" ]]; then
-  echo "Upgraded from $OLD_VERSION to $NEW_VERSION. Your data and settings were kept."
+  # "Upgraded" only when it's clearly newer; development builds (with a
+  # suffix like -dev) don't compare cleanly, so they just say "Changed".
+  if [[ "$OLD_VERSION$NEW_VERSION" != *-* ]] &&
+     [[ "$(printf '%s\n%s\n' "$OLD_VERSION" "$NEW_VERSION" | sort -V | tail -n1)" == "$NEW_VERSION" ]]; then
+    echo "Upgraded from $OLD_VERSION to $NEW_VERSION. Your data and settings were kept."
+  else
+    echo "Changed from version $OLD_VERSION to $NEW_VERSION. Your data and settings were kept."
+  fi
 elif [[ $FRESH -eq 0 ]]; then
   echo "Taper $NEW_VERSION reinstalled. Your data and settings were kept."
 else

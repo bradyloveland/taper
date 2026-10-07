@@ -18,8 +18,14 @@ var (
 	recoveryRE = regexp.MustCompile(`<code>([a-z2-9]{5}-[a-z2-9]{5})</code>`)
 )
 
+// totpNow returns the code for the current step plus offset. It avoids the
+// last seconds of a step, so the step can't change before the server checks
+// the code (which made this test flaky under the race detector).
 func totpNow(t *testing.T, secret string, offset int64) string {
 	t.Helper()
+	if into := time.Now().Unix() % auth.TOTPPeriod; into >= auth.TOTPPeriod-3 {
+		time.Sleep(time.Duration(auth.TOTPPeriod-into+1) * time.Second)
+	}
 	c, err := auth.TOTPCode(secret, time.Now().Unix()/auth.TOTPPeriod+offset, 6)
 	if err != nil {
 		t.Fatal(err)

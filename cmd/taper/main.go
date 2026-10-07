@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+	_ "time/tzdata" // the time zone database, for servers without one
 
 	"github.com/bradyloveland/taper/internal/auth"
 	"github.com/bradyloveland/taper/internal/config"

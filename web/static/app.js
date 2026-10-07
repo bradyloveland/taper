@@ -75,6 +75,75 @@
     setTimeout(poll, 2500);
   }
 
+  // Selects that change the page straight away.
+  document.querySelectorAll('select[data-autosubmit]').forEach((sel) => {
+    sel.addEventListener('change', () => sel.form.submit());
+  });
+
+  // The event form shows only the fields that apply.
+  const eventForm = document.querySelector('.event-form');
+  if (eventForm) {
+    const allDay = eventForm.querySelector('[data-allday]');
+    const repeat = eventForm.querySelector('[data-repeat]');
+    const cal = eventForm.querySelector('[data-closed-toggle]');
+    const show = (els, on) => els.forEach((el) => { el.hidden = !on; });
+    const update = () => {
+      show(eventForm.querySelectorAll('.time-field'), !allDay.checked);
+      show(eventForm.querySelectorAll('[data-weekly]'), repeat.value === 'weekly');
+      show(eventForm.querySelectorAll('[data-repeating]'), repeat.value !== '');
+      if (cal) show(eventForm.querySelectorAll('[data-closed-field]'), cal.value === 'school');
+    };
+    [allDay, repeat, cal].forEach((el) => el && el.addEventListener('change', update));
+    update();
+    // Moving the start moves the end with it, keeping the event's length
+    // (a 9–10 AM event moved to 6 PM becomes 6–7 PM).
+    const sd = eventForm.querySelector('#start_date'), st = eventForm.querySelector('#start_time');
+    const ed = eventForm.querySelector('#end_date'), et = eventForm.querySelector('#end_time');
+    const pad = (n) => String(n).padStart(2, '0');
+    const at = (d, t) => (d ? new Date(d + 'T' + (allDay.checked || !t ? '00:00' : t)) : null);
+    const ok = (x) => x && !isNaN(x);
+    const day = (x) => x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate());
+    const clock = (x) => pad(x.getHours()) + ':' + pad(x.getMinutes());
+    let before = at(sd.value, st.value);
+    const follow = () => {
+      const start = at(sd.value, st.value), end = at(ed.value, et.value);
+      if (ok(start) && ok(before)) {
+        let length = ok(end) ? end - before : 0;
+        if (!(length > 0) && !allDay.checked) length = 60 * 60 * 1000;
+        if (length < 0) length = 0;
+        const moved = new Date(start.getTime() + length);
+        ed.value = day(moved);
+        if (!allDay.checked) et.value = clock(moved);
+      }
+      before = start;
+      check();
+    };
+    // An end before the start can't be saved; say so on the field itself.
+    const check = () => {
+      const start = at(sd.value, st.value), end = at(ed.value, et.value);
+      let msg = '';
+      if (ok(start) && ok(end)) {
+        if (allDay.checked ? end < start : end <= start) {
+          msg = allDay.checked
+            ? 'The last day is before the first day.'
+            : 'Event end time is before it starts. Choose a later end time, or a later end date if it goes past midnight.';
+        }
+      }
+      const field = allDay.checked ? ed : et;
+      [ed, et].forEach((f) => { f.setCustomValidity(''); f.classList.remove('invalid'); f.removeAttribute('aria-invalid'); });
+      if (msg) {
+        field.setCustomValidity(msg);
+        field.classList.add('invalid');
+        field.setAttribute('aria-invalid', 'true');
+      }
+    };
+    sd.addEventListener('change', follow);
+    st.addEventListener('change', follow);
+    [ed, et, allDay].forEach((f) => f.addEventListener('change', check));
+    [ed, et].forEach((f) => f.addEventListener('input', check));
+    check();
+  }
+
   // Filter boxes for long lists of people.
   document.querySelectorAll('[data-filter]').forEach((box) => {
     const list = document.getElementById(box.getAttribute('data-filter'));

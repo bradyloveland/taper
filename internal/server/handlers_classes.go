@@ -104,6 +104,7 @@ func (s *Server) handleClasses(w http.ResponseWriter, r *http.Request) {
 // --------------------------------------------------------------- one class
 
 type classData struct {
+	Upcoming    []occurrence
 	Class       *store.Class
 	Access      classAccess
 	Description template.HTML
@@ -134,6 +135,7 @@ func (s *Server) handleClass(w http.ResponseWriter, r *http.Request) {
 	}
 	d := classData{Class: c, Access: a}
 	d.Mentors, d.Scholars = splitMembers(members)
+	d.Upcoming = s.upcoming(store.EventQuery{ClassIDs: []int64{c.ID}}, 31, 6)
 	if c.Description != "" {
 		d.Description, _ = markdown.Render([]byte(c.Description), markdown.Options{})
 	}

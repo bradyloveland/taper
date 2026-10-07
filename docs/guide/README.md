@@ -9,6 +9,7 @@ guide is in the app (under **Guide**) and on GitHub.
 
 - [Getting started](getting-started.md): signing in for the first time, and what admins, mentors and scholars can do.
 - [Classes](classes.md): your classes, and how admins and mentors set them up.
+- [Calendars](calendar.md): the school and class calendars, adding events, and subscribing in Google, Apple or Outlook.
 - [Your account](account.md): your name, password, and signing out on other devices.
 - [Two-step sign-in](two-step.md): add a code from your phone, and what to do if you lose it.
 - [Taper on your phone](phone-app.md): add Taper to your home screen on iPhone, iPad and Android.
@@ -25,5 +26,5 @@ guide is in the app (under **Guide**) and on GitHub.
 
 ## Coming in later versions
 
-School and class calendars with iCal links, assignments and chat. See the
+Assignments and chat. See the
 [plan and milestones](../plan.md).

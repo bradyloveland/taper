@@ -6,6 +6,28 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Milestone 5, calendars:
+  - **Calendar**: month, week and list views of the school calendar and your classes'
+    calendars together, or one at a time. Phones get dots on the month and a list below.
+  - **Events**: admins add to the school calendar (including "no school" days), mentors to
+    their classes'. All-day, timed and multi-day events, with a place and formatted details.
+  - **Repeating events**: every day, every week on chosen days, every month or every year,
+    with an optional end date; remove a single date, or change every date.
+  - **Coming up** on the home page (two weeks), and a **Coming up** card at the top of each
+    class's page (that class's next month, Add event, Subscribe to this class).
+  - **Subscribe**: private iCal links for Google Calendar, Apple Calendar and Outlook (my
+    whole calendar, the school calendar, and each class). Each link has its own address
+    and can be reset on its own, or all at once.
+  - The event form moves the end with the start (keeping the length) and won't save an end
+    before the start; the problem field is highlighted.
+  - **Settings → School → Time zone**, so calendars use the school's local time across
+    daylight saving changes. The time zone database is built in.
+
+### Changed
+- The installer says "Changed from version…" instead of "Upgraded" when installing an older
+  or development version.
+
 ## [0.4.0] - 2026-10-07
 
 ### Added

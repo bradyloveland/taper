@@ -113,7 +113,7 @@ updated documentation, and passes `make check`, before it's opened for review.
 - Class page with members and, later, its calendar, assignments and chat.
 - A home page for each role showing their classes.
 
-### M5: calendars and iCal
+### M5: calendars and iCal (done)
 - School calendar (admins add events): holidays, gatherings, terms.
 - Class calendars (mentors add events). Repeating events (weekly and so on).
 - My calendar: the school calendar plus my classes, in month, week and list views.

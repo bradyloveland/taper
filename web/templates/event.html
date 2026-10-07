@@ -1,0 +1,35 @@
+{{define "content"}}
+<p class="crumbs"><a href="/calendar{{if .D.Event.ClassID}}?cal=class:{{.D.Event.ClassID}}{{end}}">Calendar</a> /</p>
+<section class="card readable event-card">
+  <div class="event-head">
+    <span class="bar tall c-{{if .D.Event.ClassColor}}{{.D.Event.ClassColor}}{{else}}school{{end}}" aria-hidden="true"></span>
+    <div>
+      <h1>{{.D.Event.Title}}</h1>
+      <p class="muted">{{if .D.Event.ClassID}}<a href="/classes/{{.D.Event.ClassID}}">{{.D.Event.ClassName}}</a>{{else}}School calendar{{end}}{{if .D.Event.Closed}} · <span class="badge warn">No school</span>{{end}}</p>
+    </div>
+  </div>
+  <dl class="facts">
+    {{with .D.Occ}}<dt>When</dt><dd>{{.Start.Format "Monday, January 2, 2006"}}<br>{{.When}}</dd>{{end}}
+    {{with .D.Repeats}}<dt>Repeats</dt><dd>{{.}}</dd>{{end}}
+    {{with .D.Event.Location}}<dt>Where</dt><dd>{{.}}</dd>{{end}}
+  </dl>
+  {{with .D.Description}}<div class="prose">{{.}}</div>{{end}}
+
+  {{if .D.CanEdit}}
+  <div class="actions spaced">
+    <a class="button" href="/events/{{.D.Event.ID}}/edit">Edit{{if .D.Event.Repeat}} every date{{end}}</a>
+    {{if and .D.Event.Repeat .D.Occ}}
+    <form method="post" action="/events/{{.D.Event.ID}}/delete" data-confirm="Remove {{.D.Event.Title}} on {{.D.Occ.Start.Format "Monday, January 2"}}? The other dates stay.">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <input type="hidden" name="date" value="{{.D.Occ.Date.Format "2006-01-02"}}">
+      <button type="submit" class="button">Remove just this date</button>
+    </form>
+    {{end}}
+    <form method="post" action="/events/{{.D.Event.ID}}/delete" data-confirm="Delete {{.D.Event.Title}}{{if .D.Event.Repeat}} and all its dates{{end}}?">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button type="submit" class="button danger">Delete{{if .D.Event.Repeat}} every date{{end}}</button>
+    </form>
+  </div>
+  {{end}}
+</section>
+{{end}}

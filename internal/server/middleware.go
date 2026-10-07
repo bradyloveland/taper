@@ -180,7 +180,7 @@ func public(path string) bool {
 		"/apple-touch-icon-precomposed.png", "/healthz":
 		return true
 	}
-	return strings.HasPrefix(path, "/static/")
+	return strings.HasPrefix(path, "/static/") || strings.HasPrefix(path, "/ical/")
 }
 
 // gate sends everyone to setup until it's done, and people with a temporary

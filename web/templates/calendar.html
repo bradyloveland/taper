@@ -1,0 +1,85 @@
+{{define "content"}}
+<div class="page-head row">
+  <div>
+    <h1>{{.D.Label}}</h1>
+    {{with .D.Class}}<p class="muted"><a href="/classes/{{.ID}}">{{.Name}}</a> class calendar</p>{{end}}
+  </div>
+  <div class="actions">
+    <a class="button" href="/calendar/subscribe">Subscribe</a>
+    {{if .D.CanAdd}}<a class="button primary" href="/events/new?date={{.D.Date.Format "2006-01-02"}}{{with .D.AddTarget}}&amp;cal={{.}}{{end}}">Add event</a>{{end}}
+  </div>
+</div>
+
+<div class="cal-bar card">
+  <form method="get" action="/calendar" class="cal-pick">
+    <input type="hidden" name="view" value="{{.D.View}}">
+    <input type="hidden" name="date" value="{{.D.Date.Format "2006-01-02"}}">
+    <label class="sr-only" for="cal">Calendar</label>
+    <select id="cal" name="cal" data-autosubmit>
+      {{range .D.Choices}}<option value="{{.Key}}" {{if eq .Key $.D.Key}}selected{{end}}>{{.Label}}</option>{{end}}
+    </select>
+    <noscript><button type="submit" class="button small">Show</button></noscript>
+  </form>
+  <nav class="cal-nav" aria-label="Dates">
+    <a class="button small" href="/calendar?view={{.D.View}}&amp;cal={{.D.Key}}&amp;date={{.D.Prev}}" aria-label="Earlier">‹</a>
+    <a class="button small" href="/calendar?view={{.D.View}}&amp;cal={{.D.Key}}">Today</a>
+    <a class="button small" href="/calendar?view={{.D.View}}&amp;cal={{.D.Key}}&amp;date={{.D.Next}}" aria-label="Later">›</a>
+    <strong class="cal-title">{{.D.Title}}</strong>
+  </nav>
+  <nav class="cal-views" aria-label="View">
+    {{range $v := list "month" "week" "list"}}
+    <a href="/calendar?view={{$v}}&amp;cal={{$.D.Key}}&amp;date={{$.D.Date.Format "2006-01-02"}}" {{if eq $v $.D.View}}aria-current="page"{{end}}>{{title $v}}</a>
+    {{end}}
+  </nav>
+</div>
+
+{{if eq .D.View "month"}}
+<div class="month card" role="table" aria-label="{{.D.Title}}">
+  <div class="month-row month-head" role="row">
+    {{range list "Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat"}}<div role="columnheader">{{.}}</div>{{end}}
+  </div>
+  {{range .D.Weeks}}
+  <div class="month-row" role="row">
+    {{range .}}
+    <div class="day{{if not .InMonth}} out{{end}}{{if .Today}} today{{end}}{{if .Closed}} closed{{end}}" role="cell">
+      <a class="day-num" href="/calendar?view=week&amp;cal={{$.D.Key}}&amp;date={{.Date.Format "2006-01-02"}}" aria-label="{{.Date.Format "Monday, January 2"}}">{{.Date.Day}}</a>
+      {{range .Items}}
+      <a class="chip-event c-{{if .Event.ClassColor}}{{.Event.ClassColor}}{{else}}school{{end}}{{if .Event.Closed}} closed{{end}}" href="{{.Link}}" title="{{.Event.Title}}">{{with .StartClock}}<span class="t">{{.}}</span> {{end}}{{.Event.Title}}</a>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+<section class="agenda month-agenda">
+  {{if .D.Agenda}}{{range .D.Agenda}}{{template "agenda-day" (pair . $.D.Key)}}{{end}}
+  {{else}}<div class="card empty"><p>Nothing on this calendar in {{.D.Date.Format "January"}}.</p></div>{{end}}
+</section>
+{{else}}
+<section class="agenda">
+  {{if .D.Days}}
+    {{range .D.Days}}{{template "agenda-day" (pair . $.D.Key)}}{{end}}
+  {{else}}
+  <div class="card empty"><p>Nothing on this calendar {{if eq .D.View "week"}}this week{{else}}in the next 60 days{{end}}.</p></div>
+  {{end}}
+</section>
+{{end}}
+{{end}}
+
+{{define "agenda-day"}}
+{{$d := .A}}
+<div class="agenda-day card{{if $d.Today}} today{{end}}">
+  <h2 class="agenda-date">{{$d.Date.Format "Monday, January 2"}}{{if $d.Today}} <span class="badge">Today</span>{{end}}{{if $d.Closed}} <span class="badge warn">No school</span>{{end}}</h2>
+  {{if $d.Items}}
+  <ul class="agenda-list">
+    {{range $d.Items}}
+    <li><a href="{{.Link}}" class="agenda-item">
+      <span class="bar c-{{if .Event.ClassColor}}{{.Event.ClassColor}}{{else}}school{{end}}" aria-hidden="true"></span>
+      <span class="agenda-when">{{.When}}</span>
+      <span class="agenda-what"><strong>{{.Event.Title}}</strong>{{with .Event.ClassName}} <span class="muted small">{{.}}</span>{{end}}{{with .Event.Location}} <span class="muted small">· {{.}}</span>{{end}}</span>
+    </a></li>
+    {{end}}
+  </ul>
+  {{else}}<p class="muted small">Nothing.</p>{{end}}
+</div>
+{{end}}

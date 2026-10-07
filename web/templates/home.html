@@ -9,6 +9,21 @@
 {{with .D.Unsent}}<div class="flash flash-warn" role="status">{{.}} problem report{{if gt . 1}}s{{end}} from your school {{if gt . 1}}aren't{{else}}isn't{{end}} on GitHub yet. <a href="/admin/reports">See reports</a></div>{{end}}
 {{end}}
 
+<section class="card">
+  <div class="row-head"><h2>Coming up</h2><a class="small" href="/calendar">Calendar</a></div>
+  {{if .D.Upcoming}}
+  <ul class="agenda-list">
+    {{range .D.Upcoming}}
+    <li><a href="{{.Link}}" class="agenda-item">
+      <span class="bar c-{{if .Event.ClassColor}}{{.Event.ClassColor}}{{else}}school{{end}}" aria-hidden="true"></span>
+      <span class="agenda-when">{{.Start.Format "Mon Jan 2"}}<br><span class="muted small">{{.When}}</span></span>
+      <span class="agenda-what"><strong>{{.Event.Title}}</strong>{{with .Event.ClassName}} <span class="muted small">{{.}}</span>{{end}}{{if .Event.Closed}} <span class="badge warn">No school</span>{{end}}</span>
+    </a></li>
+    {{end}}
+  </ul>
+  {{else}}<p class="muted">Nothing on your calendar in the next two weeks.</p>{{end}}
+</section>
+
 {{if .D.Classes}}
 <h2 class="section-title">Your classes</h2>
 <div class="class-grid">
