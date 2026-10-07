@@ -218,9 +218,26 @@ func (s *Store) SaveWork(id int64, body string) error {
 // ErrWrongStatus means the work isn't in a state that allows the change.
 var ErrWrongStatus = errors.New("the work isn't in a state that allows that")
 
+// History kinds besides the statuses themselves.
+const (
+	WorkTakenBack   = "taken_back"  // the scholar took it back to change it
+	WorkReturned    = "returned"    // a mentor returned it to the scholar, not turned in
+	WorkUncompleted = "uncompleted" // a mentor undid Complete, back to Turned in
+)
+
 // SetWorkStatus moves work from one of the from statuses to to, and records
 // it in the history. Feedback, when given, replaces the latest feedback.
 func (s *Store) SetWorkStatus(id int64, from []string, to string, by int64, feedback *string) error {
+	kind := to
+	if to == WorkDraft {
+		kind = WorkTakenBack
+	}
+	return s.MoveWork(id, from, to, kind, by, feedback)
+}
+
+// MoveWork is SetWorkStatus with the history kind given. The turned-in time
+// is set only when a scholar turns work in (kind WorkTurnedIn).
+func (s *Store) MoveWork(id int64, from []string, to, kind string, by int64, feedback *string) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -230,7 +247,7 @@ func (s *Store) SetWorkStatus(id int64, from []string, to string, by int64, feed
 	marks := make([]string, len(from))
 	args := []any{to, now}
 	q := `UPDATE submissions SET status = ?, updated_at = ?`
-	if to == WorkTurnedIn {
+	if kind == WorkTurnedIn {
 		q += `, turned_in_at = ?`
 		args = append(args, now)
 	}
@@ -251,10 +268,6 @@ func (s *Store) SetWorkStatus(id int64, from []string, to string, by int64, feed
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrWrongStatus
-	}
-	kind := to
-	if to == WorkDraft {
-		kind = "taken_back"
 	}
 	note := ""
 	if feedback != nil {

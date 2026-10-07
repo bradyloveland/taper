@@ -20,8 +20,9 @@ All notable changes to Taper are recorded here. The format follows
   - **Scholars** download the files, write in a box that saves as they type, attach files,
     and **turn in** their work. They can take it back until their mentor looks at it.
   - **Mentors** see every scholar's work and status, write feedback, and mark it
-    **Complete** or **Needs another look**; the scholar can then turn it in again. Each
-    piece of work keeps a history. No grades.
+    **Complete** or **Needs another look**; the scholar can then turn it in again. Mentors
+    can also **Undo complete** or **Return to scholar** without feedback. Each piece of
+    work keeps a history. No grades.
   - Assignments live in their class: an **Assignments** card on each class's page, and a
     list of all of them. The home page's **Assignments** card brings together all your
     classes: work still to do for scholars; work to review, then what's due soon, for

@@ -274,3 +274,67 @@ func countFiles(t *testing.T, dir string) int {
 	})
 	return n
 }
+
+func TestReviewUndo(t *testing.T) {
+	c := newCalEnv(t)
+	classPath := fmt.Sprintf("/classes/%d", c.class.ID)
+	m := c.signedIn("mia", "mentor-password")
+	id := assignmentID(t, m.postFiles(classPath+"/assignments/new", url.Values{"title": {"Essay"}, "publish": {"now"}, "work_online": {"1"}}, nil))
+	path := "/assignments/" + id
+	review := fmt.Sprintf("%s/work/%d", path, c.sam.ID)
+	s := c.signedIn("sam", "scholar-password")
+	s.get(path)
+	expectRedirect(t, s.postFiles(path+"/work", url.Values{"body": {"Draft one"}, "action": {"turn_in"}}, nil), path+"#work")
+	status := func() *store.Submission {
+		w, err := c.store.GetSubmission(mustID(t, id), c.sam.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return w
+	}
+	turnedIn := status().TurnedInAt
+
+	// Undo complete: back to turned in, keeping when it was turned in.
+	expect(t, m.get(review), http.StatusOK, "Return to scholar")
+	if strings.Contains(m.last, "Undo complete") {
+		t.Fatal("nothing to undo before it's complete")
+	}
+	expectRedirect(t, m.postForm(review, url.Values{"decision": {"complete"}}), path+"#roster")
+	expect(t, m.get(review), http.StatusOK, "Undo complete", "Return to scholar")
+	expectRedirect(t, m.postForm(review, url.Values{"decision": {"undo_complete"}}), review)
+	if w := status(); w.Status != store.WorkTurnedIn || w.TurnedInAt != turnedIn {
+		t.Fatalf("after undo complete: %+v", w)
+	}
+	expect(t, m.get(review), http.StatusOK, "no longer marked complete", "Complete undone, back to turned in by Mia Mentor")
+
+	// Return to scholar: not turned in, and they can change it again.
+	expectRedirect(t, m.postForm(review, url.Values{"decision": {"unsubmit"}}), review)
+	if w := status(); w.Status != store.WorkDraft || w.Body != "Draft one" {
+		t.Fatalf("after returning: %+v", w)
+	}
+	expect(t, s.get(path), http.StatusOK, "Not turned in", "Turn in", "Returned, not turned in by Mia Mentor")
+	expectRedirect(t, s.postFiles(path+"/work", url.Values{"body": {"Draft two"}, "action": {"save"}}, nil), path+"#work")
+	if status().Body != "Draft two" {
+		t.Fatal("returned work should be editable")
+	}
+
+	// Nothing to undo now; scholars and other mentors can't.
+	expectRedirect(t, m.postForm(review, url.Values{"decision": {"unsubmit"}}), review)
+	expect(t, m.get(review), http.StatusOK, "doesn't apply to this work any more")
+	expect(t, s.postForm(review, url.Values{"decision": {"unsubmit"}}), http.StatusNotFound)
+	c.addUser("otto", "Otto", store.RoleMentor, "mentor-password", false)
+	expect(t, c.signedIn("otto", "mentor-password").postForm(review, url.Values{"decision": {"unsubmit"}}), http.StatusNotFound)
+
+	// Work marked complete without being turned in goes back to not turned in.
+	id2 := assignmentID(t, m.postFiles(classPath+"/assignments/new", url.Values{"title": {"Done in class"}, "publish": {"now"}}, nil))
+	review2 := fmt.Sprintf("/assignments/%s/work/%d", id2, c.sam.ID)
+	expectRedirect(t, m.postForm(review2, url.Values{"decision": {"complete"}}), "/assignments/"+id2+"#roster")
+	expect(t, m.get(review2), http.StatusOK, "Undo complete")
+	if strings.Contains(m.last, "Return to scholar") {
+		t.Fatal("it was never turned in, so there's nothing to return")
+	}
+	expectRedirect(t, m.postForm(review2, url.Values{"decision": {"undo_complete"}}), review2)
+	if w, _ := c.store.GetSubmission(mustID(t, id2), c.sam.ID); w.Status != store.WorkDraft {
+		t.Fatalf("undo complete without turning in: %+v", w)
+	}
+}

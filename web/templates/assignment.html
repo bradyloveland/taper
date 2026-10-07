@@ -77,7 +77,7 @@
   {{if .D.History}}
   <details class="history">
     <summary class="small">History</summary>
-    <ul class="history-list">{{range .D.History}}<li><span class="muted small">{{when .At}}</span> {{happened .Kind}}{{if and .By (or (eq .Kind "needs_work") (eq .Kind "complete"))}} by {{.By}}{{end}}</li>{{end}}</ul>
+    <ul class="history-list">{{range .D.History}}<li><span class="muted small">{{when .At}}</span> {{happened .Kind}}{{if and .By (or (eq .Kind "needs_work") (eq .Kind "complete") (eq .Kind "returned") (eq .Kind "uncompleted"))}} by {{.By}}{{end}}</li>{{end}}</ul>
   </details>
   {{end}}
 </section>

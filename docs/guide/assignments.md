@@ -94,6 +94,19 @@ the arrows at the top to move between scholars.
 You can also mark work complete that wasn't turned in through Taper, such as
 something done in class.
 
+### Changing your mind
+
+Under **Change your mind?** on a scholar's work, without writing feedback:
+
+- **Undo complete** (on work marked Complete) puts it back to **Turned in**,
+  waiting for review, as if you hadn't looked at it yet. Work you marked
+  complete without it being turned in goes back to not turned in.
+- **Return to scholar** (on work that's Turned in or Complete) makes it **not
+  turned in** again, so the scholar can change it and turn it in again. Use it
+  when something was turned in by mistake, or too early.
+
+Their writing and files stay as they are, and the history shows what you did.
+
 ## Who sees what
 
 - Scholars see their classes' published assignments and only **their own**

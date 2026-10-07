@@ -612,3 +612,6 @@ details.card[open] > summary { margin-bottom: 12px; }
   .assign-item { flex-wrap: wrap; }
   .assign-state { flex-direction: row; align-items: center; margin-left: 16px; }
 }
+.undo { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); }
+.undo h3 { font-size: 1rem; margin: 0 0 8px; }
+.undo .actions form { margin: 0; }

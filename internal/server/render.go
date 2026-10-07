@@ -60,8 +60,12 @@ func happened(kind string) string {
 	switch kind {
 	case store.WorkTurnedIn:
 		return "Turned in"
-	case "taken_back":
+	case store.WorkTakenBack:
 		return "Taken back to change"
+	case store.WorkReturned:
+		return "Returned, not turned in"
+	case store.WorkUncompleted:
+		return "Complete undone, back to turned in"
 	case store.WorkNeedsWork:
 		return "Needs another look"
 	case store.WorkComplete:

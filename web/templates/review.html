@@ -37,6 +37,26 @@
       <button type="submit" name="decision" value="needs_work" class="button">Needs another look</button>
     </div>
   </form>
+  {{with .D.Work}}{{if or (eq .Status "turned_in") (eq .Status "complete")}}
+  <div class="undo">
+    <h3>Change your mind?</h3>
+    <div class="actions">
+      {{if eq .Status "complete"}}
+      <form method="post" action="/assignments/{{$.D.A.ID}}/work/{{$.D.Scholar.ID}}" data-confirm="Undo Complete for {{$.D.Scholar.DisplayName}}? {{if .TurnedInAt}}It goes back to Turned in, waiting for review.{{else}}It goes back to not turned in.{{end}}">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="decision" value="undo_complete">
+        <button type="submit" class="button small">Undo complete</button>
+      </form>
+      {{end}}
+      {{if .TurnedInAt}}
+      <form method="post" action="/assignments/{{$.D.A.ID}}/work/{{$.D.Scholar.ID}}" data-confirm="Return this to {{$.D.Scholar.DisplayName}} as not turned in? They can change it and turn it in again.">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="decision" value="unsubmit">
+        <button type="submit" class="button small">Return to scholar</button>
+      </form>
+      {{end}}
+    </div>
+    <p class="help">No feedback needed. Their work and files stay as they are.</p>
+  </div>
+  {{end}}{{end}}
 </section>
 {{end}}
 

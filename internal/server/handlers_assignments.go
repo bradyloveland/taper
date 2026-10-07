@@ -1036,6 +1036,11 @@ func (s *Server) handleReviewSave(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, back, http.StatusSeeOther)
 		return
 	}
+	switch r.PostFormValue("decision") {
+	case "unsubmit", "undo_complete":
+		s.handleReviewUndo(w, r, a, sch, back)
+		return
+	}
 	var to string
 	switch r.PostFormValue("decision") {
 	case "complete":
@@ -1080,6 +1085,43 @@ func (s *Server) handleReviewSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.redirect(w, r, next, msg)
+}
+
+// handleReviewUndo lets a mentor take back a decision without feedback:
+// "unsubmit" returns turned-in or complete work to the scholar as not turned
+// in; "undo_complete" puts complete work back to waiting for review.
+func (s *Server) handleReviewUndo(w http.ResponseWriter, r *http.Request, a *store.Assignment, sch *store.User, back string) {
+	u := current(r).user
+	wk, err := s.store.GetSubmission(a.ID, sch.ID)
+	if err != nil {
+		s.setFlash(w, r, "error", sch.DisplayName+" hasn't turned anything in.")
+		http.Redirect(w, r, back, http.StatusSeeOther)
+		return
+	}
+	var from []string
+	var to, kind, msg string
+	if r.PostFormValue("decision") == "undo_complete" {
+		from, kind, msg = []string{store.WorkComplete}, store.WorkUncompleted, "It's no longer marked complete: it's turned in, waiting for review."
+		to = store.WorkTurnedIn
+		if wk.TurnedInAt == 0 { // marked complete without being turned in
+			to, msg = store.WorkDraft, "It's no longer marked complete, and not turned in."
+		}
+	} else {
+		from, to, kind = []string{store.WorkTurnedIn, store.WorkComplete}, store.WorkDraft, store.WorkReturned
+		msg = "Returned to " + sch.DisplayName + " as not turned in. They can change it and turn it in again."
+	}
+	err = s.store.MoveWork(wk.ID, from, to, kind, u.ID, nil)
+	if errors.Is(err, store.ErrWrongStatus) {
+		s.setFlash(w, r, "error", "That doesn't apply to this work any more. It may have just changed; here it is now.")
+		http.Redirect(w, r, back, http.StatusSeeOther)
+		return
+	}
+	if err != nil {
+		s.serverError(w, r, "changing work status", err)
+		return
+	}
+	slog.Info("work status undone", "by", u.Username, "assignment", a.ID, "scholar", sch.Username, "status", to)
+	s.redirect(w, r, back, msg)
 }
 
 // ------------------------------------------------------------ home page
