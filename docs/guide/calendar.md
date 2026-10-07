@@ -64,6 +64,6 @@ removes the event, and all its dates if it repeats.
 
 ## Time zone
 
-Events are in the school's local time, set by an admin under **Settings →
-School → Time zone**. A class at 10:00 stays at 10:00 when daylight saving
+Events are in the school's local time, set by an admin under **Settings → General →
+Time zone**. A class at 10:00 stays at 10:00 when daylight saving
 time starts or ends.

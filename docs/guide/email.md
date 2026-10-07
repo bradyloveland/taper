@@ -2,7 +2,7 @@
 
 *For admins.* Taper can send email through your school's mail server, or a
 service such as Google Workspace, Microsoft 365, Fastmail, Mailgun or Postmark.
-Open **Settings → Set up email**.
+Open **Settings → Email**.
 
 ## What Taper emails
 

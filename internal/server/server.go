@@ -191,7 +191,6 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /classes/{id}/assignments", s.signedIn(s.handleClassAssignments))
 	mux.HandleFunc("GET /classes/{id}/assignments/new", s.signedIn(s.handleAssignmentNewForm))
 	mux.HandleFunc("POST /classes/{id}/assignments/new", s.signedIn(s.handleAssignmentCreate))
-	mux.HandleFunc("GET /assignments", s.signedIn(s.handleAssignments))
 	mux.HandleFunc("GET /assignments/{id}", s.signedIn(s.handleAssignment))
 	mux.HandleFunc("GET /assignments/{id}/edit", s.signedIn(s.handleAssignmentEditForm))
 	mux.HandleFunc("POST /assignments/{id}/edit", s.signedIn(s.handleAssignmentUpdate))

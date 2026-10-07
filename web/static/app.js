@@ -38,15 +38,19 @@
         window.location.reload();
       }
     }
-    // Close the menu when tapping outside it.
+    // Close the menus when tapping outside them.
     const toggle = document.getElementById('nav-toggle');
     if (toggle && toggle.checked && !e.target.closest('.nav, .nav-button, .nav-toggle')) toggle.checked = false;
+    const menu = document.querySelector('[data-menu]');
+    if (menu && menu.open && !e.target.closest('[data-menu]')) menu.open = false;
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const toggle = document.getElementById('nav-toggle');
       if (toggle) toggle.checked = false;
+      const menu = document.querySelector('[data-menu]');
+      if (menu && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
     }
   });
 
@@ -73,6 +77,21 @@
       }
     };
     setTimeout(poll, 2500);
+  }
+
+  // Opening one header menu closes the other.
+  const acct = document.querySelector('[data-menu]');
+  const navToggle = document.getElementById('nav-toggle');
+  if (acct && navToggle) {
+    acct.addEventListener('toggle', () => { if (acct.open) navToggle.checked = false; });
+    navToggle.addEventListener('change', () => { if (navToggle.checked) acct.open = false; });
+  }
+
+  // On narrow screens, scroll the settings tabs so the current one shows.
+  const tabs = document.querySelector('.admin-tabs');
+  const tab = tabs && tabs.querySelector('[aria-current="page"]');
+  if (tab && tabs.scrollWidth > tabs.clientWidth) {
+    tabs.scrollLeft = tab.offsetLeft - (tabs.clientWidth - tab.offsetWidth) / 2;
   }
 
   // Selects that change the page straight away.

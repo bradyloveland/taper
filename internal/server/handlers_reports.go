@@ -181,7 +181,7 @@ func (s *Server) handleReports(w http.ResponseWriter, r *http.Request) {
 			d.Fallback[rep.ID] = github.NewIssueURL(d.Repo, rep.Title, rep.Body, reportLabels)
 		}
 	}
-	s.render(w, r, http.StatusOK, "reports", "Problem reports", "settings", d)
+	s.render(w, r, http.StatusOK, "reports", "Problem reports", "reports", d)
 }
 
 func (s *Server) handleReportSend(w http.ResponseWriter, r *http.Request) {

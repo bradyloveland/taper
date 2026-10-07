@@ -255,71 +255,6 @@ type assignmentsData struct {
 	Reviewer bool         // the viewer sets and reviews work in these classes
 	Upcoming []assignItem // due from today, or no due date
 	Past     []assignItem
-	ToDo     []assignItem // for scholars: not yet turned in, or sent back
-	Waiting  []assignItem // turned in
-	Done     []assignItem
-	Mentored []assignItem // for mentors: their classes' assignments with work to review first
-	Classes  int
-}
-
-// handleAssignments is the Assignments page: a scholar's work in all their
-// classes, or a mentor's assignments to review.
-func (s *Server) handleAssignments(w http.ResponseWriter, r *http.Request) {
-	u := current(r).user
-	classes, err := s.store.ListClassesFor(u.ID)
-	if err != nil {
-		s.serverError(w, r, "listing classes", err)
-		return
-	}
-	var asScholar, asMentor []int64
-	for _, c := range classes {
-		if c.MyRole == store.ClassMentor {
-			asMentor = append(asMentor, c.ID)
-		} else {
-			asScholar = append(asScholar, c.ID)
-		}
-	}
-	d := assignmentsData{Classes: len(classes), Reviewer: len(asMentor) > 0}
-	now := time.Now().Unix()
-	if len(asScholar) > 0 {
-		list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: asScholar, PublishedOnly: true, Now: now})
-		if err != nil {
-			s.serverError(w, r, "listing assignments", err)
-			return
-		}
-		for _, it := range s.assignItems(list, u, func(*store.Assignment) bool { return false }) {
-			switch it.State.Kind {
-			case "done":
-				d.Done = append(d.Done, it)
-			case "in":
-				d.Waiting = append(d.Waiting, it)
-			default:
-				d.ToDo = append(d.ToDo, it)
-			}
-		}
-		// Most recent first for finished work.
-		sort.SliceStable(d.Done, func(i, j int) bool { return d.Done[i].DueDate > d.Done[j].DueDate })
-	}
-	if len(asMentor) > 0 {
-		list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: asMentor})
-		if err != nil {
-			s.serverError(w, r, "listing assignments", err)
-			return
-		}
-		items := s.assignItems(list, u, func(*store.Assignment) bool { return true })
-		today := cal.FormatDate(s.today())
-		for _, it := range items {
-			if it.TurnedIn > 0 || it.DueDate == "" || it.DueDate >= today || it.Draft() {
-				d.Mentored = append(d.Mentored, it)
-			} else {
-				d.Past = append(d.Past, it)
-			}
-		}
-		// Work waiting for review comes first.
-		sort.SliceStable(d.Mentored, func(i, j int) bool { return d.Mentored[i].TurnedIn > 0 && d.Mentored[j].TurnedIn == 0 })
-		sort.SliceStable(d.Past, func(i, j int) bool { return d.Past[i].DueDate > d.Past[j].DueDate })
-	}
-	s.render(w, r, http.StatusOK, "assignments", "Assignments", "assignments", d)
 }
 
 // handleClassAssignments lists all of a class's assignments.
@@ -517,7 +452,7 @@ func (s *Server) handleAssignment(w http.ResponseWriter, r *http.Request) {
 		rank := map[string]int{"in": 0, "needs": 1, "late": 2, "todo": 2, "done": 3}
 		sort.SliceStable(d.Roster, func(i, j int) bool { return rank[d.Roster[i].State.Kind] < rank[d.Roster[j].State.Kind] })
 	}
-	s.render(w, r, http.StatusOK, "assignment", a.Title, "assignments", d)
+	s.render(w, r, http.StatusOK, "assignment", a.Title, "classes", d)
 }
 
 // ------------------------------------------------------------ the form
@@ -617,7 +552,7 @@ func (s *Server) renderAssignForm(w http.ResponseWriter, r *http.Request, status
 	if !d.IsNew {
 		title = "Edit " + d.A.Title
 	}
-	s.render(w, r, status, "assignment-form", title, "assignments", d)
+	s.render(w, r, status, "assignment-form", title, "classes", d)
 }
 
 func (s *Server) handleAssignmentNewForm(w http.ResponseWriter, r *http.Request) {
@@ -1080,7 +1015,7 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	s.render(w, r, http.StatusOK, "review", sch.DisplayName+": "+a.Title, "assignments", d)
+	s.render(w, r, http.StatusOK, "review", sch.DisplayName+": "+a.Title, "classes", d)
 }
 
 // handleReviewSave records a mentor's feedback and decision.
@@ -1149,60 +1084,50 @@ func (s *Server) handleReviewSave(w http.ResponseWriter, r *http.Request) {
 
 // ------------------------------------------------------------ home page
 
-// dueSoon lists a scholar's assignments due in the next week (or past due)
-// that aren't turned in yet.
-func (s *Server) dueSoon(u *store.User, classes []*store.Class) []assignItem {
-	var ids []int64
-	for _, c := range classes {
-		if c.MyRole == store.ClassScholar {
-			ids = append(ids, c.ID)
-		}
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	today := s.today()
-	list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: ids, PublishedOnly: true, Now: time.Now().Unix(),
-		DueFrom: cal.FormatDate(today.AddDate(0, 0, -14)), DueTo: cal.FormatDate(today.AddDate(0, 0, 7))})
-	if err != nil {
-		slog.Error("listing due work", "err", err)
-		return nil
-	}
-	var out []assignItem
-	for _, it := range s.assignItems(list, u, func(*store.Assignment) bool { return false }) {
-		if it.State.Kind == "todo" || it.State.Kind == "late" || it.State.Kind == "needs" {
-			out = append(out, it)
-		}
-	}
-	return out
-}
-
-// toReview counts work turned in and waiting in the classes u mentors.
-func (s *Server) toReview(u *store.User, classes []*store.Class) int {
-	var ids []int64
+// homeAssignments lists assignments across all of u's classes for the home
+// page: for a scholar, work still to do (past due first, then by due date);
+// for a mentor, work waiting for review, then what's due in the next two weeks.
+func (s *Server) homeAssignments(u *store.User, classes []*store.Class, limit int) (todo, mentored []assignItem) {
+	var asScholar, asMentor []int64
 	for _, c := range classes {
 		if c.MyRole == store.ClassMentor {
-			ids = append(ids, c.ID)
+			asMentor = append(asMentor, c.ID)
+		} else {
+			asScholar = append(asScholar, c.ID)
 		}
 	}
-	if len(ids) == 0 {
-		return 0
+	now := time.Now().Unix()
+	if len(asScholar) > 0 {
+		list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: asScholar, PublishedOnly: true, Now: now})
+		if err != nil {
+			slog.Error("listing assignments", "err", err)
+		}
+		for _, it := range s.assignItems(list, u, func(*store.Assignment) bool { return false }) {
+			if k := it.State.Kind; (k == "todo" || k == "late" || k == "needs") && len(todo) < limit {
+				todo = append(todo, it)
+			}
+		}
 	}
-	list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: ids})
-	if err != nil {
-		return 0
+	if len(asMentor) > 0 {
+		list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: asMentor})
+		if err != nil {
+			slog.Error("listing assignments", "err", err)
+		}
+		today := s.today()
+		from, to := cal.FormatDate(today), cal.FormatDate(today.AddDate(0, 0, 14))
+		var review, soon []assignItem
+		for _, it := range s.assignItems(list, u, func(*store.Assignment) bool { return true }) {
+			switch {
+			case it.TurnedIn > 0:
+				review = append(review, it)
+			case !it.Draft() && it.DueDate >= from && it.DueDate <= to:
+				soon = append(soon, it)
+			}
+		}
+		mentored = append(review, soon...)
+		if len(mentored) > limit {
+			mentored = mentored[:limit]
+		}
 	}
-	var aids []int64
-	for _, a := range list {
-		aids = append(aids, a.ID)
-	}
-	counts, err := s.store.StatusCounts(aids)
-	if err != nil {
-		return 0
-	}
-	n := 0
-	for _, c := range counts {
-		n += c[store.WorkTurnedIn]
-	}
-	return n
+	return todo, mentored
 }

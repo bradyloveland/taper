@@ -1,6 +1,6 @@
 # Your account
 
-Select your name at the top of any page to open **My account**.
+Select your initials at the top right of any page, then **My account**.
 
 ## Profile
 

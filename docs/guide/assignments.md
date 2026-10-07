@@ -5,20 +5,20 @@ in Taper, as files, or on paper — and turn it in. Mentors look at the work and
 mark it **Complete** or ask for **another look**, with written feedback. There
 are no grades.
 
-Open **Assignments** in the menu to see everything at once, or a class's page
-for that class's assignments.
+Each class's page has an **Assignments** card with what's coming up, and
+**All** to see every assignment in the class. The **Assignments** card on your
+home page brings together what needs you across all your classes.
 
 ## For scholars
 
-**Assignments** lists:
+The **Assignments** card on your home page lists everything you haven't turned
+in yet, and work your mentor asked you to look at again, from all your classes,
+soonest due first. Work still not turned in after its due time says
+**Past due**.
 
-- **To do:** work you haven't turned in yet, and work your mentor asked you to
-  look at again. Work still not turned in after its due time says **Past due**.
-- **Turned in:** waiting for your mentor.
-- **Complete:** finished work.
-
-Your home page shows what's **due soon**: anything due in the next week (or
-already past due) that you haven't turned in.
+A class's assignments (**All** on the class's Assignments card) show where each
+one stands: Not turned in, Turned in (waiting for your mentor), Needs another
+look, or Complete.
 
 ### Doing the work
 
@@ -55,8 +55,7 @@ sent back and marked complete.
 
 ### Setting an assignment
 
-On the class's page, select **New assignment** (or **Assignments → New
-assignment**). Fill in:
+On the class's page, select **New assignment** in the Assignments card. Fill in:
 
 - **Title**, and **instructions** with simple formatting: `**bold**`,
   `*italic*`, lists with `- `, links with `[text](https://…)`.
@@ -74,9 +73,9 @@ an assignment also deletes the work turned in for it.
 
 ### Looking at work
 
-**Assignments** in the menu lists your classes' assignments, with the ones
-that have work waiting first ("2 to review"). Your home page says when work is
-waiting.
+The **Assignments** card on your home page lists assignments in your classes
+with work waiting for you ("2 to review") first, then what's due in the next
+two weeks. Each class's page lists all its assignments.
 
 On an assignment's page, **Scholars' work** lists every scholar and where their
 work is: Not turned in, Turned in, Needs another look, or Complete, and when

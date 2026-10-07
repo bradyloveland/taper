@@ -1,6 +1,7 @@
 # Managing people
 
-*For admins.* Open **People** in the menu.
+*For admins.* Open **Settings → People** (Settings is in the menu under your
+initials, at the top right).
 
 ## Adding someone
 

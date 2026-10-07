@@ -1,6 +1,7 @@
 # Updates and backups
 
-*For admins.* Open **Updates** in the menu.
+*For admins.* Open **Settings → Updates** (Settings is in the menu under your
+initials, at the top right).
 
 ## Installing a new version
 

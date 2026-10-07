@@ -129,8 +129,9 @@ updated documentation, and passes `make check`, before it's opened for review.
   looked at. Work done on paper can just be marked turned in.
 - Mentors see who has turned in work, give written feedback and set a status
   (*Needs another look*, *Complete*). Scholars can turn in again after feedback.
-- An Assignments page for everyone; "Due soon" and "waiting for review" on the
-  home page; backups that include the uploaded files.
+- Assignments live in their class; the home page brings together work to do
+  (scholars) or to review (mentors) across all classes. Backups include the
+  uploaded files.
 - No letter grades.
 
 ### M7: chat

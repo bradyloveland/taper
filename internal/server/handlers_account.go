@@ -15,8 +15,8 @@ import (
 
 type homeData struct {
 	Upcoming []occurrence
-	DueSoon  []assignItem // for scholars: work due in the next week, or past due
-	ToReview int          // for mentors: work turned in and waiting
+	ToDo     []assignItem // for scholars: work not turned in yet, across their classes
+	Mentored []assignItem // for mentors: work to review, then what's due soon
 	Greeting string
 	Classes  []*store.Class // the person's own classes
 	NClasses int            // current classes at the school, for admins
@@ -48,8 +48,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		q.ClassIDs = append(q.ClassIDs, c.ID)
 	}
 	d.Upcoming = s.upcoming(q, 14, 8)
-	d.DueSoon = s.dueSoon(current(r).user, d.Classes)
-	d.ToReview = s.toReview(current(r).user, d.Classes)
+	d.ToDo, d.Mentored = s.homeAssignments(current(r).user, d.Classes, 8)
 	if current(r).user.IsAdmin() {
 		d.NClasses, _ = s.store.CountClasses()
 		counts, err := s.store.RoleCounts()

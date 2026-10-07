@@ -45,6 +45,13 @@ func (s *Server) templateFuncs() template.FuncMap {
 		"title":     func(s string) string { return capitalize(s) },
 		"when":      func(unix int64) string { return time.Unix(unix, 0).In(s.loc()).Format("Mon, Jan 2 at 3:04 PM") },
 		"happened":  happened,
+		"adminSection": func(section string) bool {
+			switch section {
+			case "settings", "people", "updates", "network", "email", "reports":
+				return true
+			}
+			return false
+		},
 	}
 }
 

@@ -79,9 +79,9 @@ func TestAssignmentWorkflow(t *testing.T) {
 
 	// The scholar sees it, downloads the file, and it's due soon.
 	s := c.signedIn("sam", "scholar-password")
-	expect(t, s.get("/"), http.StatusOK, "Due soon", "Read and respond")
+	expect(t, s.get("/"), http.StatusOK, `id="assignments"`, "Read and respond", "Not turned in")
 	expect(t, s.get("/assignments/"+draft), http.StatusNotFound)
-	if strings.Contains(s.get("/assignments").Body, "Secret plan") || strings.Contains(s.get(classPath).Body, "Secret plan") {
+	if strings.Contains(s.get("/").Body, "Secret plan") || strings.Contains(s.get(classPath).Body, "Secret plan") {
 		t.Fatal("scholars must not see drafts")
 	}
 	dl := s.get(attachment)
@@ -133,7 +133,10 @@ func TestAssignmentWorkflow(t *testing.T) {
 	expect(t, m.get(workFile), http.StatusOK, "attached answer")
 
 	// The mentor reviews it.
-	expect(t, m.get("/"), http.StatusOK, "waiting for you")
+	expect(t, m.get("/"), http.StatusOK, `id="assignments"`, "1 to review", "Read and respond")
+	if strings.Contains(m.last, "Secret plan") {
+		t.Fatal("drafts aren't due soon")
+	}
 	expect(t, m.get(path), http.StatusOK, "1 to review", "Review")
 	review := fmt.Sprintf("%s/work/%d", path, c.sam.ID)
 	expect(t, m.get(review), http.StatusOK, "Sam Scholar", "My answer:<br>", "answer.txt", "Mark complete")
@@ -148,10 +151,9 @@ func TestAssignmentWorkflow(t *testing.T) {
 	if wk, _ := c.store.GetSubmission(mustID(t, id), c.sam.ID); wk.Body != "My answer, with an example." || wk.Status != store.WorkComplete {
 		t.Fatalf("work after complete: %+v", wk)
 	}
-	if strings.Contains(s.get("/").Body, "Due soon") {
-		t.Fatal("finished work isn't due")
-	}
-	expect(t, s.get("/assignments"), http.StatusOK, "Complete (1)")
+	expect(t, s.get("/"), http.StatusOK, "Nothing to do right now")
+	expect(t, s.get(classPath+"/assignments"), http.StatusOK, "Read and respond", "Complete")
+	expect(t, s.get("/assignments"), http.StatusNotFound)
 
 	// The calendar feed has the due date.
 	feeds := s.get("/calendar/subscribe")

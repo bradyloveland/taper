@@ -9,14 +9,19 @@
 {{with .D.Unsent}}<div class="flash flash-warn" role="status">{{.}} problem report{{if gt . 1}}s{{end}} from your school {{if gt . 1}}aren't{{else}}isn't{{end}} on GitHub yet. <a href="/admin/reports">See reports</a></div>{{end}}
 {{end}}
 
-{{if .D.DueSoon}}
-<section class="card">
-  <div class="row-head"><h2>Due soon</h2><a class="small" href="/assignments">All assignments</a></div>
-  <ul class="agenda-list">{{range .D.DueSoon}}{{template "assign-item" (pair . false)}}{{end}}</ul>
+{{if .D.Classes}}
+<section class="card" id="assignments">
+  <h2>Assignments</h2>
+  {{if .D.Mentored}}
+  <ul class="agenda-list">{{range .D.Mentored}}{{template "assign-item" (pair . true)}}{{end}}</ul>
+  {{end}}
+  {{if .D.ToDo}}
+  <ul class="agenda-list">{{range .D.ToDo}}{{template "assign-item" (pair . false)}}{{end}}</ul>
+  {{end}}
+  {{if not (or .D.Mentored .D.ToDo)}}
+  <p class="muted">{{if .User.IsMentor}}No work waiting for review, and nothing due in the next two weeks.{{else}}Nothing to do right now.{{end}} Each class's page lists all its assignments.</p>
+  {{end}}
 </section>
-{{end}}
-{{if .D.ToReview}}
-<a class="flash flash-ok banner review-banner" href="/assignments"><span><strong>{{.D.ToReview}}</strong> piece{{if gt .D.ToReview 1}}s{{end}} of work turned in and waiting for you.</span> <span>Review</span></a>
 {{end}}
 
 <section class="card">

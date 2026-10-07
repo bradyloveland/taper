@@ -3,7 +3,8 @@
 *Light your taper at mine.*
 
 Taper is your school's place for classes, calendars, assignments and chat. This
-guide is in the app (under **Guide**) and on GitHub.
+guide is in the app (select your initials at the top right, then **Guide**) and
+on GitHub.
 
 ## For everyone
 

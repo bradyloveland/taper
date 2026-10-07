@@ -6,6 +6,12 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- A simpler header: **Home**, **Calendar** and **Classes** across the top, and a menu under
+  your initials at the far right with **My account**, **Guide**, **Settings** (admins) and
+  **Sign out**. People, Updates, Network & HTTPS, Email and Problem reports are now tabs
+  under Settings.
+
 ### Added
 - Milestone 6, assignments:
   - **Assignments** for each class: a title, formatted instructions, attached files (up to
@@ -16,9 +22,10 @@ All notable changes to Taper are recorded here. The format follows
   - **Mentors** see every scholar's work and status, write feedback, and mark it
     **Complete** or **Needs another look**; the scholar can then turn it in again. Each
     piece of work keeps a history. No grades.
-  - An **Assignments** page in the menu: to do, turned in and complete for scholars; work
-    to review first for mentors. The home page shows **Due soon** for scholars and work
-    **waiting for review** for mentors; each class's page has an **Assignments** card.
+  - Assignments live in their class: an **Assignments** card on each class's page, and a
+    list of all of them. The home page's **Assignments** card brings together all your
+    classes: work still to do for scholars; work to review, then what's due soon, for
+    mentors.
   - **Due dates** on the class calendar, My calendar, the Coming up cards and calendar
     subscriptions.
   - **Settings → Download database and files**: a `.tar.gz` with the database and every
