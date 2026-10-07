@@ -518,7 +518,7 @@ func readEvent(r *http.Request, e *store.CalEvent) (map[string]string, map[strin
 			return f, days, "Enter a start and end time, or tick All day.", "start_time"
 		}
 		if end.Equal(start) && em <= sm {
-			return f, days, fmt.Sprintf("It ends (%s) before it starts (%s). Choose a later end time, or a later end date if it goes past midnight.",
+			return f, days, fmt.Sprintf("Event end time (%s) is before it starts (%s). Choose a later end time, or a later end date if it goes past midnight.",
 				clock12(em), clock12(sm)), "end_time"
 		}
 		startTime, endTime = fmt.Sprintf("%02d:%02d", sm/60, sm%60), fmt.Sprintf("%02d:%02d", em/60, em%60)

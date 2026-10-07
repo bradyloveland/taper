@@ -126,7 +126,7 @@
         if (allDay.checked ? end < start : end <= start) {
           msg = allDay.checked
             ? 'The last day is before the first day.'
-            : 'It ends before it starts. Choose a later end time, or a later end date if it goes past midnight.';
+            : 'Event end time is before it starts. Choose a later end time, or a later end date if it goes past midnight.';
         }
       }
       const field = allDay.checked ? ed : et;

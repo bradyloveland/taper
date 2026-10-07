@@ -63,7 +63,7 @@ func TestCalendarEvents(t *testing.T) {
 	expect(t, a.postForm("/events/new", url.Values{"calendar": {"school"}, "title": {"X"}, "start_date": {c.tomorrow}, "end_date": {c.today}, "all_day": {"1"}}),
 		http.StatusUnprocessableEntity, "end date is before the start date", `id="end_date" name="end_date" class="invalid"`)
 	expect(t, a.postForm("/events/new", url.Values{"calendar": {"school"}, "title": {"X"}, "start_date": {c.today}, "start_time": {"18:00"}, "end_time": {"10:00"}}),
-		http.StatusUnprocessableEntity, "It ends (10:00 AM) before it starts (6:00 PM)", `id="end_time" name="end_time" class="invalid"`)
+		http.StatusUnprocessableEntity, "Event end time (10:00 AM) is before it starts (6:00 PM)", `id="end_time" name="end_time" class="invalid"`)
 	expect(t, a.postForm("/events/new", url.Values{"calendar": {"school"}, "title": {"X"}, "start_date": {c.today}, "end_date": {c.tomorrow}, "all_day": {"1"}, "repeat": {"weekly"}}),
 		http.StatusUnprocessableEntity, "same day")
 
