@@ -1,0 +1,69 @@
+{{define "content"}}
+<p class="crumbs"><a href="/admin/people">People</a> /</p>
+<div class="page-head"><h1>Import people</h1><p class="muted">Add many people at once from a spreadsheet.</p></div>
+{{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+
+{{if .D.Rows}}
+<section class="card">
+  <h2>Check the list</h2>
+  <p>{{.D.Good}} {{if eq .D.Good 1}}person is{{else}}people are{{end}} ready to add.{{if .D.Bad}} <strong>{{if eq .D.Bad 1}}1 row has a problem and is skipped</strong>; fix it in the spreadsheet and import it again later.{{else}}{{.D.Bad}} rows have problems and are skipped</strong>; fix them in the spreadsheet and import them again later.{{end}}{{end}}</p>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Row</th><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Classes</th></tr></thead>
+    <tbody>
+    {{range .D.Rows}}
+    <tr class="{{if not .OK}}row-problem{{end}}">
+      <td data-label="Row">{{.Line}}</td>
+      <td data-label="Name">{{.Name}}{{range .Problems}}<div class="problem">{{.}}</div>{{end}}</td>
+      <td data-label="Username">{{.Username}}{{if .Generated}} <span class="muted small">(suggested)</span>{{end}}</td>
+      <td data-label="Email">{{.Email}}</td>
+      <td data-label="Role">{{roleLabel .Role}}</td>
+      <td data-label="Classes">{{.ClassNames}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  <div class="actions spaced">
+    {{if .D.Good}}
+    <form method="post" action="/admin/people/import/create">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <textarea name="text" hidden>{{.D.Text}}</textarea>
+      <button type="submit" class="button primary">Add {{.D.Good}} {{if eq .D.Good 1}}person{{else}}people{{end}}</button>
+    </form>
+    {{end}}
+    <a class="button" href="/admin/people/import">Start over</a>
+  </div>
+</section>
+{{else}}
+<div class="grid-2">
+<section class="card">
+  <h2>Your spreadsheet</h2>
+  <form method="post" action="/admin/people/import" enctype="multipart/form-data" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="file">Spreadsheet saved as CSV</label>
+    <input id="file" name="file" type="file" accept=".csv,.txt,text/csv">
+    <label for="text">Or paste the rows here</label>
+    <textarea id="text" name="text" rows="8" placeholder="Name,Email,Role,Classes&#10;Ann Adams,ann@example.org,scholar,History of Liberty">{{.D.Text}}</textarea>
+    <button type="submit" class="button primary">Check the list</button>
+  </form>
+  <p class="help">Nothing is added until you've checked the list.</p>
+</section>
+<section class="card">
+  <h2>How to lay it out</h2>
+  <p>The first row names the columns. Only a name is required:</p>
+  <table class="table compact">
+    <thead><tr><th>Column</th><th>What goes in it</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Name</strong></td><td>Full name. Or use <strong>First name</strong> and <strong>Last name</strong> columns.</td></tr>
+      <tr><td>Username</td><td>Optional. Made from the name if empty (like <code>ann.adams</code>).</td></tr>
+      <tr><td>Email</td><td>Optional.</td></tr>
+      <tr><td>Role</td><td>scholar, mentor or admin. Empty means scholar.</td></tr>
+      <tr><td>Classes</td><td>Optional. Class names, separated by <code>;</code>. They must already exist.</td></tr>
+    </tbody>
+  </table>
+  <p class="help">In Excel, Numbers or Google Sheets, use "Save as" or "Download" with CSV. Copying the cells and pasting them works too.</p>
+</section>
+</div>
+{{end}}
+{{end}}

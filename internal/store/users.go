@@ -81,14 +81,29 @@ func (u *User) Initials() string {
 	return string(out)
 }
 
-const userCols = `id, username, display_name, email, role, password_hash, must_change_password, active,
-	created_at, updated_at, COALESCE(last_login_at, 0), totp_secret, totp_enabled, totp_last_step`
+var userCols = userColsAs("")
+
+// userColsAs is the user columns, qualified with a table alias if given.
+func userColsAs(alias string) string {
+	p := ""
+	if alias != "" {
+		p = alias + "."
+	}
+	return p + "id, " + p + "username, " + p + "display_name, " + p + "email, " + p + "role, " + p + "password_hash, " +
+		p + "must_change_password, " + p + "active, " + p + "created_at, " + p + "updated_at, COALESCE(" + p + "last_login_at, 0), " +
+		p + "totp_secret, " + p + "totp_enabled, " + p + "totp_last_step"
+}
+
+// userDest is where userCols scan into.
+func userDest(u *User) []any {
+	return []any{&u.ID, &u.Username, &u.DisplayName, &u.Email, &u.Role, &u.PasswordHash,
+		&u.MustChangePassword, &u.Active, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt, &u.TOTPSecret, &u.TOTPEnabled,
+		&u.TOTPLastStep}
+}
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	u := &User{}
-	err := row.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Email, &u.Role, &u.PasswordHash,
-		&u.MustChangePassword, &u.Active, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt, &u.TOTPSecret, &u.TOTPEnabled,
-		&u.TOTPLastStep)
+	err := row.Scan(userDest(u)...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}

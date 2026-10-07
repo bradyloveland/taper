@@ -20,6 +20,26 @@ in, they choose their own.
 The People list marks anyone who hasn't chosen their own password yet with
 **Temporary password**.
 
+## Importing from a spreadsheet
+
+To add many people at once, select **Import from a spreadsheet** on the People
+page.
+
+1. Make a spreadsheet whose first row names the columns:
+   - **Name** (or **First name** and **Last name**): required.
+   - **Username:** optional. Taper makes one from the name if it's empty.
+   - **Email:** optional.
+   - **Role:** scholar, mentor or admin. Empty means scholar.
+   - **Classes:** optional. Class names separated by `;`. The classes must already
+     exist. Scholars join as scholars and mentors as mentors.
+2. Save it as CSV (Excel, Numbers and Google Sheets all can), and choose the file,
+   or copy the cells and paste them.
+3. Select **Check the list**. Taper shows each person, and any row with a problem
+   (a username that's taken, a class that doesn't exist…) in red. Problem rows are
+   skipped; fix them and import them again later.
+4. Select **Add**. Taper shows everyone's username and temporary password **once**.
+   **Download the list** or **Print** it before leaving the page.
+
 ## Finding people
 
 Search by name, username or email, and filter by role. **Status** shows active
@@ -49,3 +69,8 @@ on at any time.
 
 Accounts are deactivated rather than deleted, so classes and assignments keep a
 full record.
+
+## A person's classes
+
+Each person's page lists the classes they're in. To change that, use the class's
+**Members** page (see [Classes](classes.md)).

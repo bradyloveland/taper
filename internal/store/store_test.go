@@ -360,3 +360,106 @@ func TestPasswordResets(t *testing.T) {
 		t.Fatal("a deactivated account's link still works")
 	}
 }
+
+func TestClasses(t *testing.T) {
+	s := openTest(t)
+	mk := func(username, name, role string) *User {
+		u := &User{Username: username, DisplayName: name, Role: role, PasswordHash: "x", Active: true}
+		if err := s.CreateUser(u); err != nil {
+			t.Fatal(err)
+		}
+		return u
+	}
+	mia := mk("mia", "Mia Moss", RoleMentor)
+	ann := mk("ann", "Ann Admin", RoleAdmin)
+	sam := mk("sam", "Sam Stone", RoleScholar)
+	zoe := mk("zoe", "Zoe Zed", RoleScholar)
+
+	hist := &Class{Name: "History of Liberty", Term: "2026–27", Color: "teal", Description: "**Big** ideas"}
+	math := &Class{Name: "Arithmetic", Term: "2026–27", Color: "blue"}
+	old := &Class{Name: "Old Latin", Term: "2025–26", Color: "gray", Archived: true}
+	for _, c := range []*Class{hist, math, old} {
+		if err := s.CreateClass(c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n, err := s.AddMembers(hist.ID, ClassMentor, []int64{mia.ID, ann.ID}); err != nil || n != 2 {
+		t.Fatalf("add mentors: %d %v", n, err)
+	}
+	if n, _ := s.AddMembers(hist.ID, ClassScholar, []int64{sam.ID, zoe.ID}); n != 2 {
+		t.Fatal("add scholars")
+	}
+	if n, _ := s.AddMembers(hist.ID, ClassScholar, []int64{sam.ID}); n != 0 {
+		t.Fatal("adding again should change nothing")
+	}
+	s.AddMembers(math.ID, ClassScholar, []int64{sam.ID})
+	s.AddMembers(old.ID, ClassScholar, []int64{sam.ID})
+
+	got, err := s.GetClass(hist.ID)
+	if err != nil || got.Scholars != 2 || got.MentorNames() != "Ann Admin, Mia Moss" || got.Description != "**Big** ideas" {
+		t.Fatalf("class %+v %v", got, err)
+	}
+	list, _ := s.ListClasses(ClassFilter{})
+	if len(list) != 2 || list[0].Name != "Arithmetic" || list[1].Scholars != 2 {
+		t.Fatalf("list %+v", list)
+	}
+	if list, _ = s.ListClasses(ClassFilter{Archived: true}); len(list) != 1 || list[0].ID != old.ID {
+		t.Fatal("archived list")
+	}
+	if list, _ = s.ListClasses(ClassFilter{Query: "lib"}); len(list) != 1 || list[0].ID != hist.ID {
+		t.Fatal("search")
+	}
+	if list, _ = s.ListClasses(ClassFilter{Term: "2025–26"}); len(list) != 0 {
+		t.Fatal("term filter should still hide archived")
+	}
+	mine, _ := s.ListClassesFor(sam.ID)
+	if len(mine) != 2 || mine[0].MyRole != ClassScholar {
+		t.Fatalf("sam's classes %+v", mine)
+	}
+	mine, _ = s.ListClassesFor(mia.ID)
+	if len(mine) != 1 || mine[0].MyRole != ClassMentor {
+		t.Fatal("mia's classes")
+	}
+	members, _ := s.ClassMembers(hist.ID, false)
+	if len(members) != 4 || members[0].ClassRole != ClassMentor || members[2].Username != "sam" {
+		t.Fatalf("members %v", members)
+	}
+	if r, _ := s.ClassRole(hist.ID, zoe.ID); r != ClassScholar {
+		t.Fatal("role")
+	}
+	if r, _ := s.ClassRole(math.ID, zoe.ID); r != "" {
+		t.Fatal("not a member")
+	}
+	// Deactivated people drop out of counts and default lists.
+	zoe.Active = false
+	s.UpdateUser(zoe)
+	if got, _ := s.GetClass(hist.ID); got.Scholars != 1 {
+		t.Fatal("inactive scholar counted")
+	}
+	if m, _ := s.ClassMembers(hist.ID, true); len(m) != 4 {
+		t.Fatal("withInactive")
+	}
+	s.RemoveMember(hist.ID, sam.ID)
+	if r, _ := s.ClassRole(hist.ID, sam.ID); r != "" {
+		t.Fatal("removed")
+	}
+	terms, _ := s.Terms()
+	if len(terms) != 2 {
+		t.Fatalf("terms %v", terms)
+	}
+	if n, _ := s.CountClasses(); n != 2 {
+		t.Fatal("count")
+	}
+	if err := s.DeleteClass(hist.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetClass(hist.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatal("deleted")
+	}
+	if m, _ := s.ClassMembers(hist.ID, true); len(m) != 0 {
+		t.Fatal("memberships should go with the class")
+	}
+	if !ValidColor("teal") || ValidColor("pink") {
+		t.Fatal("colors")
+	}
+}

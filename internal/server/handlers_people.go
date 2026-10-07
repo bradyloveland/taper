@@ -34,6 +34,7 @@ func (s *Server) handlePeople(w http.ResponseWriter, r *http.Request) {
 }
 
 type personData struct {
+	Classes         []*store.Class
 	IsNew           bool
 	Self            bool
 	TwoStepRequired bool
@@ -128,8 +129,14 @@ func (s *Server) handlePersonForm(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
+	classes, err := s.store.ListClassesFor(u.ID)
+	if err != nil {
+		s.serverError(w, r, "listing classes", err)
+		return
+	}
 	s.render(w, r, http.StatusOK, "person", u.DisplayName, "people",
-		personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: store.Roles, TwoStepRequired: s.mfaRequired(u)})
+		personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: store.Roles,
+			TwoStepRequired: s.mfaRequired(u), Classes: classes})
 }
 
 func (s *Server) handlePersonUpdate(w http.ResponseWriter, r *http.Request) {

@@ -48,7 +48,11 @@
 
 {{if not .D.IsNew}}
 <section class="card">
-  <h2>Password</h2>
+  <h2>Classes</h2>
+  {{if .D.Classes}}
+  <ul class="list">{{range .D.Classes}}<li class="list-row"><span class="dot c-{{.Color}}" aria-hidden="true"></span><a href="/classes/{{.ID}}">{{.Name}}</a> <span class="muted small">{{if eq .MyRole "mentor"}}mentor{{else}}scholar{{end}}</span></li>{{end}}</ul>
+  {{else}}<p class="muted">Not in any current classes. Add people to a class from the class's Members page.</p>{{end}}
+  <h2 class="section-gap">Password</h2>
   {{if .D.Person.MustChangePassword}}
   <p><span class="badge warn">Temporary password</span> They haven't chosen their own password yet.</p>
   {{end}}

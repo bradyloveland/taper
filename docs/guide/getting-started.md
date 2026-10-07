@@ -37,7 +37,8 @@ at your school. An admin can create a new temporary password for you (see
 
 ## Getting around
 
-- **Home** shows what's important for you.
+- **Home** shows what's important for you, starting with your classes.
+- **Classes** lists your classes, and for mentors and admins, every class.
 - **Guide** is this guide.
 - Select your name at the top to open **My account**, and **Sign out** when you're done.
 - On a phone, the menu button (three lines) at the top right opens the menu.

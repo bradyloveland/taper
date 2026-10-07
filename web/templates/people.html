@@ -4,7 +4,10 @@
     <h1>People</h1>
     <p class="muted">Everyone who can sign in to Taper.</p>
   </div>
-  <a class="button primary" href="/admin/people/new{{with .D.Filter.Role}}?role={{.}}{{end}}">Add a person</a>
+  <div class="actions">
+    <a class="button" href="/admin/people/import">Import from a spreadsheet</a>
+    <a class="button primary" href="/admin/people/new{{with .D.Filter.Role}}?role={{.}}{{end}}">Add a person</a>
+  </div>
 </div>
 
 <form method="get" action="/admin/people" class="filters card">

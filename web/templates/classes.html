@@ -1,0 +1,57 @@
+{{define "content"}}
+<div class="page-head row">
+  <div>
+    <h1>{{if .D.Filter.Archived}}Archived classes{{else}}Classes{{end}}</h1>
+    {{if .D.Filter.Archived}}<p class="muted">Classes from earlier terms, kept read-only. <a href="/classes">Current classes</a></p>{{end}}
+  </div>
+  {{if .User.IsAdmin}}{{if not .D.Filter.Archived}}<a class="button primary" href="/classes/new">New class</a>{{end}}{{end}}
+</div>
+
+{{if not .D.Filter.Archived}}
+{{if .D.Mine}}
+<h2 class="section-title">Your classes</h2>
+<div class="class-grid">
+  {{range .D.Mine}}{{template "class-card" .}}{{end}}
+</div>
+{{else if not .D.ShowAll}}
+<div class="card empty"><p>You're not in any classes yet. Your mentors or an admin will add you.</p></div>
+{{end}}
+{{end}}
+
+{{if .D.ShowAll}}
+<h2 class="section-title">{{if .D.Filter.Archived}}All archived classes{{else}}All classes{{end}}</h2>
+<form method="get" action="/classes" class="filters card">
+  {{if .D.Filter.Archived}}<input type="hidden" name="archived" value="1">{{end}}
+  <label class="sr-only" for="q">Search</label>
+  <input id="q" name="q" type="search" placeholder="Search class names" value="{{.D.Filter.Query}}">
+  {{if .D.Terms}}
+  <label class="sr-only" for="term">Term</label>
+  <select id="term" name="term">
+    <option value="">Every term</option>
+    {{range .D.Terms}}<option value="{{.}}" {{if eq . $.D.Filter.Term}}selected{{end}}>{{.}}</option>{{end}}
+  </select>
+  {{end}}
+  <button type="submit" class="button">Filter</button>
+</form>
+{{if .D.All}}
+<div class="table-wrap card">
+<table class="table">
+  <thead><tr><th>Class</th><th>Term</th><th>Mentors</th><th>Scholars</th></tr></thead>
+  <tbody>
+  {{range .D.All}}
+  <tr>
+    <td data-label="Class"><span class="dot c-{{.Color}}" aria-hidden="true"></span><a href="/classes/{{.ID}}">{{.Name}}</a></td>
+    <td data-label="Term">{{if .Term}}{{.Term}}{{else}}<span class="muted">None</span>{{end}}</td>
+    <td data-label="Mentors">{{if .Mentors}}{{.MentorNames}}{{else}}<span class="muted">None yet</span>{{end}}</td>
+    <td data-label="Scholars">{{.Scholars}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+{{else}}
+<div class="card empty"><p>{{if or .D.Filter.Query .D.Filter.Term}}No classes match. <a href="/classes{{if .D.Filter.Archived}}?archived=1{{end}}">Clear the filters</a>.{{else if .D.Filter.Archived}}No archived classes.{{else}}No classes yet.{{if .User.IsAdmin}} <a href="/classes/new">Create the first one</a>.{{end}}{{end}}</p></div>
+{{end}}
+{{if and (not .D.Filter.Archived) .D.Archived}}<p class="small"><a href="/classes?archived=1">Archived classes ({{.D.Archived}})</a></p>{{end}}
+{{end}}
+{{end}}
