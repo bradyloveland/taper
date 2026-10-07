@@ -38,6 +38,16 @@
 </div>
 
 <section class="card">
+  <h2>Two-step sign-in</h2>
+  {{if .User.TOTPEnabled}}
+  <p><span class="badge ok">On</span> You sign in with your password and a code from your phone.</p>
+  {{else}}
+  <p><span class="badge">Off</span> Add a code from your phone when you sign in, so a stolen password isn't enough to get in.</p>
+  {{end}}
+  <p><a class="button" href="/account/two-step">{{if .User.TOTPEnabled}}Manage{{else}}Set up two-step sign-in{{end}}</a></p>
+</section>
+
+<section class="card">
   <h2>Where you're signed in</h2>
   <ul class="list">
     {{range .D.Sessions}}

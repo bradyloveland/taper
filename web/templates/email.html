@@ -1,0 +1,58 @@
+{{define "content"}}
+<p class="crumbs"><a href="/admin/settings">Settings</a> /</p>
+<div class="page-head">
+  <h1>Email</h1>
+  <p class="muted">Taper sends email through your school's mail server, or a service such as Google Workspace, Microsoft 365, Fastmail, Mailgun or Postmark.</p>
+</div>
+{{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+<div class="grid-2">
+<section class="card">
+  <h2>Mail server (SMTP)</h2>
+  <form method="post" action="/admin/email" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="host">Server</label>
+    <input id="host" name="host" value="{{.D.Config.Host}}" placeholder="smtp.example.org" autocapitalize="none" spellcheck="false">
+    <label for="port">Port</label>
+    <input id="port" name="port" inputmode="numeric" value="{{.D.Config.Port}}">
+    <label for="security">Security</label>
+    <select id="security" name="security">
+      <option value="starttls" {{if eq .D.Config.Security "starttls"}}selected{{end}}>STARTTLS (usually port 587)</option>
+      <option value="tls" {{if eq .D.Config.Security "tls"}}selected{{end}}>TLS (usually port 465)</option>
+      <option value="none" {{if eq .D.Config.Security "none"}}selected{{end}}>None: only for a mail server on your own network</option>
+    </select>
+    <label for="username">Username <span class="muted">(if the server needs one)</span></label>
+    <input id="username" name="username" value="{{.D.Config.Username}}" autocomplete="off" autocapitalize="none" spellcheck="false">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" placeholder="{{if .D.HasPass}}Saved; leave empty to keep it{{end}}">
+    <p class="help">Stored encrypted and never shown again. For Google or Microsoft accounts, use an app password.</p>
+    <label for="from">From address</label>
+    <input id="from" name="from" type="email" value="{{.D.Config.From}}" placeholder="taper@yourschool.org">
+    <label for="from_name">From name <span class="muted">(optional)</span></label>
+    <input id="from_name" name="from_name" value="{{.D.Config.FromName}}" placeholder="{{.AppName}}">
+    <label class="check"><input type="checkbox" name="alerts" value="1" {{if .D.Alerts}}checked{{end}}><span>Email admins about new versions, failed updates and problem reports</span></label>
+    <p class="help">Sent to admins who have an email address under My account.</p>
+    <div class="actions">
+      <button type="submit" class="button primary">Save</button>
+      {{if .D.Config.Host}}<button type="submit" name="clear" value="1" class="button" data-confirm-click="Turn off email? Password reset by email will stop working.">Turn off email</button>{{end}}
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Send a test email</h2>
+  {{with .D.TestResult}}<div class="flash {{if $.D.TestOK}}flash-ok{{else}}flash-error{{end}}" role="status">{{.}}</div>{{end}}
+  <form method="post" action="/admin/email/test" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="to">Send to</label>
+    <input id="to" name="to" type="email" value="{{.D.TestTo}}" required>
+    <button type="submit" class="button">Send test email</button>
+  </form>
+  <h3>What Taper emails</h3>
+  <ul class="small">
+    <li>Password reset links, when someone with an email address uses "Forgot your password?" on the sign-in page.</li>
+    <li>Notices to admins, if turned on.</li>
+    <li>Later versions add notices about assignments and messages, which each person can turn off.</li>
+  </ul>
+</section>
+</div>
+{{end}}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -101,6 +102,7 @@ type loginData struct {
 	Next     string
 	Remember bool
 	Error    string
+	CanReset bool // email is set up, so "forgot password" works
 }
 
 func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
@@ -108,13 +110,13 @@ func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, safeNext(r.URL.Query().Get("next")), http.StatusSeeOther)
 		return
 	}
-	s.render(w, r, http.StatusOK, "login", "Sign in", "", loginData{Next: r.URL.Query().Get("next")})
+	s.render(w, r, http.StatusOK, "login", "Sign in", "", loginData{Next: r.URL.Query().Get("next"), CanReset: s.emailReady()})
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	username := strings.TrimSpace(r.PostFormValue("username"))
 	password := r.PostFormValue("password")
-	d := loginData{Username: username, Next: r.PostFormValue("next"), Remember: r.PostFormValue("remember") == "1"}
+	d := loginData{Username: username, Next: r.PostFormValue("next"), Remember: r.PostFormValue("remember") == "1", CanReset: s.emailReady()}
 	fail := func(status int, msg string) {
 		d.Error = msg
 		s.render(w, r, status, "login", "Sign in", "", d)
@@ -148,6 +150,23 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.userThrottle.Reset(username)
+	if u.TOTPEnabled {
+		if old := current(r).sess; old != nil {
+			_ = s.store.DeleteSession(old.TokenHash)
+		}
+		token, _, err := s.store.CreatePendingSession(u.ID, d.Remember, r.UserAgent(), s.clientIP(r))
+		if err != nil {
+			s.serverError(w, r, "starting sign-in", err)
+			return
+		}
+		s.setSessionCookie(w, r, token, false)
+		target := "/login/verify"
+		if next := safeNext(d.Next); next != "/" {
+			target += "?next=" + url.QueryEscape(next)
+		}
+		http.Redirect(w, r, target, http.StatusSeeOther)
+		return
+	}
 	if !s.startSession(w, r, u, d.Remember) {
 		return
 	}

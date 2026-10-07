@@ -1,0 +1,80 @@
+{{define "content"}}
+<p class="crumbs"><a href="/admin/settings">Settings</a> /</p>
+<div class="page-head">
+  <h1>Network &amp; HTTPS</h1>
+  <p class="muted">How people reach Taper. Right now: {{.D.Current.Describe}}.</p>
+</div>
+
+{{with .D.Notice}}<div class="flash flash-error" role="status">{{.}}</div>{{end}}
+{{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+
+{{with .D.Pending}}
+  {{if $.D.ViaPending}}
+  <section class="card callout">
+    <h2>The new settings work. Keep them?</h2>
+    <p>You reached Taper with the new settings: {{.Describe}}. Keep them, or they're undone at {{$.D.Expires.Format "3:04:05 PM"}}.</p>
+    <div class="actions">
+      <form method="post" action="/admin/network/confirm"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="button primary">Keep the new settings</button></form>
+      <form method="post" action="/admin/network/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="button">Cancel</button></form>
+    </div>
+  </section>
+  {{else}}
+  <section class="card callout">
+    <h2>Trying new settings</h2>
+    <p>Taper is also listening with the new settings: {{.Describe}}.</p>
+    <p><strong>To keep them, open <a href="{{$.D.TryURL}}">{{$.D.TryURL}}</a> and select Keep.</strong>{{if eq .Mode "proxy"}} Or open Taper through your reverse proxy.{{end}}
+    If nobody does by {{$.D.Expires.Format "3:04:05 PM"}}, the change is undone by itself.</p>
+    {{if $.D.Swapping}}<p class="help">The new settings use the same port, so this address stops working in a moment.</p>{{end}}
+    {{if eq .Mode "https"}}<p class="help">The first visit can take a few seconds while Let's Encrypt issues the certificate. If it doesn't load, check that {{.Domain}} points at this server and ports 80 and 443 reach it.</p>{{end}}
+    <form method="post" action="/admin/network/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="button">Cancel the change</button></form>
+  </section>
+  {{end}}
+{{end}}
+
+<div class="grid-2">
+<section class="card">
+  <h2>Address and HTTPS</h2>
+  <form method="post" action="/admin/network" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <fieldset class="choices">
+      <legend>How is Taper reached?</legend>
+      <label class="check"><input type="radio" name="mode" value="http" {{if eq .D.Form.mode "http"}}checked{{end}}><span><strong>Plain HTTP</strong>, for trying Taper out on your own network</span></label>
+      <label class="check"><input type="radio" name="mode" value="https" {{if eq .D.Form.mode "https"}}checked{{end}}><span><strong>HTTPS with a free Let's Encrypt certificate.</strong> The server must be reachable from the internet on ports 80 and 443.</span></label>
+      <label class="check"><input type="radio" name="mode" value="proxy" {{if eq .D.Form.mode "proxy"}}checked{{end}}><span><strong>Behind a reverse proxy</strong> that handles HTTPS (nginx, Caddy, Nginx Proxy Manager…)</span></label>
+    </fieldset>
+
+    <label for="domain">Public name <span class="muted">(Let's Encrypt)</span></label>
+    <input id="domain" name="domain" value="{{.D.Form.domain}}" placeholder="learn.yourschool.org" autocapitalize="none" spellcheck="false">
+    <label for="email">Email for Let's Encrypt notices <span class="muted">(optional)</span></label>
+    <input id="email" name="email" type="email" value="{{.D.Form.email}}">
+
+    <label for="port">Port <span class="muted">(plain HTTP and proxy)</span></label>
+    <input id="port" name="port" inputmode="numeric" value="{{.D.Form.port}}" placeholder="8088">
+    <label for="bind">Listen address <span class="muted">(optional)</span></label>
+    <input id="bind" name="bind" value="{{.D.Form.bind}}" placeholder="Every address" autocapitalize="none" spellcheck="false">
+    <p class="help">Leave empty to listen on every address. Use 127.0.0.1 when the reverse proxy runs on this same server.</p>
+    <label for="proxies">Trusted proxies <span class="muted">(proxy)</span></label>
+    <input id="proxies" name="proxies" value="{{.D.Form.proxies}}" placeholder="127.0.0.1, ::1, 192.168.1.20" autocapitalize="none" spellcheck="false">
+    <p class="help">Addresses of your reverse proxy. Taper believes their X-Forwarded-For and X-Forwarded-Proto headers.</p>
+
+    <p class="help">Changes to the address or HTTPS are tried first. You confirm them from the new address, and if you don't within a few minutes, they're undone by themselves.</p>
+    <button type="submit" class="button primary">Save</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Public address</h2>
+  <p>The address people type to reach Taper. It's used in links Taper sends, such as password reset emails and calendar subscriptions.</p>
+  {{with .D.PublicErr}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/admin/network/public" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="public_url">Public address</label>
+    <input id="public_url" name="public_url" type="url" value="{{.D.PublicURL}}" placeholder="{{.D.Guess}}" autocapitalize="none" spellcheck="false">
+    <p class="help">Leave empty to use the address in the browser at the time ({{.D.Guess}}). Set it when people reach Taper through a reverse proxy or a different name.</p>
+    <button type="submit" class="button">Save</button>
+  </form>
+  <h3>If you get locked out</h3>
+  <p class="help">On the server, <code>sudo taper network --reset</code> then <code>sudo systemctl restart taper</code> puts back the settings from the installer.</p>
+</section>
+</div>
+{{end}}

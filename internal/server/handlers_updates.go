@@ -39,10 +39,16 @@ func (s *Server) UpdateFiles() update.Files { return s.updater.Files }
 
 // Started is called once the server is listening. A version that was just
 // installed counts as working once it has stayed up for settle.
-func (s *Server) Started(settle time.Duration) { s.updater.Started(settle) }
+func (s *Server) Started(settle time.Duration) {
+	s.updater.Started(settle)
+	s.checkUpdateNotices()
+}
 
-// Stop cancels background work on shutdown.
-func (s *Server) Stop() { s.updater.Stop() }
+// Stop cancels background work on shutdown, and waits for email being sent.
+func (s *Server) Stop() {
+	s.updater.Stop()
+	s.wg.Wait()
+}
 
 func (s *Server) requestRestart(rollback string) {
 	s.mu.Lock()
@@ -78,6 +84,7 @@ func (s *Server) Run(ctx context.Context) {
 			if c.Error != "" {
 				slog.Warn("checking for updates", "err", c.Error)
 			}
+			s.checkUpdateNotices()
 		}
 	}
 }

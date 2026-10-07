@@ -1,0 +1,22 @@
+{{define "content"}}
+<section class="auth-card card">
+  <h1>Two-step sign-in</h1>
+  <p class="muted">Open your authenticator app and enter the 6-digit code for {{.AppName}}.</p>
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/login/verify" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="next" value="{{.D.Next}}">
+    <label for="code">Code</label>
+    <input id="code" name="code" required autocomplete="one-time-code" inputmode="numeric" autocapitalize="none" spellcheck="false" autofocus maxlength="20" class="code-input">
+    <button type="submit" class="button primary block">Continue</button>
+  </form>
+  <details class="help-details">
+    <summary>Lost your phone?</summary>
+    <p>Enter one of your recovery codes (like <code>abcde-fghjk</code>) in the box above instead. Each one works once. No recovery codes? Ask an admin at your school to turn off two-step sign-in for you.</p>
+  </details>
+  <form method="post" action="/logout" class="center">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit" class="link-button">Cancel and sign out</button>
+  </form>
+</section>
+{{end}}

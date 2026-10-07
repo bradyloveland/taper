@@ -93,20 +93,34 @@ updated documentation, and passes `make check`, before it's opened for review.
 - Report a problem → GitHub issue (token stored encrypted), with a fallback link.
   Reports are also kept in Taper for admins.
 
-### M3: classes
+### M3: security and server settings (done)
+- **Two-step sign-in (MFA):** codes from an authenticator app (Google Authenticator,
+  Microsoft Authenticator, 1Password and so on), turned on from My account with a QR code.
+  Single-use recovery codes for a lost phone. Admins can require it for admins and/or
+  mentors (optional for scholars), and turn it off for someone who's locked out.
+  `taper mfa-reset` on the server is the last resort.
+- **Network & HTTPS in the web interface:** port, listen address, plain HTTP, Let's Encrypt
+  or behind a reverse proxy, trusted proxies. A change runs alongside the old settings until
+  it's confirmed from the new address, and goes back by itself if it isn't, so a mistake
+  can't lock you out. The installer is then only needed for the first install.
+- **Public address** (base URL) setting, used in links Taper sends (email, calendars).
+- **Email (SMTP):** server settings with a test button. Used for "forgot password" by
+  email, and to tell admins about new versions, failed updates and problem reports.
+
+### M4: classes
 - Admins create classes (name, description, term, color) and archive old ones.
 - Assign one or more mentors; enroll scholars (by hand, or a CSV list of scholars).
 - Class page with members and, later, its calendar, assignments and chat.
 - A home page for each role showing their classes.
 
-### M4: calendars and iCal
+### M5: calendars and iCal
 - School calendar (admins add events): holidays, gatherings, terms.
 - Class calendars (mentors add events). Repeating events (weekly and so on).
 - My calendar: the school calendar plus my classes, in month, week and list views.
 - iCal subscriptions with a private link for each person (their whole calendar,
   or one class), for Google Calendar, Apple Calendar and Outlook. Links can be reset.
 
-### M5: assignments
+### M6: assignments
 - Mentors create assignments with formatted text and attached files, an optional
   due date (which shows on the class calendar), and publish now or later.
 - Scholars download the attachments, and either write their work online (saved
@@ -115,14 +129,15 @@ updated documentation, and passes `make check`, before it's opened for review.
   (*Needs another look*, *Complete*). Scholars can turn in again after feedback.
 - No letter grades.
 
-### M6: chat
+### M7: chat
 - A community channel for the whole school and a channel for each class.
 - Live updates, unread counts, and notifications in the app.
 - Mentors moderate their class channels and admins moderate everything (delete messages, mute).
 - Admins can turn channels off.
 
-### M7: polish and 1.0
-- Notifications (in-app first; web push where the phone supports it).
+### M8: polish and 1.0
+- Notifications: in the app, by email (each person chooses), and web push where the phone supports it.
+- Passkeys (sign in with Face ID or a fingerprint).
 - Accessibility check, performance, a full guide with screenshots.
 - Tested upgrade path from every pre-release, then **1.0.0**.
 

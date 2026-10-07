@@ -19,6 +19,10 @@
 
     <button type="submit" class="button primary block">Sign in</button>
   </form>
+  {{if .D.CanReset}}
+  <p class="small"><a href="/forgot">Forgot your password?</a></p>
+  {{else}}
   <p class="muted small">Forgot your password? Ask a mentor or admin at your school to reset it.</p>
+  {{end}}
 </section>
 {{end}}

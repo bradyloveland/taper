@@ -19,6 +19,17 @@ Your **username** and **role** can only be changed by an admin.
 You stay signed in on the device you're using. Any other phones, tablets or
 computers you were signed in on are signed out.
 
+## Forgot your password?
+
+If your school has set up email and your account has an email address, select
+**Forgot your password?** on the sign-in page. Taper emails you a link to choose
+a new one. Otherwise, ask a mentor or admin at your school to reset it.
+
+## Two-step sign-in
+
+Add a code from your phone to your password, so a stolen password isn't enough
+to get in. See [Two-step sign-in](two-step.md).
+
 ## Where you're signed in
 
 This list shows every browser where you're signed in, and when each was last

@@ -83,7 +83,7 @@ func (s *Server) secure(r *http.Request) bool {
 	if r.TLS != nil {
 		return true
 	}
-	return s.cfg.Trusted(r.RemoteAddr) && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+	return s.netcfg(r).Trusted(r.RemoteAddr) && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 }
 
 // clientIP is the browser's address, believing X-Forwarded-For only from
@@ -93,7 +93,8 @@ func (s *Server) clientIP(r *http.Request) string {
 	if err != nil {
 		host = r.RemoteAddr
 	}
-	if !s.cfg.Trusted(r.RemoteAddr) {
+	cfg := s.netcfg(r)
+	if !cfg.Trusted(r.RemoteAddr) {
 		return host
 	}
 	// Walk from the right, skipping our own proxies.
@@ -106,7 +107,7 @@ func (s *Server) clientIP(r *http.Request) string {
 		if net.ParseIP(p) == nil {
 			break
 		}
-		if !s.cfg.Trusted(p) {
+		if !cfg.Trusted(p) {
 			return p
 		}
 		host = p
@@ -117,15 +118,19 @@ func (s *Server) clientIP(r *http.Request) string {
 // baseURL is the address people use to reach this server, for showing in
 // instructions.
 func (s *Server) baseURL(r *http.Request) string {
-	if s.cfg.Mode == config.ModeHTTPS {
-		return "https://" + s.cfg.Domain
+	if u := s.publicURL(); u != "" {
+		return u
+	}
+	cfg := s.netcfg(r)
+	if cfg.Mode == config.ModeHTTPS {
+		return "https://" + cfg.Domain
 	}
 	scheme := "http"
 	if s.secure(r) {
 		scheme = "https"
 	}
 	host := r.Host
-	if s.cfg.Trusted(r.RemoteAddr) {
+	if cfg.Trusted(r.RemoteAddr) {
 		if fh := r.Header.Get("X-Forwarded-Host"); fh != "" {
 			host = strings.TrimSpace(strings.Split(fh, ",")[0])
 		}
@@ -190,8 +195,22 @@ func (s *Server) gate(next http.Handler) http.Handler {
 			http.Redirect(w, r, "/setup", http.StatusSeeOther)
 			return
 		}
-		if u := current(r).user; u != nil && u.MustChangePassword && p != "/password" && p != "/logout" {
+		ri := current(r)
+		if ri.sess != nil && ri.sess.MFAPending {
+			if p != "/login/verify" && p != "/logout" {
+				http.Redirect(w, r, "/login/verify", http.StatusSeeOther)
+				return
+			}
+			next.ServeHTTP(w, r)
+			return
+		}
+		if u := ri.user; u != nil && u.MustChangePassword && p != "/password" && p != "/logout" {
 			http.Redirect(w, r, "/password", http.StatusSeeOther)
+			return
+		}
+		if u := ri.user; u != nil && !u.TOTPEnabled && !strings.HasPrefix(p, "/account/two-step") && p != "/logout" &&
+			s.mfaRequired(u) {
+			http.Redirect(w, r, "/account/two-step", http.StatusSeeOther)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -202,7 +221,7 @@ func (s *Server) gate(next http.Handler) http.Handler {
 func (s *Server) signedIn(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ri := current(r)
-		if ri.user == nil {
+		if ri.user == nil || (ri.sess.MFAPending && r.URL.Path != "/logout") {
 			if r.Method == http.MethodGet {
 				next := r.URL.RequestURI()
 				target := "/login"

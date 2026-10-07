@@ -16,6 +16,8 @@ const (
 	ShortFor    = 12 * time.Hour
 	// touchEvery limits how often last_seen_at is written.
 	touchEvery = 5 * time.Minute
+	// PendingFor is how long someone has to enter their two-step code.
+	PendingFor = 10 * time.Minute
 )
 
 // Session is a signed-in browser.
@@ -29,6 +31,7 @@ type Session struct {
 	ExpiresAt  int64
 	UserAgent  string
 	IP         string
+	MFAPending bool // waiting for the second step of signing in
 }
 
 func (s *Store) expiry(remember bool, from int64) int64 {
@@ -40,16 +43,29 @@ func (s *Store) expiry(remember bool, from int64) int64 {
 
 // CreateSession signs a user in and returns the token for the cookie.
 func (s *Store) CreateSession(userID int64, remember bool, userAgent, ip string) (string, *Session, error) {
+	return s.createSession(userID, remember, userAgent, ip, false)
+}
+
+// CreatePendingSession starts signing in someone who must still enter a
+// two-step code. It lasts PendingFor.
+func (s *Store) CreatePendingSession(userID int64, remember bool, userAgent, ip string) (string, *Session, error) {
+	return s.createSession(userID, remember, userAgent, ip, true)
+}
+
+func (s *Store) createSession(userID int64, remember bool, userAgent, ip string, pending bool) (string, *Session, error) {
 	token := auth.Token(32)
 	now := s.now()
 	if len(userAgent) > 300 {
 		userAgent = userAgent[:300]
 	}
 	sess := &Session{TokenHash: auth.HashToken(token), UserID: userID, CSRF: auth.Token(24), Remember: remember,
-		CreatedAt: now, LastSeenAt: now, ExpiresAt: s.expiry(remember, now), UserAgent: userAgent, IP: ip}
+		CreatedAt: now, LastSeenAt: now, ExpiresAt: s.expiry(remember, now), UserAgent: userAgent, IP: ip, MFAPending: pending}
+	if pending {
+		sess.ExpiresAt = now + int64(PendingFor/time.Second)
+	}
 	_, err := s.db.Exec(`INSERT INTO sessions (token_hash, user_id, csrf, remember, created_at, last_seen_at,
-		expires_at, user_agent, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, sess.TokenHash, sess.UserID, sess.CSRF,
-		sess.Remember, sess.CreatedAt, sess.LastSeenAt, sess.ExpiresAt, sess.UserAgent, sess.IP)
+		expires_at, user_agent, ip, mfa_pending) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sess.TokenHash, sess.UserID, sess.CSRF,
+		sess.Remember, sess.CreatedAt, sess.LastSeenAt, sess.ExpiresAt, sess.UserAgent, sess.IP, sess.MFAPending)
 	if err != nil {
 		return "", nil, err
 	}
@@ -65,9 +81,9 @@ func (s *Store) LookupSession(token string) (*Session, *User, error) {
 	}
 	sess := &Session{}
 	err := s.db.QueryRow(`SELECT token_hash, user_id, csrf, remember, created_at, last_seen_at, expires_at,
-		user_agent, ip FROM sessions WHERE token_hash = ?`, auth.HashToken(token)).Scan(&sess.TokenHash,
+		user_agent, ip, mfa_pending FROM sessions WHERE token_hash = ?`, auth.HashToken(token)).Scan(&sess.TokenHash,
 		&sess.UserID, &sess.CSRF, &sess.Remember, &sess.CreatedAt, &sess.LastSeenAt, &sess.ExpiresAt,
-		&sess.UserAgent, &sess.IP)
+		&sess.UserAgent, &sess.IP, &sess.MFAPending)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil, ErrNotFound
 	}
@@ -86,7 +102,7 @@ func (s *Store) LookupSession(token string) (*Session, *User, error) {
 	if !u.Active {
 		return nil, nil, ErrNotFound
 	}
-	if now-sess.LastSeenAt >= int64(touchEvery/time.Second) {
+	if !sess.MFAPending && now-sess.LastSeenAt >= int64(touchEvery/time.Second) {
 		sess.LastSeenAt = now
 		// Short sessions keep their fixed end; remembered ones slide.
 		if sess.Remember {
@@ -96,6 +112,22 @@ func (s *Store) LookupSession(token string) (*Session, *User, error) {
 			sess.LastSeenAt, sess.ExpiresAt, sess.TokenHash)
 	}
 	return sess, u, nil
+}
+
+// CompleteMFA finishes signing in a pending session, giving it its full
+// lifetime.
+func (s *Store) CompleteMFA(tokenHash string) error {
+	var remember bool
+	if err := s.db.QueryRow(`SELECT remember FROM sessions WHERE token_hash = ? AND mfa_pending = 1`, tokenHash).Scan(&remember); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	now := s.now()
+	_, err := s.db.Exec(`UPDATE sessions SET mfa_pending = 0, last_seen_at = ?, expires_at = ? WHERE token_hash = ?`,
+		now, s.expiry(remember, now), tokenHash)
+	return err
 }
 
 // DeleteSession signs one browser out.
@@ -113,7 +145,8 @@ func (s *Store) DeleteUserSessions(userID int64, keepHash string) error {
 // UserSessions lists a user's sessions, most recently used first.
 func (s *Store) UserSessions(userID int64) ([]*Session, error) {
 	rows, err := s.db.Query(`SELECT token_hash, user_id, csrf, remember, created_at, last_seen_at, expires_at,
-		user_agent, ip FROM sessions WHERE user_id = ? AND expires_at > ? ORDER BY last_seen_at DESC`, userID, s.now())
+		user_agent, ip, mfa_pending FROM sessions WHERE user_id = ? AND expires_at > ? AND mfa_pending = 0
+		ORDER BY last_seen_at DESC`, userID, s.now())
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +155,7 @@ func (s *Store) UserSessions(userID int64) ([]*Session, error) {
 	for rows.Next() {
 		sess := &Session{}
 		if err := rows.Scan(&sess.TokenHash, &sess.UserID, &sess.CSRF, &sess.Remember, &sess.CreatedAt,
-			&sess.LastSeenAt, &sess.ExpiresAt, &sess.UserAgent, &sess.IP); err != nil {
+			&sess.LastSeenAt, &sess.ExpiresAt, &sess.UserAgent, &sess.IP, &sess.MFAPending); err != nil {
 			return nil, err
 		}
 		out = append(out, sess)

@@ -7,6 +7,23 @@ All notable changes to Taper are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- Milestone 3, security and server settings:
+  - **Two-step sign-in**: codes from an authenticator app, set up with a QR code under
+    My account, with 10 single-use recovery codes. Codes can't be reused, and wrong codes
+    are limited. Admins can require it for admins, mentors and/or scholars, and turn it
+    off for someone who lost their phone. `taper mfa-reset` on the server as a last resort.
+  - **Settings → Network & HTTPS**: plain HTTP, Let's Encrypt or behind a reverse proxy,
+    port, listen address and trusted proxies, from the web interface. A change runs
+    alongside the old settings until it's confirmed from the new address, and is undone
+    by itself if it isn't. `taper network` shows the settings in use; `taper network
+    --reset` goes back to the installer's.
+  - **Public address** setting, used in links Taper sends.
+  - **Settings → Email**: SMTP server settings (password stored encrypted) with a test
+    button. "Forgot your password?" sends a single-use reset link (valid for an hour) to
+    people with an email address. Admins can get email about new versions, undone updates
+    and problem reports.
+  - CI test of changing network settings from the web interface on a real systemd machine.
+
 - Milestone 2, updates and problem reports:
   - **Updates** page for admins: check GitHub for new versions (daily, or on demand), read
     the release notes, download and install. Releases must be signed by the Taper project.

@@ -57,6 +57,19 @@
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <button type="submit" class="button">Reset password</button>
   </form>
+  <h2 class="section-gap">Two-step sign-in</h2>
+  {{if .D.Person.TOTPEnabled}}
+  <p><span class="badge ok">On</span> {{.D.Form.display_name}} signs in with a code from their phone.</p>
+  {{if not .D.Self}}
+  <p class="help">If they lost their phone and their recovery codes, turn it off so they can sign in with just their password{{if .D.TwoStepRequired}}. They'll be asked to set it up again{{end}}.</p>
+  <form method="post" action="/admin/people/{{.D.Person.ID}}/two-step-off" data-confirm="Turn off two-step sign-in for {{.D.Form.display_name}}?">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit" class="button">Turn off two-step sign-in</button>
+  </form>
+  {{end}}
+  {{else}}
+  <p><span class="badge">Off</span>{{if .D.TwoStepRequired}} Your school requires it for {{lower .D.Person.RoleLabel}}s, so they'll set it up when they next sign in.{{else}} They can turn it on under My account.{{end}}</p>
+  {{end}}
 </section>
 {{end}}
 </div>

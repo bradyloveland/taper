@@ -1,0 +1,16 @@
+{{define "content"}}
+<section class="auth-card card">
+  <h1>Choose a new password</h1>
+  <p class="muted">For {{.D.User.DisplayName}} ({{.D.User.Username}}).</p>
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/reset/{{.D.Token}}" class="form">
+    <input type="text" name="username" value="{{.D.User.Username}}" autocomplete="username" hidden>
+    <label for="password">New password</label>
+    <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" autofocus>
+    <p class="help">At least 8 characters. This signs you out on all your devices.</p>
+    <label for="confirm">Type it again</label>
+    <input id="confirm" name="confirm" type="password" required minlength="8" autocomplete="new-password">
+    <button type="submit" class="button primary block">Save password</button>
+  </form>
+</section>
+{{end}}

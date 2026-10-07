@@ -52,6 +52,9 @@ type Server struct {
 	userThrottle   *auth.Throttle // failed sign-ins per username
 	ipThrottle     *auth.Throttle // failed sign-ins and setup codes per address
 	reportThrottle *auth.Throttle // problem reports per person
+	mfaThrottle    *auth.Throttle // wrong two-step codes per person
+	resetThrottle  *auth.Throttle // password reset emails per account
+	resetIPLimit   *auth.Throttle // password reset requests per address (a school shares one)
 
 	box       *secret.Box
 	updater   *update.Updater
@@ -61,6 +64,14 @@ type Server struct {
 	rollback    string // set when the restart should go back to the previous version
 	restart     chan struct{}
 	restartOnce sync.Once
+
+	wg sync.WaitGroup // background email
+
+	netMu     sync.Mutex
+	netCur    *listenerSet // nil before Serve, and while swapping listeners
+	netPend   *pendingNet
+	netNotice string // why the last network change was undone
+	netFatal  chan error
 
 	setupMu   sync.Mutex
 	setupDone atomic.Bool
@@ -79,8 +90,12 @@ func New(opts Options) (*Server, error) {
 		userThrottle:   auth.NewThrottle(5, 15*time.Minute),
 		ipThrottle:     auth.NewThrottle(50, 15*time.Minute),
 		reportThrottle: auth.NewThrottle(5, time.Hour),
+		mfaThrottle:    auth.NewThrottle(5, 15*time.Minute),
+		resetThrottle:  auth.NewThrottle(3, time.Hour),
+		resetIPLimit:   auth.NewThrottle(20, time.Hour),
 		githubAPI:      opts.GitHubAPI,
 		restart:        make(chan struct{}),
+		netFatal:       make(chan error, 1),
 	}
 	var err error
 	if s.box, err = secret.LoadOrCreate(filepath.Join(s.cfg.DataDir, "secret.key")); err != nil {
@@ -140,6 +155,12 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /setup", s.handleSetup)
 	mux.HandleFunc("GET /login", s.handleLoginForm)
 	mux.HandleFunc("POST /login", s.handleLogin)
+	mux.HandleFunc("GET /forgot", s.handleForgotForm)
+	mux.HandleFunc("POST /forgot", s.handleForgot)
+	mux.HandleFunc("GET /reset/{token}", s.handleResetForm)
+	mux.HandleFunc("POST /reset/{token}", s.handleReset)
+	mux.HandleFunc("GET /login/verify", s.handleVerifyForm)
+	mux.HandleFunc("POST /login/verify", s.handleVerify)
 
 	// Everyone signed in.
 	mux.HandleFunc("POST /logout", s.signedIn(s.handleLogout))
@@ -150,6 +171,10 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /account/profile", s.signedIn(s.handleAccountProfile))
 	mux.HandleFunc("POST /account/password", s.signedIn(s.handleAccountPassword))
 	mux.HandleFunc("POST /account/sessions/revoke", s.signedIn(s.handleRevokeSessions))
+	mux.HandleFunc("GET /account/two-step", s.signedIn(s.handleTwoStep))
+	mux.HandleFunc("POST /account/two-step/enable", s.signedIn(s.handleTwoStepEnable))
+	mux.HandleFunc("POST /account/two-step/recovery", s.signedIn(s.handleTwoStepRecovery))
+	mux.HandleFunc("POST /account/two-step/disable", s.signedIn(s.handleTwoStepDisable))
 	mux.HandleFunc("GET /guide", s.signedIn(s.handleGuide))
 	mux.HandleFunc("GET /guide/{page}", s.signedIn(s.handleGuide))
 	mux.HandleFunc("GET /report", s.signedIn(s.handleReportForm))
@@ -162,10 +187,20 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /admin/people/{id}", s.admin(s.handlePersonForm))
 	mux.HandleFunc("POST /admin/people/{id}", s.admin(s.handlePersonUpdate))
 	mux.HandleFunc("POST /admin/people/{id}/reset-password", s.admin(s.handlePersonResetPassword))
+	mux.HandleFunc("POST /admin/people/{id}/two-step-off", s.admin(s.handlePersonTwoStepOff))
 	mux.HandleFunc("GET /admin/settings", s.admin(s.handleSettings))
 	mux.HandleFunc("POST /admin/settings", s.admin(s.handleSettingsSave))
 	mux.HandleFunc("POST /admin/settings/reports", s.admin(s.handleReportSettingsSave))
+	mux.HandleFunc("POST /admin/settings/security", s.admin(s.handleSecuritySave))
 	mux.HandleFunc("GET /admin/backup", s.admin(s.handleBackupDownload))
+	mux.HandleFunc("GET /admin/email", s.admin(s.handleEmail))
+	mux.HandleFunc("POST /admin/email", s.admin(s.handleEmailSave))
+	mux.HandleFunc("POST /admin/email/test", s.admin(s.handleEmailTest))
+	mux.HandleFunc("GET /admin/network", s.admin(s.handleNetwork))
+	mux.HandleFunc("POST /admin/network", s.admin(s.handleNetworkSave))
+	mux.HandleFunc("POST /admin/network/confirm", s.admin(s.handleNetworkConfirm))
+	mux.HandleFunc("POST /admin/network/cancel", s.admin(s.handleNetworkCancel))
+	mux.HandleFunc("POST /admin/network/public", s.admin(s.handlePublicURLSave))
 	mux.HandleFunc("GET /admin/reports", s.admin(s.handleReports))
 	mux.HandleFunc("POST /admin/reports/{id}/send", s.admin(s.handleReportSend))
 	mux.HandleFunc("GET /admin/updates", s.admin(s.handleUpdates))

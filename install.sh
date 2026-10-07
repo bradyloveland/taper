@@ -18,7 +18,8 @@
 # download the newest release from GitHub:
 #   curl -fsSL https://raw.githubusercontent.com/bradyloveland/taper/main/install.sh | sudo bash
 # Re-running it upgrades Taper in place and keeps your data and settings; only the
-# options you pass are changed.
+# options you pass are changed. After the first install, these settings can also be
+# changed in the web interface (Settings > Network & HTTPS).
 set -euo pipefail
 
 REPO="bradyloveland/taper"
@@ -43,7 +44,7 @@ while [[ $# -gt 0 ]]; do
     --http) NEW_MODE=http; SET_BIND=1; SET_PROXIES=1; shift ;;
     --port) [[ $# -ge 2 ]] || fail "--port needs a number"; NEW_PORT="$2"; shift 2 ;;
     --version) [[ $# -ge 2 ]] || fail "--version needs a version"; WANT_VERSION="${2#v}"; shift 2 ;;
-    -h|--help) sed -n '2,23p' "${BASH_SOURCE[0]}" 2>/dev/null | sed 's/^# \{0,1\}//' || true; exit 0 ;;
+    -h|--help) sed -n '2,22p' "${BASH_SOURCE[0]}" 2>/dev/null | sed 's/^# \{0,1\}//' || true; exit 0 ;;
     *) fail "Unknown option: $1 (see --help)" ;;
   esac
 done
@@ -160,6 +161,11 @@ EOF
 chown root:"$USER_NAME" "$CONF.new"
 chmod 640 "$CONF.new"
 mv -f "$CONF.new" "$CONF"
+# Network options given here replace settings changed in the web interface.
+if [[ -n "$NEW_MODE" || -n "$NEW_PORT" || -n "$NEW_EMAIL" ]] && [[ -f "$DATA_DIR/network.json" ]]; then
+  rm -f "$DATA_DIR/network.json"
+  echo "The network settings changed in the web interface are replaced by the options given here."
+fi
 
 # ---- install the files ------------------------------------------------------------
 systemctl stop taper 2>/dev/null || true
@@ -259,6 +265,11 @@ EOF
 fi
 
 # ---- check it answers -------------------------------------------------------------------
+# The settings in use: the web interface may have changed them (network.json).
+if read -r MODE PORT BIND DOMAIN < <(/usr/local/bin/taper network 2>/dev/null); then
+  [[ "$BIND" == "-" ]] && BIND=""
+  [[ "$DOMAIN" == "-" ]] && DOMAIN=""
+fi
 if [[ "$MODE" != https ]] && command -v curl >/dev/null; then
   CHECK_HOST="${BIND:-127.0.0.1}"
   [[ "$CHECK_HOST" == *:* ]] && CHECK_HOST="[$CHECK_HOST]"
@@ -294,7 +305,8 @@ case "$MODE" in
     HOST="${HOST:-$(hostname)}"
     echo "Open http://$HOST:$PORT/"
     echo "Plain HTTP is fine for trying Taper out. To install it on phones, use HTTPS:"
-    echo "run this installer again with --domain or --behind-proxy (see the install guide)."
+    echo "Settings > Network & HTTPS in the web interface, or this installer's --domain or"
+    echo "--behind-proxy options (see the install guide)."
     ;;
 esac
 SETUP_CODE="$(/usr/local/bin/taper setup-code 2>/dev/null | grep -E '^[A-Z0-9]{4}-[A-Z0-9]{4}$' || true)"

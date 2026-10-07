@@ -142,10 +142,12 @@ type settingsData struct {
 	HasToken    bool
 	Reports     int
 	Unsent      int
+	MFA         mfaPolicy
+	Email       bool
 }
 
 func (s *Server) renderSettingsWith(w http.ResponseWriter, r *http.Request, status int, errs settingsErrors) {
-	d := settingsData{Errors: errs, Network: s.cfg.Describe(), DataDir: s.cfg.DataDir,
+	d := settingsData{Errors: errs, Network: s.currentNet().Describe(), DataDir: s.cfg.DataDir,
 		ReportRepo: s.reportRepo(), DefaultRepo: version.Repo, HasToken: s.reportToken() != ""}
 	d.Schema, _ = s.store.SchemaVersion()
 	var size int64
@@ -160,6 +162,8 @@ func (s *Server) renderSettingsWith(w http.ResponseWriter, r *http.Request, stat
 		d.Reports = len(list)
 	}
 	d.Unsent, _ = s.store.UnsentBugReports()
+	d.MFA = s.mfaPolicy()
+	d.Email = s.emailReady()
 	s.render(w, r, status, "settings", "Settings", "settings", d)
 }
 
