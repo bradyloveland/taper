@@ -1,4 +1,4 @@
-// Taper service worker. The server fills in __CACHE__ and __PRECACHE__.
+// Taper service worker. The server fills in the cache name and the files to keep.
 //
 // Pages always come from the network, because they hold personal,
 // up-to-the-minute information. Only when there's no connection does the
