@@ -43,3 +43,16 @@ jobs:
           path: dist
       - name: Install, upgrade and uninstall
         run: sudo scripts/ci-install-test.sh dist
+
+  # Updates from the web interface on a real systemd machine: install,
+  # update, roll back by hand, and an update that doesn't start.
+  update:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Update, roll back, and recover from a broken update
+        run: scripts/ci-update-test.sh

@@ -35,7 +35,11 @@ type env struct {
 	cfg   *config.Config
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWith(t, nil) }
+
+// newEnvWith lets a test adjust the options; the program folder is
+// cfg.AppDir, a temporary folder.
+func newEnvWith(t *testing.T, adjust func(*Options)) *env {
 	t.Helper()
 	dir := t.TempDir()
 	st, err := store.Open(filepath.Join(dir, "taper.db"))
@@ -43,8 +47,16 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
-	cfg := &config.Config{Mode: config.ModeHTTP, Port: 8088, DataDir: dir}
-	srv, err := New(Options{Config: cfg, Store: st})
+	app := filepath.Join(dir, "opt")
+	if err := os.MkdirAll(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{Mode: config.ModeHTTP, Port: 8088, DataDir: dir, AppDir: app}
+	opts := Options{Config: cfg, Store: st, Supervised: func() bool { return false }}
+	if adjust != nil {
+		adjust(&opts)
+	}
+	srv, err := New(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,8 +67,10 @@ func newEnv(t *testing.T) *env {
 
 // newEnvReady is a server that's been set up, with an admin "admin" whose
 // password is "admin-password".
-func newEnvReady(t *testing.T) *env {
-	e := newEnv(t)
+func newEnvReady(t *testing.T) *env { return newEnvReadyWith(t, nil) }
+
+func newEnvReadyWith(t *testing.T, adjust func(*Options)) *env {
+	e := newEnvWith(t, adjust)
 	e.addUser("admin", "Ada Admin", store.RoleAdmin, "admin-password", false)
 	if err := e.store.SetSetting("school_name", "Liberty Commonwealth"); err != nil {
 		t.Fatal(err)

@@ -5,6 +5,8 @@
 </div>
 
 {{if .User.IsAdmin}}
+{{with .D.Update}}<div class="flash flash-ok banner" role="status"><span>Taper {{.}} is available.</span> <a href="/admin/updates">See what's new and install it</a></div>{{end}}
+{{with .D.Unsent}}<div class="flash flash-warn" role="status">{{.}} problem report{{if gt . 1}}s{{end}} from your school {{if gt . 1}}aren't{{else}}isn't{{end}} on GitHub yet. <a href="/admin/reports">See reports</a></div>{{end}}
 <section class="stats" aria-label="People">
   <a class="stat card" href="/admin/people?role=admin"><span class="stat-num">{{index .D.Counts "admin"}}</span><span class="stat-label">Admins</span></a>
   <a class="stat card" href="/admin/people?role=mentor"><span class="stat-num">{{index .D.Counts "mentor"}}</span><span class="stat-label">Mentors</span></a>

@@ -1,0 +1,106 @@
+{{define "content"}}
+<div class="page-head">
+  <h1>Updates</h1>
+  <p class="muted">This server runs Taper {{.D.Version}} ({{.D.Arch}}).</p>
+</div>
+
+{{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+
+{{with .D.Last}}
+  {{if eq .Phase "done"}}
+  <div class="flash flash-ok banner" role="status">
+    <span>Updated from {{.From}} to {{.To}}. Everything went well.</span>
+    <form method="post" action="/admin/updates/dismiss"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="link-button">Dismiss</button></form>
+  </div>
+  {{else if eq .Phase "rolled_back"}}
+  <div class="flash flash-error banner" role="status">
+    <span>{{if .Manual}}Went back from {{.From}} to {{.To}}.{{else}}Taper {{.From}} didn't work, so {{.To}} was put back.{{end}} {{.Reason}} Your data is as it was before the update.</span>
+    <form method="post" action="/admin/updates/dismiss"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="link-button">Dismiss</button></form>
+  </div>
+  {{else}}
+  <div class="flash flash-ok" role="status">Taper {{.To}} just started. It counts as installed once it has run for a minute.</div>
+  {{end}}
+{{end}}
+
+{{with .D.CantUpdate}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+
+<div class="grid-2">
+<section class="card">
+  <h2>New versions</h2>
+  {{if .D.Check.Checked}}
+    {{if and .D.Check.Latest .D.Newer}}
+      <p><strong>Taper {{.D.Check.Latest.Version}} is available.</strong> <span class="muted">Checked {{ago .D.Check.Checked}}.</span></p>
+      {{with .D.Notes}}<div class="notes prose">{{.}}</div>{{end}}
+      <p class="small"><a href="{{.D.Check.Latest.Page}}" rel="noopener">Release notes on GitHub</a></p>
+      {{if not .D.CantUpdate}}
+      <form method="post" action="/admin/updates/download" class="form-inline">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <input type="hidden" name="version" value="{{.D.Check.Latest.Version}}">
+        <button type="submit" class="button primary">Download {{.D.Check.Latest.Version}}</button>
+      </form>
+      {{end}}
+    {{else}}
+      <p>You have the newest version. <span class="muted">Checked {{ago .D.Check.Checked}}.</span></p>
+    {{end}}
+  {{else}}
+    <p class="muted">Taper hasn't checked GitHub for new versions yet.</p>
+  {{end}}
+  <form method="post" action="/admin/updates/check" class="form-inline">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit" class="button">Check now</button>
+  </form>
+  <form method="post" action="/admin/updates/settings" class="form autosave">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label class="check">
+      <input type="checkbox" name="check_daily" value="1" {{if .D.CheckDaily}}checked{{end}}>
+      <span>Check for new versions every day</span>
+    </label>
+    <p class="help">Admins see a note on the home page when one is out. Nothing is installed without you.</p>
+    <button type="submit" class="button small">Save</button>
+  </form>
+</section>
+
+<section class="card">
+  {{with .D.Staged}}
+  <h2>Ready to install: Taper {{.Version}}</h2>
+  {{with $.D.StagedNotes}}<div class="notes prose">{{.}}</div>{{end}}
+  {{if not $.D.StagedNewer}}<p class="help">This isn't newer than the running version, so it can't be installed.</p>{{end}}
+  <p class="help">Installing takes about a minute. Taper backs up the database first, then restarts. If the new version doesn't start, the current one is put back on its own.</p>
+  <div class="actions">
+    {{if and $.D.StagedNewer (not $.D.CantUpdate)}}
+    <form method="post" action="/admin/updates/install" data-confirm="Install Taper {{.Version}} now? Taper will be unavailable for about a minute.">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}">
+      <button type="submit" class="button primary">Install {{.Version}}</button>
+    </form>
+    {{end}}
+    <form method="post" action="/admin/updates/discard">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}">
+      <button type="submit" class="button">Discard</button>
+    </form>
+  </div>
+  {{else}}
+  <h2>Install from a file</h2>
+  <p>For a server without internet access: download <code>taper-&lt;version&gt;-linux-{{.D.Arch}}.tar.gz</code> from the <a href="https://github.com/{{.Repo}}/releases" rel="noopener">releases page</a>, then upload it here. Only releases signed by the Taper project are accepted.</p>
+  <form method="post" action="/admin/updates/upload" enctype="multipart/form-data" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="release">Release file</label>
+    <input id="release" name="release" type="file" accept=".tar.gz,.gz,application/gzip" required>
+    <button type="submit" class="button">Upload and check</button>
+  </form>
+  {{end}}
+</section>
+</div>
+
+{{if .D.RollbackTo}}
+<section class="card">
+  <h2>Go back</h2>
+  <p>If something isn't right with this version, you can go back to Taper {{.D.RollbackTo}}. The database is put back as it was just before the update, so <strong>changes made since then are lost</strong>.</p>
+  <form method="post" action="/admin/updates/rollback" data-confirm="Go back to Taper {{.D.RollbackTo}}? Changes made since the update will be lost.">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit" class="button danger">Go back to {{.D.RollbackTo}}</button>
+  </form>
+</section>
+{{end}}
+
+<p class="small muted">Backups: Taper keeps a copy of the database from before each of the last five updates. You can also <a href="/admin/backup">download a backup</a> at any time.</p>
+{{end}}

@@ -21,7 +21,9 @@ lint:
 
 check: lint test
 
-# Release archives for Linux on x86-64 and ARM64, with SHA256SUMS.
+# Release archives for Linux on x86-64 and ARM64, with SHA256SUMS. Set
+# TAPER_SIGNING_KEY to sign them; unsigned archives install with install.sh
+# but can't be installed from the Updates page.
 dist:
 	rm -rf dist && mkdir -p dist
 	for arch in amd64 arm64; do \
@@ -29,6 +31,7 @@ dist:
 		mkdir -p dist/$$name; \
 		CGO_ENABLED=0 GOOS=linux GOARCH=$$arch go build -trimpath -ldflags "$(LDFLAGS)" -o dist/$$name/taper ./cmd/taper || exit 1; \
 		cp install.sh uninstall.sh LICENSE README.md CHANGELOG.md dist/$$name/; \
+		go run ./tools/taper-sign sign dist/$$name $(VERSION) $$arch || exit 1; \
 		tar -C dist -czf dist/$$name.tar.gz $$name; \
 		rm -rf dist/$$name; \
 	done

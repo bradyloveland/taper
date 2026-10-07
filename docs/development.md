@@ -44,12 +44,17 @@ docker exec taper-it bash /scripts/ci-install-test.sh /dist
 
 | Path | What |
 |------|------|
-| `cmd/taper/` | The program: `serve`, `setup-code`, `passwd`, `backup`, `version` |
+| `cmd/taper/` | The program: `serve`, `setup-code`, `passwd`, `backup`, `rollback`, `version` |
 | `internal/config/` | Settings from `TAPER_*` environment variables (`/etc/taper/taper.conf`) |
 | `internal/store/` | SQLite access and numbered migrations (`migrations/NNNN_name.sql`) |
 | `internal/auth/` | Password hashing, tokens, sign-in throttling |
 | `internal/server/` | HTTP handlers, middleware, rendering |
-| `internal/markdown/` | Safe Markdown rendering (guide, later assignment text) |
+| `internal/markdown/` | Safe Markdown rendering (guide, release notes, later assignment text) |
+| `internal/release/` | Release manifests, signatures and version numbers |
+| `internal/update/` | Checking GitHub, staging, installing and rolling back releases |
+| `internal/secret/` | Encrypting saved secrets (GitHub token) with `secret.key` |
+| `internal/github/` | Filing problem reports as GitHub issues |
+| `tools/taper-sign/` | Signs release folders; makes signing keys |
 | `web/templates/` | Page templates (`layout.html` wraps every page) |
 | `web/static/` | CSS, JS, icons, the service worker |
 | `docs/guide/` | The user guide, shown in the app and on GitHub |
@@ -69,5 +74,27 @@ docker exec taper-it bash /scripts/ci-install-test.sh /dist
 1. In a pull request, set `internal/version/VERSION` to the new version and rename
    `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`.
 2. After it's merged, tag it: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-3. The Release workflow tests, builds the archives and publishes the GitHub
-   release with the changelog section as its notes.
+3. The Release workflow tests, builds and **signs** the archives, and publishes the
+   GitHub release with the changelog section as its notes.
+
+### Release signing
+
+Each archive has a `MANIFEST` (SHA-256 of every file) and `MANIFEST.sig`, an
+ed25519 signature. Taper only installs releases from the Updates page if
+they're signed by a key built into `internal/release/keys.go`.
+
+- The private key is the `TAPER_SIGNING_KEY` Actions secret (`id:base64-seed`), and
+  the owner keeps an offline copy. `make dist` signs when it's set.
+- To replace the key: `go run ./tools/taper-sign genkey taper-YYYY`, **add** the
+  new public key to `keys.go` (keep the old one), release that version signed with
+  the old key, then switch the secret to the new key. Versions that know both keys
+  accept either.
+
+### Testing updates
+
+`scripts/ci-update-test.sh` (run in CI) builds versions A, B and C signed with a
+throwaway key, installs A, updates to B from the web interface, goes back, updates
+again, then installs C, which is built not to start (`-X main.brokenOnPurpose=yes`).
+It checks that B is put back on its own and that unsigned releases are refused.
+It needs root and systemd. Locally, run it in a systemd container that has Go,
+`make` and `sudo`.

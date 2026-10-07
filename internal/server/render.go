@@ -26,6 +26,7 @@ type pageData struct {
 	Version   string
 	Repo      string
 	CSRF      string
+	Path      string // the page's own address, for "Report a problem"
 	User      *store.User
 	Flash     *flash
 	D         any
@@ -92,7 +93,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, status int, page
 	}
 	name, short := s.appNames()
 	pd := &pageData{Title: title, Section: section, AppName: name, ShortName: short, School: s.store.SchoolName(),
-		Version: version.Version, Repo: version.Repo, Flash: s.takeFlash(w, r), D: d}
+		Version: version.Version, Repo: version.Repo, Path: r.URL.Path, Flash: s.takeFlash(w, r), D: d}
 	if ri := current(r); ri.user != nil {
 		pd.User, pd.CSRF = ri.user, ri.sess.CSRF
 	}

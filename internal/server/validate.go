@@ -78,3 +78,12 @@ func validateProfile(u *store.User, form map[string]string) string {
 	}
 	return ""
 }
+
+// capitalize upper-cases the first letter of a message.
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+	r, n := utf8.DecodeRuneInString(s)
+	return string(unicode.ToUpper(r)) + s[n:]
+}

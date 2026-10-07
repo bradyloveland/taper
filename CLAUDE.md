@@ -28,8 +28,12 @@ The plan and milestones are in `docs/plan.md`. User documentation is in
 - **Strict CSP:** no inline scripts, no inline event handlers, no `style=""` attributes.
 - **Schema changes are new numbered files** in `internal/store/migrations/`. Never edit
   a migration that has been released. Upgrades must keep every school's data.
-- **No terminal needed after install**, except the first install and the account-recovery
-  commands (`taper passwd`, `taper setup-code`).
+- **No terminal needed after install**, except the first install and the recovery
+  commands (`taper passwd`, `taper setup-code`, `taper rollback`).
+- **Secrets are write-only.** Tokens are encrypted with `internal/secret`, never shown
+  again, never logged, and an empty field on save keeps the stored value.
+- **Releases are signed.** Never weaken the signature check in `internal/release`; see
+  "Release signing" in `docs/development.md`.
 - **Privacy:** scholars are often minors. Never send personal data off the server
   except where the user chooses to (a bug report they write, a calendar link they share).
 - **User-facing text is plain and specific:** say what happened and what to do next.
