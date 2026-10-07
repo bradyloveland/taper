@@ -50,7 +50,7 @@ func TestHomeAndSettings(t *testing.T) {
 	e.addUser("mia", "Mia Mentor", store.RoleMentor, "mentor-password", false)
 	b := e.signedIn("admin", "admin-password")
 	expect(t, b.get("/"), http.StatusOK, "Getting started", `href="/admin/people"`, "Liberty Commonwealth")
-	expect(t, b.get("/admin/settings"), http.StatusOK, "This server", "Plain HTTP", "schema 5", "Download a backup", "Problem reports")
+	expect(t, b.get("/admin/settings"), http.StatusOK, "This server", "Plain HTTP", "schema 6", "Download a backup", "Problem reports")
 	expect(t, b.postForm("/admin/settings", url.Values{"school": {"   "}}), http.StatusUnprocessableEntity, "Enter a school name")
 	expectRedirect(t, b.postForm("/admin/settings", url.Values{"school": {"Freedom   Academy"}}), "/admin/settings")
 	expect(t, b.get("/admin/settings"), http.StatusOK, "Settings saved", "Freedom Academy")
