@@ -41,6 +41,8 @@ func (s *Server) templateFuncs() template.FuncMap {
 		"date":      func(unix int64) string { return time.Unix(unix, 0).Format("January 2, 2006") },
 		"device":    device,
 		"pair":      func(a, b any) pairT { return pairT{a, b} },
+		"list":      func(xs ...string) []string { return xs },
+		"title":     func(s string) string { return capitalize(s) },
 	}
 }
 

@@ -75,6 +75,41 @@
     setTimeout(poll, 2500);
   }
 
+  // Selects that change the page straight away.
+  document.querySelectorAll('select[data-autosubmit]').forEach((sel) => {
+    sel.addEventListener('change', () => sel.form.submit());
+  });
+
+  // The event form shows only the fields that apply.
+  const eventForm = document.querySelector('.event-form');
+  if (eventForm) {
+    const allDay = eventForm.querySelector('[data-allday]');
+    const repeat = eventForm.querySelector('[data-repeat]');
+    const cal = eventForm.querySelector('[data-closed-toggle]');
+    const show = (els, on) => els.forEach((el) => { el.hidden = !on; });
+    const update = () => {
+      show(eventForm.querySelectorAll('.time-field'), !allDay.checked);
+      show(eventForm.querySelectorAll('[data-weekly]'), repeat.value === 'weekly');
+      show(eventForm.querySelectorAll('[data-repeating]'), repeat.value !== '');
+      if (cal) show(eventForm.querySelectorAll('[data-closed-field]'), cal.value === 'school');
+    };
+    [allDay, repeat, cal].forEach((el) => el && el.addEventListener('change', update));
+    update();
+    // Moving the start date moves the end date with it, keeping the length.
+    const startDate = eventForm.querySelector('#start_date');
+    const endDate = eventForm.querySelector('#end_date');
+    let previous = startDate.value;
+    startDate.addEventListener('change', () => {
+      const from = Date.parse(previous), to = Date.parse(startDate.value), end = Date.parse(endDate.value);
+      if (!isNaN(from) && !isNaN(to) && !isNaN(end)) {
+        endDate.value = new Date(end + (to - from)).toISOString().slice(0, 10);
+      } else if (!isNaN(to)) {
+        endDate.value = startDate.value;
+      }
+      previous = startDate.value;
+    });
+  }
+
   // Filter boxes for long lists of people.
   document.querySelectorAll('[data-filter]').forEach((box) => {
     const list = document.getElementById(box.getAttribute('data-filter'));

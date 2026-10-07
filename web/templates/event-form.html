@@ -1,0 +1,67 @@
+{{define "content"}}
+<p class="crumbs"><a href="/calendar">Calendar</a> /{{if not .D.IsNew}} <a href="/events/{{.D.Event.ID}}">{{.D.Event.Title}}</a> /{{end}}</p>
+<div class="page-head"><h1>{{if .D.IsNew}}New event{{else}}Edit event{{end}}</h1>{{if and (not .D.IsNew) .D.Event.Repeat}}<p class="muted">Changes apply to every date.</p>{{end}}</div>
+<section class="card readable">
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="{{if .D.IsNew}}/events/new{{else}}/events/{{.D.Event.ID}}/edit{{end}}" class="form event-form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    {{if .D.IsNew}}
+    <label for="calendar">Calendar</label>
+    <select id="calendar" name="calendar" data-closed-toggle>
+      {{range .D.Calendars}}<option value="{{.Key}}" {{if eq .Key $.D.Form.calendar}}selected{{end}}>{{.Label}}</option>{{end}}
+    </select>
+    {{else}}
+    <input type="hidden" name="calendar" value="{{.D.Form.calendar}}">
+    <p class="muted">On the {{if .D.Event.ClassID}}{{.D.Event.ClassName}}{{else}}school{{end}} calendar.</p>
+    {{end}}
+
+    <label for="title">Title</label>
+    <input id="title" name="title" required maxlength="100" value="{{.D.Form.title}}" {{if .D.IsNew}}autofocus{{end}} placeholder="Field trip to the museum">
+
+    <label class="check"><input type="checkbox" name="all_day" value="1" {{if eq .D.Form.all_day "1"}}checked{{end}} data-allday><span>All day</span></label>
+
+    <div class="when-grid">
+      <div><label for="start_date">Starts</label><input id="start_date" name="start_date" type="date" required value="{{.D.Form.start_date}}"></div>
+      <div class="time-field"><label for="start_time">at</label><input id="start_time" name="start_time" type="time" value="{{.D.Form.start_time}}"></div>
+      <div><label for="end_date">Ends</label><input id="end_date" name="end_date" type="date" value="{{.D.Form.end_date}}"></div>
+      <div class="time-field"><label for="end_time">at</label><input id="end_time" name="end_time" type="time" value="{{.D.Form.end_time}}"></div>
+    </div>
+
+    <label for="repeat">Repeats</label>
+    <select id="repeat" name="repeat" data-repeat>
+      <option value="" {{if eq .D.Form.repeat ""}}selected{{end}}>Doesn't repeat</option>
+      <option value="daily" {{if eq .D.Form.repeat "daily"}}selected{{end}}>Every day</option>
+      <option value="weekly" {{if eq .D.Form.repeat "weekly"}}selected{{end}}>Every week</option>
+      <option value="monthly" {{if eq .D.Form.repeat "monthly"}}selected{{end}}>Every month, on the same date</option>
+      <option value="yearly" {{if eq .D.Form.repeat "yearly"}}selected{{end}}>Every year</option>
+    </select>
+    <fieldset class="weekdays" data-weekly>
+      <legend class="small">On</legend>
+      <div class="weekday-list">
+      {{range .D.Weekdays}}
+        <label class="weekday"><input type="checkbox" name="day" value="{{printf "%d" .}}" {{if index $.D.Days (printf "%d" .)}}checked{{end}}><span>{{slice .String 0 3}}</span></label>
+      {{end}}
+      </div>
+    </fieldset>
+    <div data-repeating>
+      <label for="until">Until <span class="muted">(optional)</span></label>
+      <input id="until" name="until" type="date" value="{{.D.Form.until}}">
+      <p class="help">The last day it can happen, such as the end of the term.</p>
+    </div>
+
+    <label for="location">Where <span class="muted">(optional)</span></label>
+    <input id="location" name="location" maxlength="200" value="{{.D.Form.location}}">
+
+    <label for="description">Details <span class="muted">(optional)</span></label>
+    <textarea id="description" name="description" rows="5" maxlength="20000">{{.D.Form.description}}</textarea>
+    <p class="help">Simple formatting works: <code>**bold**</code>, lists with <code>- </code>, links.</p>
+
+    <label class="check" data-closed-field><input type="checkbox" name="closed" value="1" {{if eq .D.Form.closed "1"}}checked{{end}}><span>No school (a holiday or break)</span></label>
+
+    <div class="actions">
+      <button type="submit" class="button primary">{{if .D.IsNew}}Add to calendar{{else}}Save{{end}}</button>
+      <a class="button" href="{{if .D.IsNew}}/calendar{{else}}/events/{{.D.Event.ID}}{{end}}">Cancel</a>
+    </div>
+  </form>
+</section>
+{{end}}

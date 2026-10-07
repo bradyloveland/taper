@@ -58,6 +58,7 @@ docker exec taper-it bash /scripts/ci-install-test.sh /dist
 | `internal/github/` | Filing problem reports as GitHub issues |
 | `internal/mail/` | Sending email over SMTP; `mailtest` is a fake server for tests |
 | `internal/qr/` | QR codes (SVG) for setting up two-step sign-in |
+| `internal/cal/` | Repeating events, dates in the school's time zone, and iCalendar feeds |
 | `tools/taper-sign/` | Signs release folders; makes signing keys |
 | `web/templates/` | Page templates (`layout.html` wraps every page) |
 | `web/static/` | CSS, JS, icons, the service worker |

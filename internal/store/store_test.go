@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -462,4 +463,102 @@ func TestClasses(t *testing.T) {
 	if !ValidColor("teal") || ValidColor("pink") {
 		t.Fatal("colors")
 	}
+}
+
+func TestEvents(t *testing.T) {
+	s := openTest(t)
+	u := &User{Username: "mia", DisplayName: "Mia", Role: RoleMentor, PasswordHash: "x", Active: true}
+	s.CreateUser(u)
+	c := &Class{Name: "History", Color: "teal"}
+	s.CreateClass(c)
+	other := &Class{Name: "Math", Color: "blue"}
+	s.CreateClass(other)
+
+	school := &CalEvent{Title: "Winter break", Closed: true, StartDate: "2026-12-21", EndDate: "2027-01-01", CreatedBy: u.ID}
+	weekly := &CalEvent{ClassID: c.ID, Title: "History", StartDate: "2026-09-01", StartTime: "10:00", EndDate: "2026-09-01",
+		EndTime: "11:30", Repeat: "weekly", RepeatDays: "2,4", RepeatUntil: "2027-05-31"}
+	math := &CalEvent{ClassID: other.ID, Title: "Math test", StartDate: "2026-10-15", EndDate: "2026-10-15"}
+	for _, e := range []*CalEvent{school, weekly, math} {
+		if err := s.CreateEvent(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if school.UID == weekly.UID || !strings.HasSuffix(school.UID, "@taper") {
+		t.Fatal("uids")
+	}
+	got, err := s.ListEvents(EventQuery{School: true, ClassIDs: []int64{c.ID}, From: "2026-10-01", To: "2026-10-31"})
+	if err != nil || len(got) != 1 || got[0].ID != weekly.ID || got[0].ClassName != "History" || got[0].ClassColor != "teal" {
+		t.Fatalf("october: %+v %v", got, err)
+	}
+	got, _ = s.ListEvents(EventQuery{School: true, ClassIDs: []int64{c.ID}, From: "2026-12-01", To: "2026-12-31"})
+	if len(got) != 2 {
+		t.Fatalf("december: %d", len(got))
+	}
+	if got, _ := s.ListEvents(EventQuery{}); got != nil {
+		t.Fatal("no calendars, no events")
+	}
+	if got, _ := s.ListEvents(EventQuery{ClassIDs: []int64{c.ID}, From: "2027-09-01", To: "2027-09-30"}); len(got) != 0 {
+		t.Fatal("after the repeat ends")
+	}
+
+	if err := s.SkipDate(weekly.ID, "2026-10-08"); err != nil {
+		t.Fatal(err)
+	}
+	e, _ := s.GetEvent(weekly.ID)
+	if !e.Skips["2026-10-08"] || e.Sequence != 1 {
+		t.Fatalf("skip: %+v", e)
+	}
+	r, err := e.Rule()
+	if err != nil {
+		t.Fatal(err)
+	}
+	occ := r.Occurrences(mustDate("2026-10-05"), mustDate("2026-10-11"))
+	if len(occ) != 1 || occ[0].Format("2006-01-02") != "2026-10-06" {
+		t.Fatalf("occurrences: %v", occ)
+	}
+	e.Title = "History of Liberty"
+	if err := s.UpdateEvent(e); err != nil {
+		t.Fatal(err)
+	}
+	e, _ = s.GetEvent(weekly.ID)
+	if e.Title != "History of Liberty" || e.Sequence != 2 {
+		t.Fatal("update")
+	}
+	s.DeleteClass(c.ID)
+	if _, err := s.GetEvent(weekly.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatal("class events go with the class")
+	}
+	s.DeleteEvent(school.ID)
+	if _, err := s.GetEvent(school.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatal("delete")
+	}
+
+	// Subscription tokens.
+	if sealed, _ := s.CalendarFeed(u.ID); sealed != "" {
+		t.Fatal("no feed yet")
+	}
+	s.SetCalendarFeed(u.ID, "hash1", "sealed1")
+	s.SetCalendarFeed(u.ID, "hash2", "sealed2")
+	if sealed, _ := s.CalendarFeed(u.ID); sealed != "sealed2" {
+		t.Fatal("feed replaced")
+	}
+	if _, err := s.UserByCalendarFeed("hash1"); err == nil {
+		t.Fatal("old token still works")
+	}
+	if got, err := s.UserByCalendarFeed("hash2"); err != nil || got.ID != u.ID {
+		t.Fatal("token lookup")
+	}
+	u.Active = false
+	s.UpdateUser(u)
+	if _, err := s.UserByCalendarFeed("hash2"); err == nil {
+		t.Fatal("deactivated people's feeds stop")
+	}
+}
+
+func mustDate(s string) time.Time {
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		panic(err)
+	}
+	return t
 }

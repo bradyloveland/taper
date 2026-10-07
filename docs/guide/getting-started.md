@@ -37,7 +37,8 @@ at your school. An admin can create a new temporary password for you (see
 
 ## Getting around
 
-- **Home** shows what's important for you, starting with your classes.
+- **Home** shows what's coming up and your classes.
+- **Calendar** shows the school calendar and your classes' calendars.
 - **Classes** lists your classes, and for mentors and admins, every class.
 - **Guide** is this guide.
 - Select your name at the top to open **My account**, and **Sign out** when you're done.

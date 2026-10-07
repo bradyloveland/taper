@@ -11,6 +11,10 @@
     <label for="school">School name</label>
     <input id="school" name="school" required maxlength="100" value="{{.School}}">
     <p class="help">Shown at the top of every page and as the app's name on phones.</p>
+    <label for="time_zone">Time zone</label>
+    <input id="time_zone" name="time_zone" list="zones" value="{{.D.TimeZone}}" placeholder="The server's ({{.D.ServerZone}})" autocapitalize="none" spellcheck="false">
+    <datalist id="zones">{{range .D.Zones}}<option value="{{.}}">{{end}}</datalist>
+    <p class="help">Calendars use the school's local time. It's {{.D.Now}} there now.</p>
     <button type="submit" class="button primary">Save</button>
   </form>
 </section>

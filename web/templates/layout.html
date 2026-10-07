@@ -31,6 +31,7 @@
     <label for="nav-toggle" class="nav-button"><span class="hamburger" aria-hidden="true"></span><span class="sr-only">Menu</span></label>
       <nav class="nav" aria-label="Main">
         <a href="/" {{if eq .Section "home"}}aria-current="page"{{end}}>Home</a>
+        <a href="/calendar" {{if eq .Section "calendar"}}aria-current="page"{{end}}>Calendar</a>
         <a href="/classes" {{if eq .Section "classes"}}aria-current="page"{{end}}>Classes</a>
         <a href="/guide" {{if eq .Section "guide"}}aria-current="page"{{end}}>Guide</a>
         {{if .User.IsAdmin}}

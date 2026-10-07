@@ -8,9 +8,10 @@ Open **Classes** in the menu.
 
 ## A class's page
 
-Each class has its name, term and meeting time, a description, and its mentors
-and scholars. The class calendar, assignments and chat come in later versions
-of Taper and will appear here.
+Each class has its name, term and meeting time, a description, what's coming
+up on its calendar, and its mentors and scholars. Assignments and chat come in
+later versions of Taper and will appear here. See [Calendars](calendar.md) for
+the class calendar.
 
 Mentors and admins see usernames. Scholars see their classmates' names only.
 

@@ -14,6 +14,7 @@ import (
 )
 
 type homeData struct {
+	Upcoming []occurrence
 	Greeting string
 	Classes  []*store.Class // the person's own classes
 	NClasses int            // current classes at the school, for admins
@@ -40,6 +41,11 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, "listing classes", err)
 		return
 	}
+	q := store.EventQuery{School: true}
+	for _, c := range d.Classes {
+		q.ClassIDs = append(q.ClassIDs, c.ID)
+	}
+	d.Upcoming = s.upcoming(q, 14, 8)
 	if current(r).user.IsAdmin() {
 		d.NClasses, _ = s.store.CountClasses()
 		counts, err := s.store.RoleCounts()
@@ -136,6 +142,7 @@ func (s *Server) handleRevokeSessions(w http.ResponseWriter, r *http.Request) {
 
 type settingsErrors struct {
 	School  string
+	Zone    string
 	Reports string
 }
 
@@ -152,6 +159,10 @@ type settingsData struct {
 	Unsent      int
 	MFA         mfaPolicy
 	Email       bool
+	TimeZone    string   // the setting, or "" for the server's
+	ServerZone  string   // the server's own zone, as a label
+	Zones       []string // suggestions
+	Now         string   // the time now at the school, to check the zone
 }
 
 func (s *Server) renderSettingsWith(w http.ResponseWriter, r *http.Request, status int, errs settingsErrors) {
@@ -171,6 +182,10 @@ func (s *Server) renderSettingsWith(w http.ResponseWriter, r *http.Request, stat
 	}
 	d.Unsent, _ = s.store.UnsentBugReports()
 	d.MFA = s.mfaPolicy()
+	_, _ = s.store.GetSetting(settingTimeZone, &d.TimeZone)
+	d.ServerZone = time.Now().In(time.Local).Format("MST")
+	d.Zones = commonZones
+	d.Now = time.Now().In(s.loc()).Format("Monday 3:04 PM")
 	d.Email = s.emailReady()
 	s.render(w, r, status, "settings", "Settings", "settings", d)
 }
@@ -185,7 +200,18 @@ func (s *Server) handleSettingsSave(w http.ResponseWriter, r *http.Request) {
 		s.renderSettingsWith(w, r, http.StatusUnprocessableEntity, settingsErrors{School: msg})
 		return
 	}
+	zone := strings.TrimSpace(r.PostFormValue("time_zone"))
+	if zone != "" {
+		if _, err := time.LoadLocation(zone); err != nil || zone == "Local" {
+			s.renderSettingsWith(w, r, http.StatusUnprocessableEntity, settingsErrors{School: "That time zone isn't one Taper knows. Use a name like America/Denver or Europe/London."})
+			return
+		}
+	}
 	if err := s.store.SetSetting("school_name", school); err != nil {
+		s.serverError(w, r, "saving settings", err)
+		return
+	}
+	if err := s.store.SetSetting(settingTimeZone, zone); err != nil {
 		s.serverError(w, r, "saving settings", err)
 		return
 	}
@@ -204,4 +230,13 @@ func humanSize(n int64) string {
 		return plural(int(n), "byte")
 	}
 	return strings.TrimSuffix(fmt.Sprintf("%.1f", f), ".0") + " " + units[i]
+}
+
+// commonZones are suggested in the time zone box; any IANA name works.
+var commonZones = []string{
+	"America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles",
+	"America/Anchorage", "Pacific/Honolulu", "America/Toronto", "America/Vancouver", "America/Mexico_City",
+	"America/Sao_Paulo", "Europe/London", "Europe/Dublin", "Europe/Paris", "Europe/Berlin", "Europe/Madrid",
+	"Africa/Johannesburg", "Africa/Nairobi", "Asia/Dubai", "Asia/Kolkata", "Asia/Singapore", "Asia/Manila",
+	"Asia/Tokyo", "Australia/Perth", "Australia/Sydney", "Pacific/Auckland", "UTC",
 }
