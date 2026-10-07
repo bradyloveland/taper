@@ -6,6 +6,8 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-07
+
 ### Added
 - Milestone 5, calendars:
   - **Calendar**: month, week and list views of the school calendar and your classes'
