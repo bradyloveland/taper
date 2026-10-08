@@ -44,6 +44,8 @@ Along the top:
 - **Calendar** shows the school calendar and your classes' calendars.
 - **Classes** lists your classes, and for mentors and admins, every class.
   Each class's page has its assignments.
+- **Chat** has the community chat and your class chats. The number shows
+  messages you haven't read.
 
 Your initials, at the far right, open your menu:
 
@@ -53,5 +55,5 @@ Your initials, at the far right, open your menu:
   email, as tabs across the top of the page.
 - **Sign out** when you're done.
 
-On a phone, the menu button (three lines) opens Home, Calendar and Classes;
-your initials still open your own menu.
+On a phone, the menu button (three lines) opens Home, Calendar, Classes and
+Chat; your initials still open your own menu.

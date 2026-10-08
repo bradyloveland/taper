@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -32,6 +33,18 @@ type netKey struct{}
 type netInfo struct {
 	cfg     atomic.Pointer[config.Config]
 	pending atomic.Bool // these listeners are on trial
+
+	closing   chan struct{} // closed when these listeners shut down, to end long requests
+	closeOnce sync.Once
+}
+
+// closingFor returns a channel that's closed when the listeners a request
+// arrived on shut down, so streams end and shutdown isn't held up.
+func closingFor(r *http.Request) <-chan struct{} {
+	if ni, ok := r.Context().Value(netKey{}).(*netInfo); ok && ni.closing != nil {
+		return ni.closing
+	}
+	return nil
 }
 
 // listenerSet is the HTTP servers for one set of network settings.
@@ -96,7 +109,7 @@ func (discard) Write(p []byte) (int, error) { return len(p), nil }
 // startSet opens the listeners for cfg. Ports are opened before it returns,
 // so a port that's in use is an error here.
 func (s *Server) startSet(cfg *config.Config, pending bool) (*listenerSet, error) {
-	info := &netInfo{}
+	info := &netInfo{closing: make(chan struct{})}
 	info.cfg.Store(cfg)
 	info.pending.Store(pending)
 	ls := &listenerSet{info: info}
@@ -104,6 +117,7 @@ func (s *Server) startSet(cfg *config.Config, pending bool) (*listenerSet, error
 	mk := func(h http.Handler) *http.Server {
 		hs := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute,
 			MaxHeaderBytes: 64 << 10, BaseContext: base}
+		hs.RegisterOnShutdown(func() { info.closeOnce.Do(func() { close(info.closing) }) })
 		if cfg.Mode == config.ModeHTTPS {
 			hs.ErrorLog = quietLog
 		}

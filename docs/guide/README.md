@@ -11,6 +11,7 @@ on GitHub.
 - [Getting started](getting-started.md): signing in for the first time, and what admins, mentors and scholars can do.
 - [Classes](classes.md): your classes, and how admins and mentors set them up.
 - [Assignments](assignments.md): setting work, turning it in, and feedback without grades.
+- [Chat](chat.md): the community and class chats, and keeping them friendly.
 - [Calendars](calendar.md): the school and class calendars, adding events, and subscribing in Google, Apple or Outlook.
 - [Your account](account.md): your name, password, and signing out on other devices.
 - [Two-step sign-in](two-step.md): add a code from your phone, and what to do if you lose it.
@@ -28,4 +29,5 @@ on GitHub.
 
 ## Coming in later versions
 
-Community and class chat. See the [plan and milestones](../plan.md).
+Notifications by email and on your phone, and signing in with a passkey. See
+the [plan and milestones](../plan.md).

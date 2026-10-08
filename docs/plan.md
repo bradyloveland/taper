@@ -134,7 +134,7 @@ updated documentation, and passes `make check`, before it's opened for review.
   uploaded files.
 - No letter grades.
 
-### M7: chat
+### M7: chat (done)
 - A community channel for the whole school and a channel for each class.
 - Live updates, unread counts, and notifications in the app.
 - Mentors moderate their class channels and admins moderate everything (delete messages, mute).

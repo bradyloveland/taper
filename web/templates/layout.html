@@ -28,11 +28,12 @@
     </a>
     {{if and .User (not .User.MustChangePassword)}}
     <input type="checkbox" id="nav-toggle" class="nav-toggle sr-only">
-    <label for="nav-toggle" class="nav-button"><span class="hamburger" aria-hidden="true"></span><span class="sr-only">Menu</span></label>
+    <label for="nav-toggle" class="nav-button"><span class="hamburger" aria-hidden="true"></span><span class="sr-only">Menu</span><span class="nav-dot" data-chat-dot {{if not .ChatUnread}}hidden{{end}} aria-hidden="true"></span></label>
     <nav class="nav" aria-label="Main">
       <a href="/" {{if eq .Section "home"}}aria-current="page"{{end}}>Home</a>
       <a href="/calendar" {{if eq .Section "calendar"}}aria-current="page"{{end}}>Calendar</a>
       <a href="/classes" {{if eq .Section "classes"}}aria-current="page"{{end}}>Classes</a>
+      <a href="/chat" {{if eq .Section "chat"}}aria-current="page"{{end}}>Chat<span class="nav-badge" data-chat-badge {{if not .ChatUnread}}hidden{{end}} aria-label="{{.ChatUnread}} unread">{{.ChatUnread}}</span></a>
     </nav>
     <details class="menu" data-menu>
       <summary class="menu-button{{if or (eq .Section "account") (eq .Section "guide") (adminSection .Section)}} current{{end}}" title="{{.User.DisplayName}}">
@@ -52,7 +53,7 @@
     {{end}}
   </div>
 </header>
-<main id="main" class="container">
+<main id="main" class="container{{if eq .Section "chat"}} chat-page{{end}}">
   {{if and .User .User.IsAdmin (adminSection .Section)}}{{template "admin-tabs" .}}{{end}}
   {{with .Flash}}<div class="flash flash-{{.Kind}}" role="status">{{.Message}}</div>{{end}}
   {{template "content" .}}
@@ -108,4 +109,20 @@
   <a href="/admin/email" {{if eq .Section "email"}}aria-current="page"{{end}}>Email</a>
   <a href="/admin/reports" {{if eq .Section "reports"}}aria-current="page"{{end}}>Problem reports</a>
 </nav>
+{{end}}
+
+{{/* The list of chat channels. Pass the []chanItem. */}}
+{{define "chat-channels"}}
+<ul class="chat-channels">
+  {{range .}}
+  <li><a href="/chat/{{.Ch.ID}}" class="chat-chan{{if .Active}} active{{end}}" {{if .Active}}aria-current="page"{{end}} data-channel-link="{{.Ch.ID}}">
+    <span class="chat-chan-mark c-{{.Color}}" aria-hidden="true">{{if eq .Ch.ClassID 0}}#{{else}}{{initial .Name}}{{end}}</span>
+    <span class="chat-chan-text">
+      <strong>{{.Name}}</strong>{{if not .Ch.Enabled}} <span class="badge muted">Off</span>{{end}}
+      {{with .Last}}<span class="muted small chat-preview">{{if .Deleted}}Message removed{{else}}{{.AuthorName}}: {{.Body}}{{end}}</span>{{end}}
+    </span>
+    {{if .Unread}}<span class="chat-unread" aria-label="{{.Unread}} unread">{{.Unread}}</span>{{end}}
+  </a></li>
+  {{end}}
+</ul>
 {{end}}

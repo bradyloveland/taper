@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -668,5 +669,110 @@ func TestAssignments(t *testing.T) {
 	}
 	if _, err := s.GetSubmissionByID(w.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatal("work goes with its assignment")
+	}
+}
+
+func TestChat(t *testing.T) {
+	s := openTest(t)
+	mk := func(username, role string) *User {
+		u := &User{Username: username, DisplayName: strings.ToUpper(username[:1]) + username[1:], Role: role, PasswordHash: "x", Active: true}
+		if err := s.CreateUser(u); err != nil {
+			t.Fatal(err)
+		}
+		return u
+	}
+	mia, sam := mk("mia", RoleMentor), mk("sam", RoleScholar)
+	com, err := s.CommunityChannel()
+	if err != nil || com.ClassID != 0 || !com.Enabled {
+		t.Fatalf("community: %+v %v", com, err)
+	}
+	c := &Class{Name: "Logic", Color: "red"}
+	s.CreateClass(c)
+	if have, _ := s.ClassChannels([]int64{c.ID}); len(have) != 0 {
+		t.Fatal("class channels are made when first needed")
+	}
+	ch, err := s.ClassChannel(c.ID)
+	if err != nil || ch.ClassName != "Logic" || ch.ClassColor != "red" {
+		t.Fatalf("class channel: %+v %v", ch, err)
+	}
+	if again, _ := s.ClassChannel(c.ID); again.ID != ch.ID {
+		t.Fatal("one channel per class")
+	}
+
+	var ids []int64
+	for i := 0; i < 5; i++ {
+		m, err := s.PostMessage(com.ID, sam.ID, fmt.Sprintf("hello %d", i))
+		if err != nil || m.AuthorName != "Sam" || m.AuthorRole != RoleScholar {
+			t.Fatal(m, err)
+		}
+		ids = append(ids, m.ID)
+	}
+	page, more, _ := s.ListMessages(com.ID, 0, 3)
+	if !more || len(page) != 3 || page[0].Body != "hello 2" || page[2].Body != "hello 4" {
+		t.Fatalf("newest page: %v %v", page, more)
+	}
+	page, more, _ = s.ListMessages(com.ID, page[0].ID, 3)
+	if more || len(page) != 2 || page[0].Body != "hello 0" {
+		t.Fatalf("earlier page: %v %v", page, more)
+	}
+	if after, _ := s.MessagesAfter(com.ID, ids[2], 10); len(after) != 2 {
+		t.Fatalf("after: %v", after)
+	}
+
+	// Unread: others' messages after what you've read, not removed.
+	if n, _ := s.UnreadCounts(mia.ID, []int64{com.ID, ch.ID}); n[com.ID] != 5 || n[ch.ID] != 0 {
+		t.Fatalf("unread: %v", n)
+	}
+	if n, _ := s.UnreadCounts(sam.ID, []int64{com.ID}); n[com.ID] != 0 {
+		t.Fatal("your own messages aren't unread")
+	}
+	s.MarkRead(mia.ID, com.ID, ids[2])
+	s.MarkRead(mia.ID, com.ID, ids[0]) // never goes backwards
+	if err := s.DeleteMessage(ids[4], mia.ID); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := s.UnreadCounts(mia.ID, []int64{com.ID}); n[com.ID] != 1 {
+		t.Fatalf("unread after reading and a removal: %v", n)
+	}
+	m, _ := s.GetMessage(ids[4])
+	if !m.Deleted() || m.Body != "" || m.DeletedBy != mia.ID {
+		t.Fatalf("removed: %+v", m)
+	}
+	if err := s.DeleteMessage(ids[4], mia.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatal("removing twice")
+	}
+	latest, _ := s.LatestMessages([]int64{com.ID, ch.ID})
+	if latest[com.ID].ID != ids[4] || latest[ch.ID] != nil {
+		t.Fatalf("latest: %v", latest)
+	}
+
+	// Mutes, with and without an end.
+	if mu, _ := s.MuteOf(ch.ID, sam.ID); mu != nil {
+		t.Fatal("not muted yet")
+	}
+	s.SetMute(ch.ID, sam.ID, 0, mia.ID)
+	if mu, _ := s.MuteOf(ch.ID, sam.ID); mu == nil || mu.By != "Mia" || mu.Name != "Sam" {
+		t.Fatalf("mute: %+v", mu)
+	}
+	s.SetMute(ch.ID, sam.ID, time.Now().Unix()-10, mia.ID)
+	if mu, _ := s.MuteOf(ch.ID, sam.ID); mu != nil {
+		t.Fatal("an expired mute isn't in force")
+	}
+	s.SetMute(ch.ID, sam.ID, time.Now().Unix()+3600, mia.ID)
+	if list, _ := s.ListMutes(ch.ID); len(list) != 1 {
+		t.Fatalf("mutes: %v", list)
+	}
+	s.Unmute(ch.ID, sam.ID)
+	if list, _ := s.ListMutes(ch.ID); len(list) != 0 {
+		t.Fatal("unmuted")
+	}
+
+	// Deleting a class takes its chat with it.
+	s.PostMessage(ch.ID, mia.ID, "class message")
+	if err := s.DeleteClass(c.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetChannel(ch.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatal("class channel should go with the class")
 	}
 }

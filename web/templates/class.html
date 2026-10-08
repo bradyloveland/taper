@@ -49,6 +49,14 @@
 </section>
 </div>
 
+<div class="stack">
+{{with .D.Chat}}
+<section class="card class-chat">
+  <div class="row-head"><h2>Class chat</h2>{{if not .Ch.Enabled}}<span class="badge muted">Off</span>{{end}}</div>
+  <p class="muted">{{if .Unread}}<strong>{{.Unread}} new message{{if gt .Unread 1}}s{{end}}.</strong> {{end}}{{if .Ch.Enabled}}Talk with your class{{if $.D.Class.Archived}} (read-only now the class is archived){{end}}.{{else}}Chat is turned off for this class.{{end}}</p>
+  <a class="button small{{if .Unread}} primary{{end}}" href="/chat/{{.Ch.ID}}">Open class chat</a>
+</section>
+{{end}}
 <section class="card">
   <h2>Mentor{{if ne (len .D.Mentors) 1}}s{{end}}</h2>
   {{if .D.Mentors}}
@@ -59,6 +67,7 @@
   <ul class="people">{{range .D.Scholars}}<li>{{template "person-chip" (pair . $.D.Access.ShowAccount)}}</li>{{end}}</ul>
   {{else}}<p class="muted">None yet.</p>{{end}}
 </section>
+</div>
 </div>
 
 {{if .D.Access.CanMentors}}

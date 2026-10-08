@@ -18,18 +18,19 @@ import (
 
 // pageData is what every page template gets. D holds the page's own data.
 type pageData struct {
-	Title     string
-	Section   string // highlights the menu item
-	AppName   string // the school's name, or Taper before setup
-	ShortName string // for phone home screens
-	School    string
-	Version   string
-	Repo      string
-	CSRF      string
-	Path      string // the page's own address, for "Report a problem"
-	User      *store.User
-	Flash     *flash
-	D         any
+	Title      string
+	Section    string // highlights the menu item
+	AppName    string // the school's name, or Taper before setup
+	ShortName  string // for phone home screens
+	School     string
+	Version    string
+	Repo       string
+	CSRF       string
+	Path       string // the page's own address, for "Report a problem"
+	User       *store.User
+	Flash      *flash
+	ChatUnread int // unread chat messages, for the menu
+	D          any
 }
 
 func (s *Server) templateFuncs() template.FuncMap {
@@ -45,6 +46,12 @@ func (s *Server) templateFuncs() template.FuncMap {
 		"title":     func(s string) string { return capitalize(s) },
 		"when":      func(unix int64) string { return time.Unix(unix, 0).In(s.loc()).Format("Mon, Jan 2 at 3:04 PM") },
 		"happened":  happened,
+		"initial": func(s string) string {
+			for _, r := range s {
+				return strings.ToUpper(string(r))
+			}
+			return "?"
+		},
 		"adminSection": func(section string) bool {
 			switch section {
 			case "settings", "people", "updates", "network", "email", "reports":
@@ -132,6 +139,9 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, status int, page
 		pd.CSRF = ri.sess.CSRF
 		if !ri.sess.MFAPending { // not signed in until the second step
 			pd.User = ri.user
+			if !ri.user.MustChangePassword {
+				pd.ChatUnread = s.chatUnread(ri.user)
+			}
 		}
 	}
 	var buf bytes.Buffer

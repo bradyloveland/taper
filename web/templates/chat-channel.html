@@ -1,0 +1,95 @@
+{{define "content"}}
+<div class="chat-layout">
+  <aside class="chat-side card" aria-label="Chats">
+    <h2 class="chat-side-title"><a href="/chat">Chat</a></h2>
+    {{template "chat-channels" .D.Channels}}
+  </aside>
+  <section class="chat-main card" data-chat="{{.D.A.Ch.ID}}" data-last="{{.D.LastID}}" data-me="{{.D.Me}}" {{if .D.Before}}data-history{{end}}>
+    <header class="chat-head">
+      <a class="chat-back" href="/chat" aria-label="All chats">‹</a>
+      <span class="chat-chan-mark c-{{.D.A.Color}}" aria-hidden="true">{{if eq .D.A.Ch.ClassID 0}}#{{else}}{{initial .D.A.Name}}{{end}}</span>
+      <div class="chat-title">
+        <h1>{{.D.A.Name}}</h1>
+        <p class="muted small">{{if eq .D.A.Ch.ClassID 0}}Everyone at {{.School}}{{else}}Class chat · <a href="{{.D.A.Link}}">Class page</a>{{end}}</p>
+      </div>
+      {{if or .D.A.Moderate .D.A.Manage}}
+      <details class="chat-tools" data-menu-like>
+        <summary class="button small">Manage</summary>
+        <div class="chat-tools-panel">
+          {{if .D.A.Manage}}
+          <form method="post" action="/chat/{{.D.A.Ch.ID}}/enabled" {{if .D.A.Ch.Enabled}}data-confirm="Turn off chat in {{.D.A.Name}}? Messages are kept, but no one can post, and only {{if eq .D.A.Ch.ClassID 0}}admins{{else}}admins and its mentors{{end}} can see it."{{end}}>
+            <input type="hidden" name="csrf" value="{{.CSRF}}">
+            <input type="hidden" name="on" value="{{if .D.A.Ch.Enabled}}0{{else}}1{{end}}">
+            <button type="submit" class="button small">{{if .D.A.Ch.Enabled}}Turn off this chat{{else}}Turn this chat back on{{end}}</button>
+          </form>
+          {{end}}
+          {{if .D.A.Moderate}}
+          <h3>Muted</h3>
+          {{if .D.Mutes}}
+          <ul class="mute-list">
+            {{range .D.Mutes}}
+            <li><span>{{.Name}} <span class="muted small">{{if .Until}}until {{when .Until}}{{else}}until unmuted{{end}}{{with .By}} · by {{.}}{{end}}</span></span>
+              <form method="post" action="/chat/{{$.D.A.Ch.ID}}/unmute"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="user" value="{{.UserID}}"><button type="submit" class="link-button">Unmute</button></form></li>
+            {{end}}
+          </ul>
+          {{else}}<p class="muted small">No one. To mute someone, open the ⋯ menu on one of their messages.</p>{{end}}
+          {{end}}
+        </div>
+      </details>
+      {{end}}
+    </header>
+    {{if not .D.A.Ch.Enabled}}<div class="flash flash-warn chat-off" role="status">Chat is turned off here. Messages are kept; no one can post.</div>{{end}}
+    <div class="chat-scroll" data-chat-scroll>
+      {{if .D.More}}<p class="chat-more"><a href="/chat/{{.D.A.Ch.ID}}?before={{(index .D.Messages 0).M.ID}}">Show earlier messages</a></p>{{end}}
+      <ol class="chat-log" id="chat-log">
+        {{range .D.Messages}}{{if .NewDay}}<li class="chat-day"><span>{{.DayLabel}}</span></li>{{end}}{{template "chat-message" .}}{{end}}
+      </ol>
+      {{if not .D.Messages}}<p class="chat-empty muted" data-chat-empty>No messages yet. Say hello!</p>{{end}}
+      {{if .D.Before}}<p class="chat-more"><a href="/chat/{{.D.A.Ch.ID}}">Back to the latest messages</a></p>{{end}}
+    </div>
+    <button type="button" class="chat-jump" data-chat-jump hidden>New messages ↓</button>
+    {{if .D.A.Post}}
+    <form method="post" action="/chat/{{.D.A.Ch.ID}}" class="chat-compose" data-chat-form>
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <p class="chat-error" role="alert" data-chat-error {{if not .D.Error}}hidden{{end}}>{{.D.Error}}</p>
+      <div class="chat-compose-row">
+        <label for="chat-body" class="sr-only">Message</label>
+        <textarea id="chat-body" name="body" rows="1" maxlength="2000" placeholder="Message {{.D.A.Name}}" required>{{.D.Draft}}</textarea>
+        <button type="submit" class="button primary">Send</button>
+      </div>
+    </form>
+    {{else}}<p class="chat-readonly muted">{{.D.A.Why}}</p>{{end}}
+  </section>
+</div>
+{{end}}
+
+{{define "chat-message"}}
+<li class="msg{{if .Cont}} cont{{end}}{{if .Mine}} mine{{end}}{{if .M.Deleted}} removed{{end}}" id="m{{.M.ID}}" data-id="{{.M.ID}}" data-author="{{.M.UserID}}" data-at="{{.M.CreatedAt}}" data-day="{{.DayKey}}" data-day-label="{{.DayLabel}}">
+  <span class="avatar msg-avatar" aria-hidden="true">{{.Initials}}</span>
+  <div class="msg-main">
+    <div class="msg-head"><strong>{{.M.AuthorName}}</strong>{{with .Badge}} <span class="badge role-mentor">{{.}}</span>{{end}} <time title="{{.Stamp}}">{{.Time}}</time></div>
+    {{if .M.Deleted}}<p class="msg-body msg-removed">Message removed by {{.Removed}}.</p>{{else}}<p class="msg-body">{{.Body}}</p>{{end}}
+  </div>
+  {{if or .CanDelete .CanMute}}
+  <details class="msg-menu">
+    <summary title="Message options"><span aria-hidden="true">⋯</span><span class="sr-only">Options for this message</span></summary>
+    <div class="msg-menu-panel">
+      {{if .CanDelete}}
+      <form method="post" action="/chat/{{.ChannelID}}/messages/{{.M.ID}}/delete" data-chat-action data-confirm="Remove this message{{if not .Mine}} by {{.M.AuthorName}}{{end}}?">
+        <input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">Remove message</button>
+      </form>
+      {{end}}
+      {{if .CanMute}}
+      <form method="post" action="/chat/{{.ChannelID}}/mute" data-confirm="Mute {{.M.AuthorName}} in this chat? They can still read it.">
+        <input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="user" value="{{.M.UserID}}">
+        <span class="msg-menu-label">Mute {{.FirstName}}</span>
+        <button type="submit" name="for" value="hour">for an hour</button>
+        <button type="submit" name="for" value="day">for a day</button>
+        <button type="submit" name="for" value="always">until I unmute</button>
+      </form>
+      {{end}}
+    </div>
+  </details>
+  {{end}}
+</li>
+{{end}}

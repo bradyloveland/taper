@@ -1,0 +1,7 @@
+{{define "content"}}
+<div class="page-head"><h1>Chat</h1><p class="muted">Talk with everyone at {{.School}}, and with each of your classes.</p></div>
+<section class="card chat-list-card">
+  {{if .D.Channels}}{{template "chat-channels" .D.Channels}}
+  {{else}}<p class="muted">Chat is turned off at your school.</p>{{end}}
+</section>
+{{end}}
