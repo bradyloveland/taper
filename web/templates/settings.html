@@ -43,6 +43,7 @@
   <form method="post" action="/admin/settings/security" class="form">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <label class="check"><input type="checkbox" name="admin" value="1" {{if .D.MFA.Admin}}checked{{end}}><span>Require it for admins</span></label>
+    <label class="check"><input type="checkbox" name="board" value="1" {{if .D.MFA.Board}}checked{{end}}><span>Require it for board members</span></label>
     <label class="check"><input type="checkbox" name="mentor" value="1" {{if .D.MFA.Mentor}}checked{{end}}><span>Require it for mentors</span></label>
     <label class="check"><input type="checkbox" name="scholar" value="1" {{if .D.MFA.Scholar}}checked{{end}}><span>Require it for scholars</span></label>
     <p class="help">Young scholars may not have phones; leave this off for them unless everyone does.</p>

@@ -4,7 +4,7 @@
     <h1>{{if .D.Filter.Archived}}Archived classes{{else}}Classes{{end}}</h1>
     {{if .D.Filter.Archived}}<p class="muted">Classes from earlier terms, kept read-only. <a href="/classes">Current classes</a></p>{{end}}
   </div>
-  {{if .User.IsAdmin}}{{if not .D.Filter.Archived}}<a class="button primary" href="/classes/new">New class</a>{{end}}{{end}}
+  {{if .User.IsLeader}}{{if not .D.Filter.Archived}}<a class="button primary" href="/classes/new">New class</a>{{end}}{{end}}
 </div>
 
 {{if not .D.Filter.Archived}}
@@ -50,7 +50,7 @@
 </table>
 </div>
 {{else}}
-<div class="card empty"><p>{{if or .D.Filter.Query .D.Filter.Term}}No classes match. <a href="/classes{{if .D.Filter.Archived}}?archived=1{{end}}">Clear the filters</a>.{{else if .D.Filter.Archived}}No archived classes.{{else}}No classes yet.{{if .User.IsAdmin}} <a href="/classes/new">Create the first one</a>.{{end}}{{end}}</p></div>
+<div class="card empty"><p>{{if or .D.Filter.Query .D.Filter.Term}}No classes match. <a href="/classes{{if .D.Filter.Archived}}?archived=1{{end}}">Clear the filters</a>.{{else if .D.Filter.Archived}}No archived classes.{{else}}No classes yet.{{if .User.IsLeader}} <a href="/classes/new">Create the first one</a>.{{end}}{{end}}</p></div>
 {{end}}
 {{if and (not .D.Filter.Archived) .D.Archived}}<p class="small"><a href="/classes?archived=1">Archived classes ({{.D.Archived}})</a></p>{{end}}
 {{end}}

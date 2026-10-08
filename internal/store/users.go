@@ -9,18 +9,21 @@ import (
 // Roles.
 const (
 	RoleAdmin   = "admin"
+	RoleBoard   = "board"
 	RoleMentor  = "mentor"
 	RoleScholar = "scholar"
 )
 
 // Roles lists every role, most powerful first.
-var Roles = []string{RoleAdmin, RoleMentor, RoleScholar}
+var Roles = []string{RoleAdmin, RoleBoard, RoleMentor, RoleScholar}
 
 // RoleLabel is a role's name as shown in the interface.
 func RoleLabel(role string) string {
 	switch role {
 	case RoleAdmin:
 		return "Admin"
+	case RoleBoard:
+		return "Board"
 	case RoleMentor:
 		return "Mentor"
 	case RoleScholar:
@@ -61,7 +64,12 @@ type User struct {
 func (u *User) IsAdmin() bool { return u.Role == RoleAdmin }
 
 // IsMentor reports whether the user can do what mentors do (admins can too).
-func (u *User) IsMentor() bool { return u.Role == RoleMentor || u.Role == RoleAdmin }
+func (u *User) IsMentor() bool { return u.Role == RoleMentor || u.IsLeader() }
+
+// IsLeader reports whether u leads the whole school: admins and the board.
+// They see and run every class, calendar and chat. Only admins manage the
+// server itself.
+func (u *User) IsLeader() bool { return u.Role == RoleAdmin || u.Role == RoleBoard }
 
 // RoleLabel is the user's role as shown in the interface.
 func (u *User) RoleLabel() string { return RoleLabel(u.Role) }

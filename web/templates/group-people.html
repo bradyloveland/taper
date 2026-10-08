@@ -1,0 +1,56 @@
+{{define "content"}}
+<p class="crumbs"><a href="/chat">Chat</a> / <a href="/chat/{{.D.A.Ch.ID}}">{{.D.A.Name}}</a> /</p>
+<div class="page-head"><h1>People in {{.D.A.Name}}</h1><p class="muted">Group chat. Admins and board members can always open it too.</p></div>
+{{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+<div class="grid-2">
+<section class="card">
+  <h2>In this chat <span class="muted">({{len .D.Members}})</span></h2>
+  {{if .D.Members}}
+  <ul class="list">
+    {{range .D.Members}}
+    <li class="list-row member-row">
+      <span>{{.DisplayName}} <span class="muted small">{{.Username}} · {{.RoleLabel}}</span></span>
+      <form method="post" action="/chat/{{$.D.A.Ch.ID}}/people/{{.ID}}/remove" data-confirm="Remove {{.DisplayName}} from {{$.D.A.Name}}?"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="button small">Remove</button></form>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}<p class="muted">No one yet.</p>{{end}}
+  <h3>Add people</h3>
+  {{if .D.Candidates}}
+  <form method="post" action="/chat/{{.D.A.Ch.ID}}/people/add" class="picker">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label class="sr-only" for="filter-people">Find</label>
+    <input id="filter-people" type="search" placeholder="Type to find people" data-filter="list-people" autocomplete="off">
+    <ul class="pick-list" id="list-people">
+      {{range .D.Candidates}}
+      <li data-search="{{.Search}}"><label class="check"><input type="checkbox" name="user" value="{{.ID}}"><span>{{.DisplayName}} <span class="muted small">{{.Username}} · {{.RoleLabel}}</span></span></label></li>
+      {{end}}
+    </ul>
+    <button type="submit" class="button primary">Add selected people</button>
+  </form>
+  {{else}}<p class="muted small">Everyone is already in this chat.</p>{{end}}
+</section>
+
+<div class="stack">
+<section class="card">
+  <h2>Name</h2>
+  <form method="post" action="/chat/{{.D.A.Ch.ID}}/rename" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="name" class="sr-only">Name</label>
+    <input id="name" name="name" required maxlength="100" value="{{.D.Name}}">
+    <button type="submit" class="button">Rename</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Delete this chat</h2>
+  <form method="post" action="/chat/{{.D.A.Ch.ID}}/delete" class="form danger-zone">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="confirm">To delete it and all its messages for good, type its name: <strong>{{.D.A.Ch.Name}}</strong></label>
+    <input id="confirm" name="confirm" autocomplete="off" required>
+    <button type="submit" class="button danger">Delete chat</button>
+  </form>
+</section>
+</div>
+</div>
+<p><a class="button" href="/chat/{{.D.A.Ch.ID}}">Back to the chat</a></p>
+{{end}}
