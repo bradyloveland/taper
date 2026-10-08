@@ -10,6 +10,7 @@ commonwealth school. One school runs one copy on its own Debian server.
 | Role | Who | Can do |
 |------|-----|--------|
 | **Admin** | School leadership, the person who installs it | Everything a mentor can, plus: manage people and classes, the school calendar, settings, updates and bug-report setup |
+| **Board** | The school's board | Everything an admin does for the school (classes, calendars, assignments, every chat, mentors and scholars), but not the server, or admin and board accounts |
 | **Mentor** | Teachers | Run their classes: class calendar, assignments, feedback, class chat moderation |
 | **Scholar** | Students | See their classes and calendars, work on and turn in assignments, take part in chat |
 
@@ -135,7 +136,11 @@ updated documentation, and passes `make check`, before it's opened for review.
 - No letter grades.
 
 ### M7: chat (done)
-- A community channel for the whole school and a channel for each class.
+- A community channel for the whole school (only admins and the board post) and a
+  channel for each class.
+- Group chats with any name and members, made by admins and the board.
+- Photos, files and links in messages.
+- A Board role: everything admins do for the school, without the server settings.
 - Live updates, unread counts, and notifications in the app.
 - Mentors moderate their class channels and admins moderate everything (delete messages, mute).
 - Admins can turn channels off.

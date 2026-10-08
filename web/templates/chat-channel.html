@@ -7,22 +7,23 @@
   <section class="chat-main card" data-chat="{{.D.A.Ch.ID}}" data-last="{{.D.LastID}}" data-me="{{.D.Me}}" {{if .D.Before}}data-history{{end}}>
     <header class="chat-head">
       <a class="chat-back" href="/chat" aria-label="All chats">‹</a>
-      <span class="chat-chan-mark c-{{.D.A.Color}}" aria-hidden="true">{{if eq .D.A.Ch.ClassID 0}}#{{else}}{{initial .D.A.Name}}{{end}}</span>
+      <span class="chat-chan-mark c-{{.D.A.Color}}" aria-hidden="true">{{if eq .D.A.Ch.Kind "community"}}#{{else}}{{initial .D.A.Name}}{{end}}</span>
       <div class="chat-title">
         <h1>{{.D.A.Name}}</h1>
-        <p class="muted small">{{if eq .D.A.Ch.ClassID 0}}Everyone at {{.School}}{{else}}Class chat · <a href="{{.D.A.Link}}">Class page</a>{{end}}</p>
+        <p class="muted small">{{if eq .D.A.Ch.Kind "community"}}Everyone at {{.School}}{{else if eq .D.A.Ch.Kind "group"}}Group chat · {{people .D.People}}{{if .D.A.Manage}} · <a href="/chat/{{.D.A.Ch.ID}}/people">People</a>{{end}}{{else}}Class chat · <a href="{{.D.A.Link}}">Class page</a>{{end}}</p>
       </div>
       {{if or .D.A.Moderate .D.A.Manage}}
       <details class="chat-tools" data-menu-like>
         <summary class="button small">Manage</summary>
         <div class="chat-tools-panel">
           {{if .D.A.Manage}}
-          <form method="post" action="/chat/{{.D.A.Ch.ID}}/enabled" {{if .D.A.Ch.Enabled}}data-confirm="Turn off chat in {{.D.A.Name}}? Messages are kept, but no one can post, and only {{if eq .D.A.Ch.ClassID 0}}admins{{else}}admins and its mentors{{end}} can see it."{{end}}>
+          <form method="post" action="/chat/{{.D.A.Ch.ID}}/enabled" {{if .D.A.Ch.Enabled}}data-confirm="Turn off {{.D.A.Name}}? Messages are kept, but no one can post, and only admins and the board{{if eq .D.A.Ch.Kind "class"}} (and its mentors){{end}} can see it."{{end}}>
             <input type="hidden" name="csrf" value="{{.CSRF}}">
             <input type="hidden" name="on" value="{{if .D.A.Ch.Enabled}}0{{else}}1{{end}}">
             <button type="submit" class="button small">{{if .D.A.Ch.Enabled}}Turn off this chat{{else}}Turn this chat back on{{end}}</button>
           </form>
           {{end}}
+          {{if eq .D.A.Ch.Kind "group"}}<p><a class="button small" href="/chat/{{.D.A.Ch.ID}}/people">People, name and delete</a></p>{{end}}
           {{if .D.A.Moderate}}
           <h3>Muted</h3>
           {{if .D.Mutes}}
@@ -49,12 +50,17 @@
     </div>
     <button type="button" class="chat-jump" data-chat-jump hidden>New messages ↓</button>
     {{if .D.A.Post}}
-    <form method="post" action="/chat/{{.D.A.Ch.ID}}" class="chat-compose" data-chat-form>
+    <form method="post" action="/chat/{{.D.A.Ch.ID}}" class="chat-compose" enctype="multipart/form-data" data-chat-form>
       <input type="hidden" name="csrf" value="{{.CSRF}}">
       <p class="chat-error" role="alert" data-chat-error {{if not .D.Error}}hidden{{end}}>{{.D.Error}}</p>
+      <ul class="chat-picked" data-chat-picked hidden></ul>
       <div class="chat-compose-row">
+        <label class="chat-attach" title="Attach photos or files">
+          <input type="file" name="files" multiple class="sr-only" data-chat-files>
+          <span aria-hidden="true">＋</span><span class="sr-only">Attach photos or files</span>
+        </label>
         <label for="chat-body" class="sr-only">Message</label>
-        <textarea id="chat-body" name="body" rows="1" maxlength="2000" placeholder="Message {{.D.A.Name}}" required>{{.D.Draft}}</textarea>
+        <textarea id="chat-body" name="body" rows="1" maxlength="2000" placeholder="Message {{.D.A.Name}}">{{.D.Draft}}</textarea>
         <button type="submit" class="button primary">Send</button>
       </div>
     </form>
@@ -67,8 +73,14 @@
 <li class="msg{{if .Cont}} cont{{end}}{{if .Mine}} mine{{end}}{{if .M.Deleted}} removed{{end}}" id="m{{.M.ID}}" data-id="{{.M.ID}}" data-author="{{.M.UserID}}" data-at="{{.M.CreatedAt}}" data-day="{{.DayKey}}" data-day-label="{{.DayLabel}}">
   <span class="avatar msg-avatar" aria-hidden="true">{{.Initials}}</span>
   <div class="msg-main">
-    <div class="msg-head"><strong>{{.M.AuthorName}}</strong>{{with .Badge}} <span class="badge role-mentor">{{.}}</span>{{end}} <time title="{{.Stamp}}">{{.Time}}</time></div>
-    {{if .M.Deleted}}<p class="msg-body msg-removed">Message removed by {{.Removed}}.</p>{{else}}<p class="msg-body">{{.Body}}</p>{{end}}
+    <div class="msg-head"><strong>{{.M.AuthorName}}</strong>{{with .Badge}} <span class="badge role-{{lower .}}">{{.}}</span>{{end}} <time title="{{.Stamp}}">{{.Time}}</time></div>
+    {{if .M.Deleted}}<p class="msg-body msg-removed">Message removed by {{.Removed}}.</p>{{else}}
+    {{if .M.Body}}<p class="msg-body">{{.Body}}</p>{{end}}
+    {{if .Files}}<div class="msg-files">
+      {{range .Files}}{{if .IsImage}}<a class="msg-image" href="{{.Link}}" target="_blank" rel="noopener"><img src="{{.Link}}" alt="{{.Name}}" loading="lazy"></a>
+      {{else}}<a class="msg-file" href="{{.Link}}?download=1" download><span class="msg-file-icon" aria-hidden="true">📄</span><span><strong>{{.Name}}</strong><span class="muted small">{{.Size}}</span></span></a>{{end}}{{end}}
+    </div>{{end}}
+    {{end}}
   </div>
   {{if or .CanDelete .CanMute}}
   <details class="msg-menu">

@@ -62,7 +62,8 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 		switch {
 		case r.URL.Path == "/admin/updates/upload":
 			limit = maxUpload
-		case strings.HasPrefix(r.URL.Path, "/assignments/") || strings.HasSuffix(r.URL.Path, "/assignments/new"):
+		case strings.HasPrefix(r.URL.Path, "/assignments/") || strings.HasSuffix(r.URL.Path, "/assignments/new"),
+			r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/chat/"):
 			limit = maxFilesBody
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, limit)
@@ -253,6 +254,18 @@ func (s *Server) admin(h http.HandlerFunc) http.HandlerFunc {
 	return s.signedIn(func(w http.ResponseWriter, r *http.Request) {
 		if !current(r).user.IsAdmin() {
 			s.renderError(w, r, http.StatusForbidden, "Admins only", "Only admins can open that page.")
+			return
+		}
+		h(w, r)
+	})
+}
+
+// leader requires a signed-in admin or board member: people who run the
+// whole school (but not the server).
+func (s *Server) leader(h http.HandlerFunc) http.HandlerFunc {
+	return s.signedIn(func(w http.ResponseWriter, r *http.Request) {
+		if !current(r).user.IsLeader() {
+			s.renderError(w, r, http.StatusForbidden, "Admins and the board only", "Only admins and board members can open that page.")
 			return
 		}
 		h(w, r)

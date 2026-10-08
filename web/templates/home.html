@@ -44,7 +44,7 @@
 <div class="class-grid">
   {{range .D.Classes}}{{template "class-card" .}}{{end}}
 </div>
-{{else if not .User.IsAdmin}}
+{{else if not .User.IsLeader}}
 <section class="card">
   <h2>Your classes</h2>
   {{if .User.IsMentor}}
@@ -55,7 +55,7 @@
 </section>
 {{end}}
 
-{{if .User.IsAdmin}}
+{{if .User.IsLeader}}
 <section class="stats" aria-label="School">
   <a class="stat card" href="/classes"><span class="stat-num">{{.D.NClasses}}</span><span class="stat-label">Classes</span></a>
   <a class="stat card" href="/admin/people?role=mentor"><span class="stat-num">{{index .D.Counts "mentor"}}</span><span class="stat-label">Mentors</span></a>

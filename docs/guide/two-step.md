@@ -37,7 +37,7 @@ in**, you won't be asked again on that device for 30 days.
 
 ### Requiring it
 
-Under **Settings → Two-step sign-in**, you can require it for admins, mentors
+Under **Settings → Two-step sign-in**, you can require it for admins, board members, mentors
 and/or scholars. People in those roles who haven't set it up are taken to the
 setup page when they next sign in, and can't turn it off. Young scholars may not
 have phones, so think twice before requiring it for them.

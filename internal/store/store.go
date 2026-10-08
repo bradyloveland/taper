@@ -31,7 +31,11 @@ type Store struct {
 
 // Open opens (creating if needed) the database at path and applies any
 // pending migrations.
-func Open(path string) (*Store, error) {
+func Open(path string) (*Store, error) { return openTo(path, 0) }
+
+// openTo opens the database, applying migrations up to version upTo (0 for
+// all). Tests use it to check a migration against older data.
+func openTo(path string, upTo int) (*Store, error) {
 	dsn := "file:" + path + "?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)" +
 		"&_pragma=foreign_keys(1)&_pragma=synchronous(NORMAL)"
 	db, err := sql.Open("sqlite", dsn)
@@ -42,7 +46,7 @@ func Open(path string) (*Store, error) {
 	// locked" error inside the app. A school's workload is small.
 	db.SetMaxOpenConns(1)
 	s := &Store{db: db, Now: time.Now}
-	if err := s.migrate(); err != nil {
+	if err := s.migrate(upTo); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -61,7 +65,7 @@ func (s *Store) SchemaVersion() (int, error) {
 	return v, err
 }
 
-func (s *Store) migrate() error {
+func (s *Store) migrate(upTo int) error {
 	if _, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
 		version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL)`); err != nil {
 		return err
@@ -81,30 +85,56 @@ func (s *Store) migrate() error {
 		if err != nil {
 			return fmt.Errorf("migration %s: bad name", base)
 		}
-		if v <= current {
+		if v <= current || (upTo > 0 && v > upTo) {
 			continue
 		}
 		body, err := migrations.ReadFile(name)
 		if err != nil {
 			return err
 		}
-		tx, err := s.db.Begin()
-		if err != nil {
-			return err
-		}
-		if _, err := tx.Exec(string(body)); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("migration %s: %w", base, err)
-		}
-		if _, err := tx.Exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`, v, s.now()); err != nil {
-			tx.Rollback()
-			return err
-		}
-		if err := tx.Commit(); err != nil {
+		if err := s.runMigration(base, v, string(body)); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// fkOff marks a migration that rebuilds tables, which SQLite says to do with
+// foreign keys off (they're checked before it's committed).
+const fkOff = "-- taper:foreign-keys-off"
+
+func (s *Store) runMigration(base string, v int, body string) error {
+	rebuild := strings.HasPrefix(body, fkOff)
+	if rebuild {
+		// The store uses one connection, so this applies to the migration.
+		if _, err := s.db.Exec(`PRAGMA foreign_keys = OFF`); err != nil {
+			return err
+		}
+		defer s.db.Exec(`PRAGMA foreign_keys = ON`)
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(body); err != nil {
+		return fmt.Errorf("migration %s: %w", base, err)
+	}
+	if rebuild {
+		rows, err := tx.Query(`PRAGMA foreign_key_check`)
+		if err != nil {
+			return err
+		}
+		bad := rows.Next()
+		rows.Close()
+		if bad {
+			return fmt.Errorf("migration %s: it would break links between tables", base)
+		}
+	}
+	if _, err := tx.Exec(`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`, v, s.now()); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // Backup writes a consistent copy of the database to path.
