@@ -6,15 +6,16 @@ Context for Claude Code sessions working on this repository.
 
 Taper is a self-hosted learning platform for a Thomas Jefferson Education
 (TJEd) commonwealth school. One school runs one copy on a Debian server. The roles are **admin**,
-**mentor** (teacher) and **scholar** (student). Use those words in the UI, never
-"teacher" or "student". There are no letter grades.
+**board**, **mentor** (teacher) and **scholar** (student). Use those words in the UI, never
+"teacher" or "student". Admins and the board are "leaders" (`User.IsLeader()`) who run the
+whole school; only admins manage the server. There are no letter grades.
 
 The tagline is **"Light your taper at mine"** (from Jefferson's letter on how
 ideas spread, the way one candle lights another without dimming). It appears on
 the sign-in and setup pages, in the footer and in the docs. The icon is a lit
 candle (a taper).
 
-The plan and milestones are in `docs/plan.md`. User documentation is in
+The plan and milestones are in `docs/plan.md`; where things stand is in `docs/HANDOFF.md`. User documentation is in
 `docs/guide/`, and the same files are built into the app as its Guide.
 
 ## Hard rules
