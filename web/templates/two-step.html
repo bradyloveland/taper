@@ -37,7 +37,7 @@
 <section class="card">
   <h2>Turn it off</h2>
   {{if .D.Required}}
-  <p>Your school requires two-step sign-in for {{lower .User.RoleLabel}}s, so it stays on. If you have a new phone, ask an admin to turn it off for you, then set it up again.</p>
+  <p>Your school requires two-step sign-in for {{roleNoun .User.Role}}s, so it stays on. If you have a new phone, ask an admin to turn it off for you, then set it up again.</p>
   {{else}}
   <p>You'll sign in with just your password.</p>
   <form method="post" action="/account/two-step/disable" class="form" data-confirm="Turn off two-step sign-in?">
@@ -51,7 +51,7 @@
 </section>
 </div>
 {{else}}
-{{if .D.Required}}<div class="flash flash-warn" role="status">Your school requires two-step sign-in for {{lower .User.RoleLabel}}s. Set it up to continue.</div>{{end}}
+{{if .D.Required}}<div class="flash flash-warn" role="status">Your school requires two-step sign-in for {{roleNoun .User.Role}}s. Set it up to continue.</div>{{end}}
 <section class="card readable">
   <h2>Set it up</h2>
   <ol class="steps">

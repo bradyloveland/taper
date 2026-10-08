@@ -31,6 +31,20 @@ const (
 
 func (s *Server) filesDir() string { return filepath.Join(s.cfg.DataDir, "files") }
 
+// uploadsIn returns the files chosen in the form field "files".
+func uploadsIn(r *http.Request) []*multipart.FileHeader {
+	if r.MultipartForm == nil {
+		return nil
+	}
+	var out []*multipart.FileHeader
+	for _, fh := range r.MultipartForm.File["files"] {
+		if fh.Filename != "" && fh.Size > 0 {
+			out = append(out, fh)
+		}
+	}
+	return out
+}
+
 // errUpload is a problem with an upload to tell the person about.
 type errUpload struct{ msg string }
 
@@ -244,6 +258,17 @@ func (s *Server) canSeeFile(u *store.User, f *store.File) bool {
 		}
 		acc, err := s.assignmentAccess(u, a)
 		return err == nil && acc.CanSee
+	case store.FileForMessage:
+		m, err := s.store.GetMessage(f.OwnerID)
+		if err != nil || m.Deleted() {
+			return false
+		}
+		ch, err := s.store.GetChannel(m.ChannelID)
+		if err != nil {
+			return false
+		}
+		a, err := s.chanAccess(u, ch)
+		return err == nil && a.See
 	case store.FileForSubmission:
 		wk, err := s.store.GetSubmissionByID(f.OwnerID)
 		if err != nil {

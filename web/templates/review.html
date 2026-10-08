@@ -24,7 +24,7 @@
   {{end}}
 </section>
 
-{{if or (not .D.Access.Class.Archived) .User.IsAdmin}}
+{{if or (not .D.Access.Class.Archived) .User.IsLeader}}
 <section class="card readable">
   <h2>Feedback</h2>
   <form method="post" action="/assignments/{{.D.A.ID}}/work/{{.D.Scholar.ID}}" class="form">

@@ -1,7 +1,12 @@
 # Managing people
 
-*For admins.* Open **Settings → People** (Settings is in the menu under your
-initials, at the top right).
+*For admins and the board.* Admins open **Settings → People** (Settings is in
+the menu under your initials, at the top right); board members open **People**
+in that menu.
+
+Board members add and look after mentors and scholars. Only admins add or
+change admin and board accounts, reset their passwords, or turn off their
+two-step sign-in, so a board member can't take over an admin's account.
 
 ## Adding someone
 
@@ -10,7 +15,8 @@ initials, at the top right).
    You can change it. Usernames are 2 to 40 letters, numbers, dots, dashes or
    underscores.
 3. Add an **email** if you like. It's optional, and scholars don't need one.
-4. Choose a **role**: Scholar, Mentor or Admin.
+4. Choose a **role**: Scholar, Mentor, Board or Admin (board members can choose
+   Scholar or Mentor).
 5. Select **Add and create a temporary password**.
 
 Taper shows the web address, the username and a **temporary password**. Give
@@ -30,7 +36,8 @@ page.
    - **Name** (or **First name** and **Last name**): required.
    - **Username:** optional. Taper makes one from the name if it's empty.
    - **Email:** optional.
-   - **Role:** scholar, mentor or admin. Empty means scholar.
+   - **Role:** scholar, mentor, board or admin. Empty means scholar. (Board
+     members can import scholars and mentors.)
    - **Classes:** optional. Class names separated by `;`. The classes must already
      exist. Scholars join as scholars and mentors as mentors.
 2. Save it as CSV (Excel, Numbers and Google Sheets all can), and choose the file,
