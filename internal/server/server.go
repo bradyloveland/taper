@@ -55,6 +55,10 @@ type Server struct {
 	mfaThrottle    *auth.Throttle // wrong two-step codes per person
 	resetThrottle  *auth.Throttle // password reset emails per account
 	resetIPLimit   *auth.Throttle // password reset requests per address (a school shares one)
+	chatThrottle   *auth.Throttle // chat messages per person
+
+	chat        *chatHub
+	streamCheck atomic.Int64 // how often chat streams recheck access (a time.Duration)
 
 	box       *secret.Box
 	updater   *update.Updater
@@ -93,10 +97,13 @@ func New(opts Options) (*Server, error) {
 		mfaThrottle:    auth.NewThrottle(5, 15*time.Minute),
 		resetThrottle:  auth.NewThrottle(3, time.Hour),
 		resetIPLimit:   auth.NewThrottle(20, time.Hour),
+		chatThrottle:   auth.NewThrottle(20, time.Minute),
+		chat:           newChatHub(),
 		githubAPI:      opts.GitHubAPI,
 		restart:        make(chan struct{}),
 		netFatal:       make(chan error, 1),
 	}
+	s.streamCheck.Store(int64(defaultStreamCheck))
 	var err error
 	if s.box, err = secret.LoadOrCreate(filepath.Join(s.cfg.DataDir, "secret.key")); err != nil {
 		return nil, err
@@ -203,6 +210,16 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /assignments/{id}/work/{sid}", s.signedIn(s.handleReview))
 	mux.HandleFunc("POST /assignments/{id}/work/{sid}", s.signedIn(s.handleReviewSave))
 	mux.HandleFunc("GET /files/{id}/{name}", s.signedIn(s.handleFile))
+	mux.HandleFunc("GET /chat", s.signedIn(s.handleChatList))
+	mux.HandleFunc("GET /chat/unread", s.signedIn(s.handleChatUnread))
+	mux.HandleFunc("GET /chat/{id}", s.signedIn(s.handleChannel))
+	mux.HandleFunc("POST /chat/{id}", s.signedIn(s.handleChatPost))
+	mux.HandleFunc("GET /chat/{id}/events", s.signedIn(s.handleChatEvents))
+	mux.HandleFunc("POST /chat/{id}/read", s.signedIn(s.handleChatRead))
+	mux.HandleFunc("POST /chat/{id}/messages/{mid}/delete", s.signedIn(s.handleChatDelete))
+	mux.HandleFunc("POST /chat/{id}/mute", s.signedIn(s.handleChatMute))
+	mux.HandleFunc("POST /chat/{id}/unmute", s.signedIn(s.handleChatUnmute))
+	mux.HandleFunc("POST /chat/{id}/enabled", s.signedIn(s.handleChatEnabled))
 	mux.HandleFunc("GET /calendar", s.signedIn(s.handleCalendar))
 	mux.HandleFunc("GET /calendar/subscribe", s.signedIn(s.handleSubscribe))
 	mux.HandleFunc("POST /calendar/subscribe/reset", s.signedIn(s.handleSubscribeReset))

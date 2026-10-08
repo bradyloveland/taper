@@ -97,9 +97,14 @@ location / {
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_http_version 1.1;
     proxy_buffering off;        # for live chat
-    client_max_body_size 50m;   # for assignment uploads
+    proxy_read_timeout 1h;      # for live chat
+    client_max_body_size 110m;  # for assignment uploads
 }
 ```
+
+For **Nginx Proxy Manager**, turn on **Websockets Support** for the host (which
+also suits live chat), and under **Advanced** add `client_max_body_size 110m;`
+so assignment files can be uploaded.
 
 To go back to plain HTTP: `sudo /opt/taper/install.sh --http`.
 

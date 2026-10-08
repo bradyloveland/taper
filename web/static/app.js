@@ -220,6 +220,169 @@
     });
   }
 
+  // ------------------------------------------------------------------ chat
+
+  const badge = document.querySelector('[data-chat-badge]');
+  const dot = document.querySelector('[data-chat-dot]');
+  const baseTitle = document.title;
+  const showUnread = (n) => {
+    if (badge) { badge.textContent = n; badge.hidden = !(n > 0); badge.setAttribute('aria-label', n + ' unread'); }
+    if (dot) dot.hidden = !(n > 0);
+  };
+
+  const chat = document.querySelector('[data-chat]');
+  if (chat) {
+    const id = chat.getAttribute('data-chat');
+    const me = chat.getAttribute('data-me');
+    const log = chat.querySelector('#chat-log');
+    const scroller = chat.querySelector('[data-chat-scroll]');
+    const jump = chat.querySelector('[data-chat-jump]');
+    const form = chat.querySelector('[data-chat-form]');
+    const box = form && form.querySelector('textarea');
+    const errBox = form && form.querySelector('[data-chat-error]');
+    const csrf = document.querySelector('input[name=csrf]');
+    const history = chat.hasAttribute('data-history');
+    let last = Number(chat.getAttribute('data-last')) || 0;
+    let hiddenNew = 0;
+
+    const nearBottom = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+    const toBottom = () => { scroller.scrollTop = scroller.scrollHeight; jump.hidden = true; };
+    if (!history && !location.hash) toBottom();
+    if (location.hash) { const t = document.querySelector(location.hash); if (t) t.scrollIntoView({ block: 'center' }); }
+    scroller.addEventListener('scroll', () => { if (nearBottom()) jump.hidden = true; });
+    jump.addEventListener('click', toBottom);
+
+    // Server HTML for one message, parsed into an element.
+    const parse = (html) => {
+      const t = document.createElement('template');
+      t.innerHTML = html.trim();
+      return t.content.firstElementChild;
+    };
+    // Put a message in the log: replace it if it's there, otherwise add it
+    // with a day divider and grouping like the server does.
+    const place = (el) => {
+      const old = document.getElementById(el.id);
+      if (old) { el.className = old.className.includes('cont') && !el.classList.contains('removed') ? el.className + ' cont' : el.className; old.replaceWith(el); return false; }
+      const msgs = log.querySelectorAll('.msg');
+      const prev = msgs[msgs.length - 1];
+      if (!prev || prev.dataset.day !== el.dataset.day) {
+        const li = document.createElement('li');
+        li.className = 'chat-day';
+        const span = document.createElement('span');
+        span.textContent = el.dataset.dayLabel;
+        li.appendChild(span);
+        log.appendChild(li);
+      } else if (prev.dataset.author === el.dataset.author && !prev.classList.contains('removed') &&
+                 !el.classList.contains('removed') && Number(el.dataset.at) - Number(prev.dataset.at) < 300) {
+        el.classList.add('cont');
+      }
+      log.appendChild(el);
+      const empty = chat.querySelector('[data-chat-empty]');
+      if (empty) empty.remove();
+      return true;
+    };
+
+    let readTimer = null;
+    const readForm = () => {
+      const fd = new FormData();
+      fd.append('csrf', csrf ? csrf.value : '');
+      fd.append('last', String(last));
+      return fd;
+    };
+    const markRead = () => {
+      clearTimeout(readTimer);
+      readTimer = setTimeout(() => {
+        readTimer = null;
+        if (document.hidden || !last) return;
+        fetch('/chat/' + id + '/read', { method: 'POST', body: readForm(), credentials: 'same-origin', headers: { Accept: 'application/json' } })
+          .then((r) => r.json()).then((j) => showUnread(j.total)).catch(() => {});
+      }, 400);
+    };
+    // Leaving straight after a message arrived: still count it as read.
+    window.addEventListener('pagehide', () => {
+      if (readTimer && navigator.sendBeacon) { clearTimeout(readTimer); navigator.sendBeacon('/chat/' + id + '/read', readForm()); }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { hiddenNew = 0; document.title = baseTitle; markRead(); }
+    });
+
+    const receive = (data) => {
+      const el = parse(data.html);
+      if (!el) return;
+      const stick = nearBottom() || data.mine;
+      const added = place(el);
+      if (added) {
+        last = Math.max(last, data.id);
+        if (!data.mine) {
+          el.classList.add('flash-new');
+          if (document.hidden) { hiddenNew++; document.title = '(' + hiddenNew + ') ' + baseTitle; }
+        }
+        if (stick) toBottom(); else if (!data.mine) jump.hidden = false;
+        markRead();
+      }
+    };
+
+    if (!history && window.EventSource) {
+      const es = new EventSource('/chat/' + id + '/events?after=' + last);
+      es.addEventListener('message', (e) => { try { receive(JSON.parse(e.data)); } catch (_) {} });
+      window.addEventListener('pagehide', () => es.close());
+    }
+
+    if (form) {
+      const grow = () => { box.style.height = 'auto'; box.style.height = Math.min(box.scrollHeight, window.innerHeight * 0.4) + 'px'; };
+      box.addEventListener('input', grow);
+      // Enter sends; Shift+Enter adds a line. On touchscreens Enter adds a line.
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !window.matchMedia('(pointer: coarse)').matches) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      });
+      let sending = false;
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (sending || !box.value.trim()) return;
+        sending = true;
+        const fd = new FormData(form);
+        fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin', headers: { Accept: 'application/json' } })
+          .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+          .then(({ ok, j }) => {
+            if (!ok) { errBox.textContent = j.error || 'Not sent. Try again.'; errBox.hidden = false; return; }
+            errBox.hidden = true;
+            box.value = '';
+            grow();
+            receive({ id: j.id, html: j.html, mine: true });
+          })
+          .catch(() => { errBox.textContent = "Not sent: you may be offline. Your message is still in the box; try again."; errBox.hidden = false; })
+          .finally(() => { sending = false; box.focus(); });
+      });
+    }
+
+    // Removing a message updates it in place.
+    chat.addEventListener('submit', (e) => {
+      const f = e.target;
+      if (e.defaultPrevented || !f.hasAttribute('data-chat-action')) return;
+      e.preventDefault();
+      fetch(f.action, { method: 'POST', body: new FormData(f), credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then((r) => r.json())
+        .then((j) => { if (j.html) place(parse(j.html)); })
+        .catch(() => f.submit());
+    });
+    // Close message menus when tapping elsewhere.
+    document.addEventListener('click', (e) => {
+      document.querySelectorAll('.msg-menu[open], .chat-tools[open]').forEach((d) => { if (!d.contains(e.target)) d.open = false; });
+    });
+  } else if (badge) {
+    // Elsewhere, check for new messages now and then.
+    const poll = () => {
+      if (document.hidden) return;
+      fetch('/chat/unread', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) showUnread(j.total); }).catch(() => {});
+    };
+    setInterval(poll, 60000);
+    document.addEventListener('visibilitychange', poll);
+  }
+
   // Filter boxes for long lists of people.
   document.querySelectorAll('[data-filter]').forEach((box) => {
     const list = document.getElementById(box.getAttribute('data-filter'));

@@ -6,6 +6,19 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Milestone 7, chat:
+  - **Chat** in the top bar: a **Community** chat for the whole school, and a chat for each
+    class (its members, and admins). A count of unread messages next to Chat, a dot on the
+    phone menu, and a **Class chat** card on each class's page.
+  - Messages arrive **live**, without reloading (server-sent events; no new dependencies).
+    After a lost connection, missed messages are filled in. Pages still work without
+    JavaScript.
+  - Remove your own messages. Mentors moderate their class chats, admins every chat:
+    remove messages and **mute** people for an hour, a day or until unmuted.
+  - Admins can **turn a chat off** (messages are kept). Archived classes' chats are
+    read-only.
+
 ## [0.6.0] - 2026-10-07
 
 ### Changed

@@ -108,6 +108,7 @@ type classData struct {
 	Assignments []assignItem
 	NAssign     int // all the assignments the viewer can see
 	Reviewer    bool
+	Chat        *chanItem // the class chat, for its members and admins
 	Class       *store.Class
 	Access      classAccess
 	Description template.HTML
@@ -142,6 +143,17 @@ func (s *Server) handleClass(w http.ResponseWriter, r *http.Request) {
 	u := current(r).user
 	d.Reviewer = u.IsAdmin() || a.Role == store.ClassMentor
 	d.Assignments, d.NAssign = s.classAssignments(c, a, u, 6)
+	if a.Role != "" || u.IsAdmin() {
+		if ch, err := s.store.ClassChannel(c.ID); err == nil {
+			if ca, err := s.chanAccess(u, ch); err == nil && ca.See {
+				it := &chanItem{chanAccess: ca}
+				if n, err := s.store.UnreadCounts(u.ID, []int64{ch.ID}); err == nil {
+					it.Unread = n[ch.ID]
+				}
+				d.Chat = it
+			}
+		}
+	}
 	if c.Description != "" {
 		d.Description, _ = markdown.Render([]byte(c.Description), markdown.Options{})
 	}
