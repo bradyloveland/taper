@@ -6,6 +6,8 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-07
+
 ### Changed
 - A simpler header: **Home**, **Calendar** and **Classes** across the top, and a menu under
   your initials at the far right with **My account**, **Guide**, **Settings** (admins) and
