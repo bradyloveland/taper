@@ -2,7 +2,7 @@
 
 ## Someone forgot their password
 
-An admin opens **People**, selects the person, and chooses **Reset password**.
+An admin opens **Settings → People**, selects the person, and chooses **Reset password**.
 See [Managing people](people.md#resetting-a-password).
 
 ## The only admin is locked out
@@ -56,7 +56,7 @@ sudo taper setup-code
 ## An update went wrong
 
 If a new version doesn't start, Taper puts the previous one back on its own; the
-**Updates** page explains what happened. You can also go back from that page.
+**Settings → Updates** page explains what happened. You can also go back from that page.
 If Taper doesn't come back at all, on the server:
 
 ```bash

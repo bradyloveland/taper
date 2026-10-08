@@ -32,7 +32,7 @@ GitHub as issues:
    - **Repository access:** only `bradyloveland/taper` (or your school's copy of Taper).
    - **Permissions:** **Issues: Read and write**. Nothing else.
    - Pick an expiry date you'll remember to renew.
-2. In Taper, open **Settings**, paste the token under **Problem reports**, and select
+2. In Taper, open **Settings → General**, paste the token under **Problem reports**, and select
    **Save**. Taper checks that the token works before saving it.
 
 The token is stored encrypted and is never shown again. To replace it, paste a

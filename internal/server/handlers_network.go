@@ -101,7 +101,7 @@ func (s *Server) renderNetwork(w http.ResponseWriter, r *http.Request, status in
 		}
 		d.Guess = scheme + "://" + r.Host
 	}
-	s.render(w, r, status, "network", "Network & HTTPS", "settings", d)
+	s.render(w, r, status, "network", "Network & HTTPS", "network", d)
 }
 
 func (s *Server) handleNetwork(w http.ResponseWriter, r *http.Request) {

@@ -120,13 +120,18 @@ updated documentation, and passes `make check`, before it's opened for review.
 - iCal subscriptions with a private link for each person (their whole calendar,
   or one class), for Google Calendar, Apple Calendar and Outlook. Links can be reset.
 
-### M6: assignments
+### M6: assignments (done)
 - Mentors create assignments with formatted text and attached files, an optional
-  due date (which shows on the class calendar), and publish now or later.
+  due date (which shows on the class calendar, My calendar and subscriptions),
+  and publish now, later, or keep a draft.
 - Scholars download the attachments, and either write their work online (saved
-  as they go) or upload files, then turn it in.
+  as they go) or upload files, then turn it in, and can take it back until it's
+  looked at. Work done on paper can just be marked turned in.
 - Mentors see who has turned in work, give written feedback and set a status
   (*Needs another look*, *Complete*). Scholars can turn in again after feedback.
+- Assignments live in their class; the home page brings together work to do
+  (scholars) or to review (mentors) across all classes. Backups include the
+  uploaded files.
 - No letter grades.
 
 ### M7: chat

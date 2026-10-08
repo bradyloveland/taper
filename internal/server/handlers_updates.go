@@ -1,9 +1,13 @@
 package server
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"errors"
 	"html/template"
+	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -274,10 +278,73 @@ func (s *Server) handleBackupDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close()
+	if r.URL.Query().Get("files") == "1" {
+		s.backupWithFiles(w, r, f)
+		return
+	}
 	name := "taper-" + time.Now().Format("2006-01-02-1504") + ".db"
 	w.Header().Set("Content-Type", "application/vnd.sqlite3")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
 	w.Header().Set("Cache-Control", "no-store")
 	slog.Info("database backup downloaded", "by", current(r).user.Username)
 	http.ServeContent(w, r, name, time.Now(), f)
+}
+
+// backupWithFiles sends the database copy and the uploaded files as one
+// .tar.gz, laid out like the data folder (taper.db and files/).
+func (s *Server) backupWithFiles(w http.ResponseWriter, r *http.Request, db *os.File) {
+	stamp := time.Now().Format("2006-01-02-1504")
+	w.Header().Set("Content-Type", "application/gzip")
+	w.Header().Set("Content-Disposition", `attachment; filename="taper-`+stamp+`.tar.gz"`)
+	w.Header().Set("Cache-Control", "no-store")
+	gz := gzip.NewWriter(w)
+	tw := tar.NewWriter(gz)
+	add := func(name string, f *os.File) error {
+		fi, err := f.Stat()
+		if err != nil {
+			return err
+		}
+		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o600, Size: fi.Size(), ModTime: fi.ModTime(), Typeflag: tar.TypeReg}); err != nil {
+			return err
+		}
+		_, err = io.Copy(tw, f)
+		return err
+	}
+	err := add("taper.db", db)
+	if err == nil {
+		root := s.filesDir()
+		err = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) && p == root {
+					return fs.SkipDir
+				}
+				return err
+			}
+			if !d.Type().IsRegular() {
+				return nil
+			}
+			rel, err := filepath.Rel(s.cfg.DataDir, p)
+			if err != nil {
+				return err
+			}
+			f, err := os.Open(p)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			return add(filepath.ToSlash(rel), f)
+		})
+	}
+	if err == nil {
+		err = tw.Close()
+	}
+	if err == nil {
+		err = gz.Close()
+	}
+	if err != nil {
+		// The download is already under way; all we can do is stop it short.
+		s.logError(r, "writing backup with files", err)
+		return
+	}
+	slog.Info("backup with files downloaded", "by", current(r).user.Username)
 }

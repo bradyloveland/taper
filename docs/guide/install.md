@@ -132,18 +132,26 @@ sudo /opt/taper/install.sh --version X.Y.Z   # or the curl command above, for th
 
 ## Backups
 
-Everything Taper keeps is in `/var/lib/taper`. Admins can download a copy of
-the database from **Settings → Download a backup**. On the server, to copy the
-database while Taper is running:
+Everything Taper keeps is in `/var/lib/taper`: the database, and the files
+attached to assignments and work in `files/`. Admins can download both from
+**Settings → Download database and files** (a `.tar.gz`), or just the database
+with **Database only**. On the server, to copy the database while Taper is
+running:
 
 ```bash
 sudo taper backup /var/lib/taper/backup-$(date +%F).db
 ```
 
-Then copy that file somewhere other than the server, or rely on your VM's
-snapshot or backup tool. To restore a copy, stop Taper
-(`sudo systemctl stop taper`), put it in place of `/var/lib/taper/taper.db`
-(owned by the `taper` user), and start Taper again.
+and copy the uploaded files with them, for example
+`sudo tar czf files-$(date +%F).tar.gz -C /var/lib/taper files`.
+
+Then copy those somewhere other than the server, or rely on your VM's snapshot
+or backup tool. To restore, stop Taper (`sudo systemctl stop taper`), put the
+database in place of `/var/lib/taper/taper.db` and the `files` folder in
+`/var/lib/taper/files` (both owned by the `taper` user:
+`sudo chown -R taper:taper /var/lib/taper`), and start Taper again. A
+`.tar.gz` from Settings unpacks into exactly that layout:
+`sudo tar xzf taper-….tar.gz -C /var/lib/taper`.
 
 ## Removing Taper
 
@@ -160,6 +168,7 @@ sudo /opt/taper/uninstall.sh --purge  # deletes everything
 | `/etc/taper/taper.conf` | How Taper is reached, as set by the installer |
 | `/var/lib/taper/network.json` | How Taper is reached, if changed in the web interface |
 | `/var/lib/taper/taper.db` | The database: people, settings and everything else |
+| `/var/lib/taper/files/` | Files attached to assignments and work |
 | `/var/lib/taper/backups/` | Database copies from before each update (the last five) |
 | `/var/lib/taper/secret.key` | Encrypts saved secrets such as the GitHub token; keep it with backups |
 | `/var/lib/taper/certs/` | Let's Encrypt certificates (HTTPS mode) |

@@ -146,7 +146,7 @@ func (s *Server) renderEmail(w http.ResponseWriter, r *http.Request, status int,
 	if d.TestTo == "" {
 		d.TestTo = current(r).user.Email
 	}
-	s.render(w, r, status, "email", "Email", "settings", d)
+	s.render(w, r, status, "email", "Email", "email", d)
 }
 
 func (s *Server) handleEmail(w http.ResponseWriter, r *http.Request) {

@@ -43,10 +43,18 @@ type occurrence struct {
 	Start, End time.Time // in the school's time zone; for all-day, midnight to midnight
 	AllDay     bool
 	Repeats    bool
+	Due        bool   // an assignment's due date, not an event
+	URL        string // for due dates: the assignment's page
 }
 
 // When describes an occurrence's time, like "10:00 AM–11:30 AM" or "All day".
 func (o occurrence) When() string {
+	if o.Due {
+		if o.AllDay {
+			return "Due by end of day"
+		}
+		return "Due " + o.Start.Format("3:04 PM")
+	}
 	if o.AllDay {
 		if days := o.days(); len(days) > 1 {
 			return days[0].Format("Jan 2") + " – " + days[len(days)-1].Format("Jan 2")
@@ -69,6 +77,9 @@ func (o occurrence) StartClock() string {
 
 // Link is the occurrence's page.
 func (o occurrence) Link() string {
+	if o.URL != "" {
+		return o.URL
+	}
 	return fmt.Sprintf("/events/%d?date=%s", o.Event.ID, cal.FormatDate(o.Date))
 }
 
@@ -87,6 +98,12 @@ func (s *Server) expand(events []*store.CalEvent, from, to time.Time) []occurren
 			out = append(out, occurrence{Event: e, Date: d, Start: start, End: end, AllDay: r.AllDay(), Repeats: e.Repeat != ""})
 		}
 	}
+	sortOccurrences(out)
+	return out
+}
+
+// sortOccurrences sorts by day, all-day items first, then by start time.
+func sortOccurrences(out []occurrence) {
 	sort.SliceStable(out, func(i, j int) bool {
 		if !out[i].Date.Equal(out[j].Date) {
 			return out[i].Date.Before(out[j].Date)
@@ -96,7 +113,6 @@ func (s *Server) expand(events []*store.CalEvent, from, to time.Time) []occurren
 		}
 		return out[i].Start.Before(out[j].Start)
 	})
-	return out
 }
 
 // calChoice is a calendar someone can look at.
@@ -239,7 +255,8 @@ func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, "listing events", err)
 		return
 	}
-	occ := s.expand(events, from, to)
+	occ := append(s.expand(events, from, to), s.dueOccurrences(query.ClassIDs, from, to)...)
+	sortOccurrences(occ)
 	byDay := map[string][]occurrence{}
 	closed := map[string]bool{}
 	for _, o := range occ {
@@ -346,7 +363,8 @@ func (s *Server) upcoming(q store.EventQuery, days, limit int) []occurrence {
 		slog.Error("listing upcoming events", "err", err)
 		return nil
 	}
-	occ := s.expand(events, from, to)
+	occ := append(s.expand(events, from, to), s.dueOccurrences(q.ClassIDs, from, to)...)
+	sortOccurrences(occ)
 	now := time.Now()
 	var out []occurrence
 	for _, o := range occ {

@@ -37,9 +37,21 @@ at your school. An admin can create a new temporary password for you (see
 
 ## Getting around
 
-- **Home** shows what's coming up and your classes.
+Along the top:
+
+- **Home** shows your assignments across all your classes, what's coming up,
+  and your classes.
 - **Calendar** shows the school calendar and your classes' calendars.
 - **Classes** lists your classes, and for mentors and admins, every class.
-- **Guide** is this guide.
-- Select your name at the top to open **My account**, and **Sign out** when you're done.
-- On a phone, the menu button (three lines) at the top right opens the menu.
+  Each class's page has its assignments.
+
+Your initials, at the far right, open your menu:
+
+- **My account:** your name, email, password and two-step sign-in.
+- **Guide:** this guide.
+- **Settings** (admins): the school's settings, people, updates, network and
+  email, as tabs across the top of the page.
+- **Sign out** when you're done.
+
+On a phone, the menu button (three lines) opens Home, Calendar and Classes;
+your initials still open your own menu.

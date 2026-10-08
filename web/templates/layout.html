@@ -29,31 +29,31 @@
     {{if and .User (not .User.MustChangePassword)}}
     <input type="checkbox" id="nav-toggle" class="nav-toggle sr-only">
     <label for="nav-toggle" class="nav-button"><span class="hamburger" aria-hidden="true"></span><span class="sr-only">Menu</span></label>
-      <nav class="nav" aria-label="Main">
-        <a href="/" {{if eq .Section "home"}}aria-current="page"{{end}}>Home</a>
-        <a href="/calendar" {{if eq .Section "calendar"}}aria-current="page"{{end}}>Calendar</a>
-        <a href="/classes" {{if eq .Section "classes"}}aria-current="page"{{end}}>Classes</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/" {{if eq .Section "home"}}aria-current="page"{{end}}>Home</a>
+      <a href="/calendar" {{if eq .Section "calendar"}}aria-current="page"{{end}}>Calendar</a>
+      <a href="/classes" {{if eq .Section "classes"}}aria-current="page"{{end}}>Classes</a>
+    </nav>
+    <details class="menu" data-menu>
+      <summary class="menu-button{{if or (eq .Section "account") (eq .Section "guide") (adminSection .Section)}} current{{end}}" title="{{.User.DisplayName}}">
+        <span class="avatar" aria-hidden="true">{{.User.Initials}}</span><span class="sr-only">Account menu for {{.User.DisplayName}}</span>
+      </summary>
+      <div class="menu-panel">
+        <div class="menu-who"><strong>{{.User.DisplayName}}</strong><span>{{.User.RoleLabel}} · {{.User.Username}}</span></div>
+        <a href="/account" {{if eq .Section "account"}}aria-current="page"{{end}}>My account</a>
         <a href="/guide" {{if eq .Section "guide"}}aria-current="page"{{end}}>Guide</a>
-        {{if .User.IsAdmin}}
-        <span class="nav-sep" aria-hidden="true"></span>
-        <a href="/admin/people" {{if eq .Section "people"}}aria-current="page"{{end}}>People</a>
-        <a href="/admin/updates" {{if eq .Section "updates"}}aria-current="page"{{end}}>Updates</a>
-        <a href="/admin/settings" {{if eq .Section "settings"}}aria-current="page"{{end}}>Settings</a>
-        {{end}}
-        <span class="nav-sep nav-push" aria-hidden="true"></span>
-        <a href="/account" class="nav-account" {{if eq .Section "account"}}aria-current="page"{{end}}>
-          <span class="avatar" aria-hidden="true">{{.User.Initials}}</span>
-          <span>{{.User.DisplayName}}</span>
-        </a>
-        <form method="post" action="/logout" class="nav-form">
+        {{if .User.IsAdmin}}<a href="/admin/settings" {{if adminSection .Section}}aria-current="page"{{end}}>Settings</a>{{end}}
+        <form method="post" action="/logout" class="menu-form">
           <input type="hidden" name="csrf" value="{{.CSRF}}">
-          <button type="submit" class="link-button">Sign out</button>
+          <button type="submit">Sign out</button>
         </form>
-      </nav>
+      </div>
+    </details>
     {{end}}
   </div>
 </header>
 <main id="main" class="container">
+  {{if and .User .User.IsAdmin (adminSection .Section)}}{{template "admin-tabs" .}}{{end}}
   {{with .Flash}}<div class="flash flash-{{.Kind}}" role="status">{{.Message}}</div>{{end}}
   {{template "content" .}}
 </main>
@@ -79,4 +79,33 @@
     {{else if .Mentors}}<span class="small">With {{.MentorNames}}</span>{{end}}
   </span>
 </a>
+{{end}}
+
+{{/* An assignment in a list. Pass (pair item reviewer). */}}
+{{define "assign-item"}}
+<li><a href="/assignments/{{.A.ID}}" class="agenda-item assign-item">
+  <span class="bar c-{{.A.ClassColor}}" aria-hidden="true"></span>
+  <span class="agenda-what"><strong>{{.A.Title}}</strong>{{with .A.Status}} <span class="badge muted">{{.}}</span>{{end}}<br>
+    <span class="muted small">{{.A.ClassName}} · <span class="{{if and .A.Overdue (not .B)}}{{if or (eq .A.State.Kind "late") (eq .A.State.Kind "needs")}}late-text{{end}}{{end}}">{{.A.Due}}</span></span></span>
+  <span class="assign-state">
+  {{if .B}}
+    {{if .A.TurnedIn}}<span class="badge state-in">{{.A.TurnedIn}} to review</span>{{end}}
+    <span class="muted small">{{.A.Done}} of {{.A.Scholars}} complete</span>
+  {{else if .A.State.Label}}
+    <span class="badge state-{{.A.State.Kind}}">{{if eq .A.State.Kind "late"}}Past due{{else}}{{.A.State.Label}}{{end}}</span>{{if and .A.State.Late (eq .A.State.Kind "in")}} <span class="muted small">late</span>{{end}}
+  {{end}}
+  </span>
+</a></li>
+{{end}}
+
+{{/* The tabs across the admin pages, all reached from Settings. */}}
+{{define "admin-tabs"}}
+<nav class="admin-tabs" aria-label="Settings">
+  <a href="/admin/settings" {{if eq .Section "settings"}}aria-current="page"{{end}}>General</a>
+  <a href="/admin/people" {{if eq .Section "people"}}aria-current="page"{{end}}>People</a>
+  <a href="/admin/updates" {{if eq .Section "updates"}}aria-current="page"{{end}}>Updates</a>
+  <a href="/admin/network" {{if eq .Section "network"}}aria-current="page"{{end}}>Network &amp; HTTPS</a>
+  <a href="/admin/email" {{if eq .Section "email"}}aria-current="page"{{end}}>Email</a>
+  <a href="/admin/reports" {{if eq .Section "reports"}}aria-current="page"{{end}}>Problem reports</a>
+</nav>
 {{end}}

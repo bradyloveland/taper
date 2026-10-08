@@ -49,8 +49,15 @@ func TestHomeAndSettings(t *testing.T) {
 	e := newEnvReady(t)
 	e.addUser("mia", "Mia Mentor", store.RoleMentor, "mentor-password", false)
 	b := e.signedIn("admin", "admin-password")
-	expect(t, b.get("/"), http.StatusOK, "Getting started", `href="/admin/people"`, "Liberty Commonwealth")
-	expect(t, b.get("/admin/settings"), http.StatusOK, "This server", "Plain HTTP", "schema 6", "Download a backup", "Problem reports")
+	home := b.get("/")
+	expect(t, home, http.StatusOK, "Getting started", "Liberty Commonwealth", `class="menu"`, `href="/admin/settings"`, `href="/guide"`, `action="/logout"`)
+	if strings.Contains(home.Body, `class="admin-tabs"`) {
+		t.Fatal("the admin tabs belong on the admin pages only")
+	}
+	for _, p := range []string{"/admin/people", "/admin/updates", "/admin/network", "/admin/email", "/admin/reports"} {
+		expect(t, b.get(p), http.StatusOK, `class="admin-tabs"`, `href="`+p+`" aria-current="page"`)
+	}
+	expect(t, b.get("/admin/settings"), http.StatusOK, `class="admin-tabs"`, "This server", "Plain HTTP", "schema 7", "Download database and files", "Problem reports")
 	expect(t, b.postForm("/admin/settings", url.Values{"school": {"   "}}), http.StatusUnprocessableEntity, "Enter a school name")
 	expectRedirect(t, b.postForm("/admin/settings", url.Values{"school": {"Freedom   Academy"}}), "/admin/settings")
 	expect(t, b.get("/admin/settings"), http.StatusOK, "Settings saved", "Freedom Academy")
@@ -58,7 +65,10 @@ func TestHomeAndSettings(t *testing.T) {
 		t.Fatal("school name not saved")
 	}
 	m := e.signedIn("mia", "mentor-password")
-	expect(t, m.get("/"), http.StatusOK, "Mentor at Freedom Academy", "Your classes")
+	expect(t, m.get("/"), http.StatusOK, "Mentor at Freedom Academy", "Your classes", `href="/account"`)
+	if strings.Contains(m.last, `href="/admin/settings"`) {
+		t.Fatal("mentors don't get Settings in their menu")
+	}
 	expect(t, m.get("/nope"), http.StatusNotFound, "Page not found")
 }
 

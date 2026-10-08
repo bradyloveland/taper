@@ -10,9 +10,11 @@ just the school calendar, or one class.
 - Use **‹** and **›** to move back and forward, and **Today** to come back.
 
 Days without school (holidays, breaks) are shaded and marked **No school**.
+Assignment due dates show as **Due: …** with a dashed outline, and open the
+assignment; they're on subscribed calendars too.
 The home page shows what's coming up in the next two weeks. Each class's page
-has a **Coming up** card with that class's events for the next month, a link
-to its calendar, and **Add event** for its mentors.
+has a **Coming up** card with that class's events and due dates for the next
+month, a link to its calendar, and **Add event** for its mentors.
 
 ## Subscribing in Google, Apple or Outlook calendars
 
@@ -62,6 +64,6 @@ removes the event, and all its dates if it repeats.
 
 ## Time zone
 
-Events are in the school's local time, set by an admin under **Settings →
-School → Time zone**. A class at 10:00 stays at 10:00 when daylight saving
+Events are in the school's local time, set by an admin under **Settings → General →
+Time zone**. A class at 10:00 stays at 10:00 when daylight saving
 time starts or ends.

@@ -32,7 +32,14 @@
     {{if .D.Access.CanEdit}}<a class="button small primary" href="/events/new?cal={{.D.Class.ID}}">Add event</a>{{end}}
     {{if .D.Access.Role}}<a class="button small" href="/calendar/subscribe#class-{{.D.Class.ID}}">Subscribe to this class</a>{{end}}
   </div>
-  <p class="muted small coming">Assignments and their due dates will show here too, in the next version of Taper.</p>
+</section>
+
+<section class="card">
+  <div class="row-head"><h2>Assignments</h2>{{if .D.NAssign}}<a class="small" href="/classes/{{.D.Class.ID}}/assignments">All {{.D.NAssign}}</a>{{end}}</div>
+  {{if .D.Assignments}}
+  <ul class="agenda-list">{{range .D.Assignments}}{{template "assign-item" (pair . $.D.Reviewer)}}{{end}}</ul>
+  {{else}}<p class="muted">{{if .D.NAssign}}Nothing coming up.{{else}}No assignments yet.{{end}}</p>{{end}}
+  {{if .D.Access.CanEdit}}<div class="actions"><a class="button small primary" href="/classes/{{.D.Class.ID}}/assignments/new">New assignment</a></div>{{end}}
 </section>
 
 <section class="card">

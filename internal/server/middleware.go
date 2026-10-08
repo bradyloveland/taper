@@ -53,15 +53,17 @@ const csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 's
 	"connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; " +
 	"form-action 'self'; frame-ancestors 'none'"
 
-// maxForm is the largest request body accepted. (File uploads, when they
-// come, get their own limit.)
+// maxForm is the largest request body accepted, apart from uploads.
 const maxForm = 1 << 20
 
 func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		limit := int64(maxForm)
-		if r.URL.Path == "/admin/updates/upload" {
+		switch {
+		case r.URL.Path == "/admin/updates/upload":
 			limit = maxUpload
+		case strings.HasPrefix(r.URL.Path, "/assignments/") || strings.HasSuffix(r.URL.Path, "/assignments/new"):
+			limit = maxFilesBody
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, limit)
 		h := w.Header()

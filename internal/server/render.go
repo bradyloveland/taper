@@ -43,7 +43,35 @@ func (s *Server) templateFuncs() template.FuncMap {
 		"pair":      func(a, b any) pairT { return pairT{a, b} },
 		"list":      func(xs ...string) []string { return xs },
 		"title":     func(s string) string { return capitalize(s) },
+		"when":      func(unix int64) string { return time.Unix(unix, 0).In(s.loc()).Format("Mon, Jan 2 at 3:04 PM") },
+		"happened":  happened,
+		"adminSection": func(section string) bool {
+			switch section {
+			case "settings", "people", "updates", "network", "email", "reports":
+				return true
+			}
+			return false
+		},
 	}
+}
+
+// happened names a step in a piece of work's history.
+func happened(kind string) string {
+	switch kind {
+	case store.WorkTurnedIn:
+		return "Turned in"
+	case store.WorkTakenBack:
+		return "Taken back to change"
+	case store.WorkReturned:
+		return "Returned, not turned in"
+	case store.WorkUncompleted:
+		return "Complete undone, back to turned in"
+	case store.WorkNeedsWork:
+		return "Needs another look"
+	case store.WorkComplete:
+		return "Marked complete"
+	}
+	return kind
 }
 
 // pairT passes two values to a sub-template.

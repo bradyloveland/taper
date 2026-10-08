@@ -9,6 +9,21 @@
 {{with .D.Unsent}}<div class="flash flash-warn" role="status">{{.}} problem report{{if gt . 1}}s{{end}} from your school {{if gt . 1}}aren't{{else}}isn't{{end}} on GitHub yet. <a href="/admin/reports">See reports</a></div>{{end}}
 {{end}}
 
+{{if .D.Classes}}
+<section class="card" id="assignments">
+  <h2>Assignments</h2>
+  {{if .D.Mentored}}
+  <ul class="agenda-list">{{range .D.Mentored}}{{template "assign-item" (pair . true)}}{{end}}</ul>
+  {{end}}
+  {{if .D.ToDo}}
+  <ul class="agenda-list">{{range .D.ToDo}}{{template "assign-item" (pair . false)}}{{end}}</ul>
+  {{end}}
+  {{if not (or .D.Mentored .D.ToDo)}}
+  <p class="muted">{{if .User.IsMentor}}No work waiting for review, and nothing due in the next two weeks.{{else}}Nothing to do right now.{{end}} Each class's page lists all its assignments.</p>
+  {{end}}
+</section>
+{{end}}
+
 <section class="card">
   <div class="row-head"><h2>Coming up</h2><a class="small" href="/calendar">Calendar</a></div>
   {{if .D.Upcoming}}
@@ -54,7 +69,7 @@
     <li class="{{if gt (index .D.Counts "scholar") 0}}done{{end}}"><a href="/admin/people/new?role=scholar">Add your scholars</a>, or <a href="/admin/people/import">import them from a spreadsheet</a>.</li>
     <li class="{{if gt .D.NClasses 0}}done{{end}}"><a href="/classes/new">Create your classes</a> <span class="muted">and add their mentors and scholars.</span></li>
     <li><a href="/guide/phone-app">Show everyone how to add Taper to their phone</a>.</li>
-    <li class="muted">Calendars, assignments and chat come in the next versions. <a href="/guide">See the guide</a>.</li>
+    <li class="muted">Community and class chat come in the next version. <a href="/guide">See the guide</a>.</li>
   </ol>
 </section>
 {{else}}
