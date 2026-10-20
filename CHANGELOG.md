@@ -6,6 +6,11 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- The top left now always says **Taper**, with the label after it on copies that aren't a
+  school's real one (**Taper BETA**, **Taper DEV**). The school's name is on the sign-in page,
+  in the account menu, in the footer and on the home page.
+
 ## [0.8.0] - 2026-10-19
 
 ### Added

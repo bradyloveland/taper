@@ -23,8 +23,8 @@
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="/">
-      <span class="brand-mark"><img src="{{asset "icons/icon.svg"}}" alt="" width="32" height="32">{{with .Label}}<span class="env-label env-{{lower .}}" title="This is a {{lower .}} copy of Taper, not the school's real one">{{.}}</span>{{end}}</span>
-      <span class="brand-name">{{.AppName}}</span>
+      <img src="{{asset "icons/icon.svg"}}" alt="" width="32" height="32">
+      <span class="brand-name">Taper</span>{{with .Label}}<span class="env-label env-{{lower .}}" title="This is a {{lower .}} copy of Taper, not the school's real one">{{.}}</span>{{end}}
     </a>
     {{if and .User (not .User.MustChangePassword)}}
     <input type="checkbox" id="nav-toggle" class="nav-toggle sr-only">
@@ -45,7 +45,7 @@
         <span class="avatar" aria-hidden="true">{{.User.Initials}}</span><span class="sr-only">Account menu for {{.User.DisplayName}}</span>
       </summary>
       <div class="menu-panel">
-        <div class="menu-who"><strong>{{.User.DisplayName}}</strong><span>{{.User.RoleLabel}} · {{.User.Username}}</span></div>
+        <div class="menu-who"><strong>{{.User.DisplayName}}</strong><span>{{.User.RoleLabel}} · {{.User.Username}}</span>{{with .School}}<span>{{.}}</span>{{end}}</div>
         <a href="/account" {{if eq .Section "account"}}aria-current="page"{{end}}>My account</a>
         <a href="/guide" {{if eq .Section "guide"}}aria-current="page"{{end}}>Guide</a>
         {{if .User.IsAdmin}}<a href="/admin/settings" {{if adminSection .Section}}aria-current="page"{{end}}>Settings</a>
@@ -66,6 +66,7 @@
 </main>
 <footer class="footer">
   <span class="footer-tagline">Light your taper at mine</span>
+  {{with .School}}<span>{{.}}</span>{{end}}
   <span>Taper {{.Version}}</span>
   <a href="/guide">Guide</a>
   {{if .User}}<a href="/report?from={{.Path}}">Report a problem</a>{{end}}
