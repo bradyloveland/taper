@@ -38,17 +38,13 @@
         window.location.reload();
       }
     }
-    // Close the menus when tapping outside them.
-    const toggle = document.getElementById('nav-toggle');
-    if (toggle && toggle.checked && !e.target.closest('.nav, .nav-button, .nav-toggle')) toggle.checked = false;
+    // Close the menu when tapping outside it.
     const menu = document.querySelector('[data-menu]');
     if (menu && menu.open && !e.target.closest('[data-menu]')) menu.open = false;
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      const toggle = document.getElementById('nav-toggle');
-      if (toggle) toggle.checked = false;
       const menu = document.querySelector('[data-menu]');
       if (menu && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
     }
@@ -77,14 +73,6 @@
       }
     };
     setTimeout(poll, 2500);
-  }
-
-  // Opening one header menu closes the other.
-  const acct = document.querySelector('[data-menu]');
-  const navToggle = document.getElementById('nav-toggle');
-  if (acct && navToggle) {
-    acct.addEventListener('toggle', () => { if (acct.open) navToggle.checked = false; });
-    navToggle.addEventListener('change', () => { if (navToggle.checked) acct.open = false; });
   }
 
   // On narrow screens, scroll the settings tabs so the current one shows.
@@ -222,17 +210,22 @@
 
   // ------------------------------------------------------------------ chat
 
-  const badge = document.querySelector('[data-chat-badge]');
-  const dot = document.querySelector('[data-chat-dot]');
+  // Counts in the header (chat, the bell) and in the phone menu, and the dot
+  // on the phone's menu button when either is above zero.
+  const badges = document.querySelectorAll('[data-chat-badge]');
+  const badge = badges[0];
+  const bells = document.querySelectorAll('[data-notice-badge]');
+  const bell = bells[0];
+  const dot = document.querySelector('[data-any-dot]');
   const baseTitle = document.title;
-  const showUnread = (n) => {
-    if (badge) { badge.textContent = n; badge.hidden = !(n > 0); badge.setAttribute('aria-label', n + ' unread'); }
-    if (dot) dot.hidden = !(n > 0);
-  };
-  const bell = document.querySelector('[data-notice-badge]');
+  const setCount = (el, n) => { el.textContent = n; el.hidden = !(n > 0); el.setAttribute('aria-label', n + ' unread'); };
+  const count = (el) => (el && !el.hidden ? parseInt(el.textContent, 10) || 0 : 0);
+  const showDot = () => { if (dot) dot.hidden = !(count(badge) + count(bell) > 0); };
+  const showUnread = (n) => { badges.forEach((b) => setCount(b, n)); showDot(); };
   const showNotices = (n) => {
-    if (!bell || typeof n !== 'number') return;
-    bell.textContent = n; bell.hidden = !(n > 0); bell.setAttribute('aria-label', n + ' unread');
+    if (typeof n !== 'number') return;
+    bells.forEach((b) => setCount(b, n));
+    showDot();
     if ('setAppBadge' in navigator) (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
   };
 

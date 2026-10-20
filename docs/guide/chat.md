@@ -1,7 +1,8 @@
 # Chat
 
 Open **Chat** at the top of any page. A number next to it counts the messages
-you haven't read yet (on a phone, a dot on the menu button).
+you haven't read yet. On a phone, Chat is in the menu under your initials, and
+a dot on them means there's something new.
 
 - **Community** is the whole school's chat. Everyone can read it; admins and
   board members post in it, so it stays a place for news and announcements.

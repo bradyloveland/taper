@@ -1,6 +1,7 @@
 # Notifications
 
 Taper tells you about things that concern you. The **bell** at the top right
+(on a phone, **Notifications** in the menu under your initials)
 shows how many are new. Select it to see them, and select one to open what it's
 about.
 

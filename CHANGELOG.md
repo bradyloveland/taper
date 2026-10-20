@@ -11,6 +11,9 @@ All notable changes to Taper are recorded here. The format follows
   school's real one (**Taper BETA**, **Taper DEV**). The school's name is on the sign-in page,
   in the account menu, in the footer, and under the home page's greeting, which now uses your
   first name ("Good evening, Pam").
+- On phones, the top bar shows only your initials: their menu has Home, Calendar, Classes,
+  Chat and Notifications (with their counts) as well as your own links, and a dot on them
+  says something's new. The separate menu button and bell are gone on phones.
 
 ## [0.8.0] - 2026-10-19
 
