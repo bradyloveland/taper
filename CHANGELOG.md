@@ -6,6 +6,8 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-19
+
 ### Added
 - Milestone 7, chat:
   - **Chat** in the top bar: **Community** for the whole school (everyone reads; admins and

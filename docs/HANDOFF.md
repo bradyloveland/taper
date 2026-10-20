@@ -3,7 +3,7 @@
 *Light your taper at mine.*
 
 A snapshot of where Taper stands, for whoever picks it up next. Last updated
-2026-10-08. This file isn't part of the in-app guide. The plan is
+2026-10-19. This file isn't part of the in-app guide. The plan is
 [plan.md](plan.md), the code tour is [development.md](development.md), the rules
 for working on the code are in [`CLAUDE.md`](../CLAUDE.md), and the user guide
 is in [guide/](guide/).
@@ -18,9 +18,8 @@ server. Roles: **admin**, **board**, **mentor** (teacher), **scholar**
 
 ## What's built
 
-Milestones 1–7 of 8 are done. Releases v0.3.0, v0.4.0 and v0.5.0 are tagged.
-PR #11 set the version to 0.6.0 and is merged, but `v0.6.0` isn't tagged yet
-(see [Next steps](#next-steps)).
+Milestones 1–7 of 8 are done, plus the Parent role. Releases v0.3.0 to v0.6.0
+are tagged; 0.7.0 (M7 and parents) is in a release pull request.
 
 | Milestone | What it added |
 |-----------|---------------|
@@ -31,6 +30,7 @@ PR #11 set the version to 0.6.0 and is merged, but `v0.6.0` isn't tagged yet
 | **M5 Calendars** | School and class calendars, repeating events, school time zone. Month, week and list views. Private iCal subscription links per calendar, each resettable on its own. |
 | **M6 Assignments** | Formatted instructions and attachments, due dates (on the calendars and feeds), publish now, later or as a draft. Scholar work saves itself as they type; files; turn in or take back. Mentor review with feedback, plus Undo complete and Return to scholar. Backups that include uploaded files. |
 | **M7 Chat** | Community, class and group chats, live over server-sent events, with unread counts. Photos and files. Moderation (remove messages, mute people). Admins and the board can turn chats off. Plus the **Board** role. |
+| **Parents** (after M7) | The **Parent** role and a `parents` link table: anyone who isn't a scholar can be linked to scholars. Parents see their scholars' classes, calendars and work, turn work in for them (history says "(parent)"), and talk in class chats. Linked on the person page or by a "Parent of" import column. |
 
 Between M6 and M7 the header was simplified. The top bar has Home, Calendar,
 Classes and Chat. The person's initials open a menu with My account, Guide,
@@ -97,9 +97,14 @@ minutes), they're undone, so a school can't lock itself out from the browser.
   school: classes, calendars, assignments and every chat.
 - **Admin-only** (`User.IsAdmin()`): server settings, updates, network, email,
   problem reports and backups.
-- **Board members manage mentors and scholars, but not admin or board
-  accounts.** Otherwise a board member could reset an admin's password and take
-  over the server. The owner was asked to confirm this choice (see Next steps).
+- **The hierarchy is admin, board, mentor, parent, scholar.** Board members
+  manage mentors, parents and scholars, but not admin or board accounts, so a
+  board member can't take over the server (confirmed by the owner).
+- **Parents are links, not only a role** (owner's choice): mentors and board
+  members with children don't need a second account. In their scholars'
+  classes they have the class role `parent` (`store.ClassRelation`); in a class
+  they mentor they're its mentor. They see class pages without the other
+  scholars' names, and can post in class chats.
 - **Community chat is read-only except for leaders**, and **group chats are
   made by leaders.** Both were the owner's requirements.
 - **Assignments have no page of their own.** They live in their class, and the
@@ -114,14 +119,12 @@ minutes), they're undone, so a school can't lock itself out from the browser.
 
 ## Current state
 
-- **`main`** has M7 chat (PR #12). VERSION is `0.7.0-dev`.
-- **PR #13** (`m7-board-groups`) is open with green CI: the Board role,
-  read-only Community, group chats, and photos and files in chat. It's deployed
-  on the dev server. This file is on that branch too.
+- **`main`** has M7 (PRs #12, #13) and the Parent role (PR #14).
+- **`release-0.7.0`** sets VERSION to `0.7.0`. After it merges, tag `v0.7.0`.
 - **Dev server:**
   - Hostname `dev`, at 10.10.10.34:8088. Proxied as
     https://taper-dev.ltekk.com by Nginx Proxy Manager.
-  - Runs the PR #13 build.
+  - Runs the PR #13 build (not yet the parent role).
   - Database backups taken before each deploy are in `/var/lib/taper/before-*.db`.
   - Port **8099 on the dev VM is now used by the owner's `pbcm` program**. Use
     another port, such as 8097, for throwaway test servers.
@@ -136,12 +139,9 @@ minutes), they're undone, so a school can't lock itself out from the browser.
 
 ## Open bugs and loose ends
 
-- **Live chat through the reverse proxy hasn't been checked** on the dev server.
-  It needs two signed-in devices.
-  - If messages only appear after reloading, turn on *Websockets Support* for
-    the host in Nginx Proxy Manager.
-  - Uploads bigger than the proxy's limit need `client_max_body_size 110m;`
-    under Advanced.
+- **Live chat through the reverse proxy** works, according to the owner. If
+  messages only appear after reloading, turn on *Websockets Support* in Nginx
+  Proxy Manager; uploads need `client_max_body_size 110m;` under Advanced.
 - **iOS 27.2 beta shows a letter instead of the home-screen icon** over HTTPS.
   This is an iOS beta bug: apple.com and github.com behave the same way.
   Nothing to fix in Taper; check again when iOS is released.
@@ -164,19 +164,12 @@ minutes), they're undone, so a school can't lock itself out from the browser.
 
 ## Next steps
 
-1. **Merge PR #13.**
-2. **Tag `v0.6.0`** on the PR #11 merge commit (`1e3fb65`), where VERSION is
-   `0.6.0`, so 0.6.0 shows in Settings → Updates. Tag only after the owner says
-   to.
-3. **Release 0.7.0:** in a pull request, set VERSION to `0.7.0` and rename
-   `## [Unreleased]` in `CHANGELOG.md`. Tag `v0.7.0` after the owner confirms
-   the merge, then check that the release has the archives, `MANIFEST` and
-   `MANIFEST.sig`.
-4. **The owner checks live chat** through Nginx Proxy Manager on two devices,
-   and confirms (or changes) what board members may do with accounts.
-5. **M8, polish and 1.0** (see [plan.md](plan.md#m8-polish-and-10)):
+1. **Release 0.7.0:** merge `release-0.7.0`, then tag `v0.7.0` and check that
+   the release has the archives, with `MANIFEST` and `MANIFEST.sig` inside.
+2. **M8, polish and 1.0** (see [plan.md](plan.md#m8-polish-and-10)):
    - Notifications in the app, by email (each person chooses) and by web push.
-     New messages, work turned in and feedback are the obvious first ones.
+     New messages, work turned in and feedback are the obvious first ones, and
+     parents should hear about their scholars' feedback.
    - Passkeys.
    - An accessibility pass, a performance check, and the guide with screenshots.
    - A tested upgrade path from every pre-release, then **1.0.0**.
@@ -189,6 +182,9 @@ minutes), they're undone, so a school can't lock itself out from the browser.
   release.
 - **Prompts:** keep permission prompts to what's needed (pushes and PRs); build
   and test without stopping in between.
+- **GitHub sign-in on the VM:** if `gh` says its token is invalid, the owner
+  runs `GH_BROWSER=true gh auth login --hostname github.com --git-protocol https --web`
+  and approves the code at github.com/login/device.
 - **Git identity:** commit as
   `bradyloveland <8643792+bradyloveland@users.noreply.github.com>`, because
   GitHub refuses the private email.
