@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="page-head">
-  <h1>{{.D.Greeting}}, {{.User.DisplayName}}</h1>
-  <p class="muted">{{.User.RoleLabel}} at {{.School}}</p>
+  <h1>{{.D.Greeting}}, {{.User.FirstName}}</h1>
+  <p class="muted">{{.School}}</p>
 </div>
 
 {{if .User.IsAdmin}}

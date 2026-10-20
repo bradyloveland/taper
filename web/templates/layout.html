@@ -23,12 +23,10 @@
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="/">
-      <span class="brand-mark"><img src="{{asset "icons/icon.svg"}}" alt="" width="32" height="32">{{with .Label}}<span class="env-label env-{{lower .}}" title="This is a {{lower .}} copy of Taper, not the school's real one">{{.}}</span>{{end}}</span>
-      <span class="brand-name">{{.AppName}}</span>
+      <img src="{{asset "icons/icon.svg"}}" alt="" width="32" height="32">
+      <span class="brand-name">Taper</span>{{with .Label}}<span class="env-label env-{{lower .}}" title="This is a {{lower .}} copy of Taper, not the school's real one">{{.}}</span>{{end}}
     </a>
     {{if and .User (not .User.MustChangePassword)}}
-    <input type="checkbox" id="nav-toggle" class="nav-toggle sr-only">
-    <label for="nav-toggle" class="nav-button"><span class="hamburger" aria-hidden="true"></span><span class="sr-only">Menu</span><span class="nav-dot" data-chat-dot {{if not .ChatUnread}}hidden{{end}} aria-hidden="true"></span></label>
     <nav class="nav" aria-label="Main">
       <a href="/" {{if eq .Section "home"}}aria-current="page"{{end}}>Home</a>
       <a href="/calendar" {{if eq .Section "calendar"}}aria-current="page"{{end}}>Calendar</a>
@@ -42,10 +40,18 @@
     </a>
     <details class="menu" data-menu>
       <summary class="menu-button{{if or (eq .Section "account") (eq .Section "guide") (adminSection .Section)}} current{{end}}" title="{{.User.DisplayName}}">
-        <span class="avatar" aria-hidden="true">{{.User.Initials}}</span><span class="sr-only">Account menu for {{.User.DisplayName}}</span>
+        <span class="avatar" aria-hidden="true">{{.User.Initials}}</span><span class="sr-only">Menu for {{.User.DisplayName}}</span>
+        <span class="menu-dot" data-any-dot {{if not (or .ChatUnread .Notices)}}hidden{{end}} aria-hidden="true"></span>
       </summary>
       <div class="menu-panel">
-        <div class="menu-who"><strong>{{.User.DisplayName}}</strong><span>{{.User.RoleLabel}} · {{.User.Username}}</span></div>
+        <div class="menu-who"><strong>{{.User.DisplayName}}</strong><span>{{.User.RoleLabel}} · {{.User.Username}}</span>{{with .School}}<span>{{.}}</span>{{end}}</div>
+        <nav class="menu-nav" aria-label="Main">
+          <a href="/" {{if eq .Section "home"}}aria-current="page"{{end}}>Home</a>
+          <a href="/calendar" {{if eq .Section "calendar"}}aria-current="page"{{end}}>Calendar</a>
+          <a href="/classes" {{if eq .Section "classes"}}aria-current="page"{{end}}>Classes</a>
+          <a href="/chat" {{if eq .Section "chat"}}aria-current="page"{{end}}>Chat<span class="nav-badge" data-chat-badge {{if not .ChatUnread}}hidden{{end}} aria-label="{{.ChatUnread}} unread">{{.ChatUnread}}</span></a>
+          <a href="/notifications" {{if eq .Section "notifications"}}aria-current="page"{{end}}>Notifications<span class="nav-badge" data-notice-badge {{if not .Notices}}hidden{{end}} aria-label="{{.Notices}} unread">{{.Notices}}</span></a>
+        </nav>
         <a href="/account" {{if eq .Section "account"}}aria-current="page"{{end}}>My account</a>
         <a href="/guide" {{if eq .Section "guide"}}aria-current="page"{{end}}>Guide</a>
         {{if .User.IsAdmin}}<a href="/admin/settings" {{if adminSection .Section}}aria-current="page"{{end}}>Settings</a>
@@ -66,6 +72,7 @@
 </main>
 <footer class="footer">
   <span class="footer-tagline">Light your taper at mine</span>
+  {{with .School}}<span>{{.}}</span>{{end}}
   <span>Taper {{.Version}}</span>
   <a href="/guide">Guide</a>
   {{if .User}}<a href="/report?from={{.Path}}">Report a problem</a>{{end}}

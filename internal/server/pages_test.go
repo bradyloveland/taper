@@ -65,7 +65,7 @@ func TestHomeAndSettings(t *testing.T) {
 		t.Fatal("school name not saved")
 	}
 	m := e.signedIn("mia", "mentor-password")
-	expect(t, m.get("/"), http.StatusOK, "Mentor at Freedom Academy", "Your classes", `href="/account"`)
+	expect(t, m.get("/"), http.StatusOK, ", Mia</h1>", "<p class=\"muted\">Freedom Academy</p>", "Your classes", `href="/account"`)
 	if strings.Contains(m.last, `href="/admin/settings"`) {
 		t.Fatal("mentors don't get Settings in their menu")
 	}

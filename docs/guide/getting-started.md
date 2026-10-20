@@ -60,5 +60,6 @@ Your initials, at the far right, open your menu:
   email, as tabs across the top of the page.
 - **Sign out** when you're done.
 
-On a phone, the menu button (three lines) opens Home, Calendar, Classes and
-Chat; your initials still open your own menu.
+On a phone, the top bar shows only your initials. They open one menu with
+Home, Calendar, Classes, Chat and Notifications as well as your own links. A
+dot on your initials means there's something new.
