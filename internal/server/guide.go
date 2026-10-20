@@ -96,6 +96,8 @@ func guideLink(dest string) string {
 		return "/guide" + frag
 	case strings.HasSuffix(file, ".md") && !strings.Contains(file, "/"):
 		return "/guide/" + strings.TrimSuffix(file, ".md") + frag
+	case strings.HasPrefix(file, "images/") && !strings.Contains(file[len("images/"):], "/"):
+		return "/guide/" + file
 	}
 	// Anything else in the repository, relative to docs/guide.
 	return "https://github.com/" + version.Repo + "/blob/main/" + path.Clean(path.Join("docs/guide", file)) + frag
@@ -123,4 +125,21 @@ func (s *Server) handleGuide(w http.ResponseWriter, r *http.Request) {
 		title = "Guide"
 	}
 	s.render(w, r, http.StatusOK, "guide", title, "guide", guideData{Pages: s.guide.pages[1:], Slug: slug, HTML: p.HTML})
+}
+
+// handleGuideImage serves a picture from the guide.
+func (s *Server) handleGuideImage(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if !strings.HasSuffix(name, ".png") || strings.ContainsAny(name, "/\\") {
+		s.notFound(w, r)
+		return
+	}
+	b, err := fs.ReadFile(s.guideFS, "guide/images/"+name)
+	if err != nil {
+		s.notFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "private, max-age=86400")
+	_, _ = w.Write(b)
 }

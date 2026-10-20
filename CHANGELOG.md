@@ -15,6 +15,9 @@ All notable changes to Taper are recorded here. The format follows
   Standard library only (ES256, EdDSA and RS256 keys, via `getPublicKey()`, so no CBOR).
 
 ### Changed
+- **The guide has pictures** (milestone 8): 15 screenshots of a made-up school, at desktop
+  and phone sizes, in the pages they explain, in the app and on GitHub. `make screenshots`
+  retakes them all.
 - **Accessibility** (milestone 8): an automated check now opens every page as an admin, a
   mentor, a scholar, a parent and someone signed out, and checks it against WCAG 2.2 AA
   (labels, names, alt text, headings, IDs and references, language, landmarks); another

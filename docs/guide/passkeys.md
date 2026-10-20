@@ -22,11 +22,15 @@ Taper needs a secure (https) address for passkeys. A passkey belongs to the
 address it was made on, so if your school moves Taper to a new address, add
 your passkeys again there.
 
+![My account, Passkeys: the list of passkeys, and Add a passkey on this device](images/passkeys.png)
+
 ## Signing in
 
 On the sign-in page, select **Sign in with a passkey**. On many devices, your
 passkey is also offered when you tap the username box. Tick **Keep me signed
 in** first if it's your own device.
+
+![The sign-in page on a phone, with Sign in with a passkey below the password](images/sign-in-phone.png)
 
 ## If your school requires two-step sign-in
 

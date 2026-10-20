@@ -5,6 +5,8 @@ Taper tells you about things that concern you. The **bell** at the top right
 shows how many are new. Select it to see them, and select one to open what it's
 about.
 
+![The notifications page: new ones marked with a dot](images/notifications.png)
+
 ## What you're told about
 
 | Kind | Who hears |

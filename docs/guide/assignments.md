@@ -39,6 +39,8 @@ When you're ready, select **Turn in**. Your mentor sees it straight away.
 Changed your mind? **Take it back to change it**, as long as your mentor hasn't
 looked at it yet. Then turn it in again.
 
+![An assignment as a scholar sees it: the instructions, and a box for their work that saves as they type](images/assignment-scholar.png)
+
 ### Feedback
 
 When your mentor has looked at your work, the assignment shows their feedback
@@ -73,6 +75,8 @@ an assignment also deletes the work turned in for it.
 
 ### Looking at work
 
+![An assignment as its mentor sees it: Scholars' work, with who has turned it in and what's waiting for review](images/assignment-roster.png)
+
 The **Assignments** card on your home page lists assignments in your classes
 with work waiting for you ("2 to review") first, then what's due in the next
 two weeks. Each class's page lists all its assignments.
@@ -93,6 +97,8 @@ the arrows at the top to move between scholars.
 
 You can also mark work complete that wasn't turned in through Taper, such as
 something done in class.
+
+![Reviewing a scholar's work: their writing, a box for feedback, and Mark complete or Needs another look](images/review.png)
 
 ### Changing your mind
 
@@ -119,6 +125,8 @@ scholar in the class, choose whose work to see at the top of it. You can do
 anything your scholar can: write (it saves as you type), attach files (photos
 of work done on paper, for example), **Turn in**, and **Take it back**. The
 history says **by** your name, **(parent)**, so the mentor knows.
+
+![A parent's home page: a card for each of their scholars, with work to do, past due or turned in](images/home-parent.png)
 
 ## Who sees what
 

@@ -5,14 +5,17 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bradyloveland/taper/docs"
 	"github.com/bradyloveland/taper/internal/config"
 	"github.com/bradyloveland/taper/internal/store"
 )
@@ -107,6 +110,33 @@ func TestGuide(t *testing.T) {
 	if len(e.srv.guide.pages) < 7 {
 		t.Fatalf("only %d guide pages", len(e.srv.guide.pages))
 	}
+	// Every picture the guide shows is there, has alt text, and is served;
+	// every picture in guide/images is used.
+	imgRE := regexp.MustCompile(`<img src="/guide/images/([a-z0-9-]+\.png)" alt="([^"]*)"`)
+	used := map[string]bool{}
+	for _, p := range e.srv.guide.pages {
+		for _, m := range imgRE.FindAllStringSubmatch(string(p.HTML), -1) {
+			used[m[1]] = true
+			if strings.TrimSpace(m[2]) == "" {
+				t.Errorf("guide page %q: %s has no alt text", p.Slug, m[1])
+			}
+			if r := b.get("/guide/images/" + m[1]); r.Status != http.StatusOK || r.Header.Get("Content-Type") != "image/png" {
+				t.Errorf("guide page %q: %s isn't served (%d)", p.Slug, m[1], r.Status)
+			}
+		}
+	}
+	files, _ := fs.Glob(docs.Guide, "guide/images/*.png")
+	for _, f := range files {
+		if !used[path.Base(f)] {
+			t.Errorf("%s isn't used in the guide", f)
+		}
+	}
+	if len(used) < 10 {
+		t.Errorf("only %d pictures in the guide", len(used))
+	}
+	expect(t, b.get("/guide/images/nope.png"), http.StatusNotFound)
+	expect(t, b.get("/guide/images/..%2fREADME.md"), http.StatusNotFound)
+	expectRedirect(t, e.browser().get("/guide/images/chat.png"), "/login?next=%2Fguide%2Fimages%2Fchat.png")
 	expect(t, b.get("/guide/nope"), http.StatusNotFound)
 	expectRedirect(t, b.get("/guide/README"), "/guide")
 	if got := guideLink("../plan.md#m1"); got != "https://github.com/bradyloveland/taper/blob/main/docs/plan.md#m1" {
