@@ -16,6 +16,8 @@ under **Other chats**, and only their own chats count towards the number next
 to Chat. Each class's page also has a **Class chat** card, with the number of
 new messages.
 
+![A class chat on a computer: the list of chats on the left, the messages on the right](images/chat.png)
+
 ## Talking
 
 Type in the box at the bottom and select **Send**. On a computer, **Enter**
@@ -26,6 +28,8 @@ read earlier messages, **New messages ↓** takes you back down. **Show earlier
 messages** at the top goes further back.
 
 Web addresses become links. Messages can be up to 2,000 characters.
+
+![A class chat on a phone](images/chat-phone.png)
 
 ## Photos and files
 

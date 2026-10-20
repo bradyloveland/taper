@@ -4,7 +4,8 @@ package docs
 
 import "embed"
 
-// Guide holds guide/*.md. guide/README.md is the table of contents.
+// Guide holds guide/*.md and the pictures in guide/images (taken with make
+// screenshots). guide/README.md is the table of contents.
 //
-//go:embed guide/*.md
+//go:embed guide/*.md guide/images/*.png
 var Guide embed.FS

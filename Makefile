@@ -5,7 +5,7 @@ DEV_DIR ?= $(CURDIR)/tmp/dev
 DEV_BIND ?= 127.0.0.1
 DEV_PORT ?= 8088
 
-.PHONY: build test lint check dist dev icons clean
+.PHONY: build test lint check dist dev icons screenshots clean
 
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/taper ./cmd/taper
@@ -45,6 +45,11 @@ dev:
 # Regenerate the PNG icons from web/static/icons/icon.svg (needs Firefox and ImageMagick).
 icons:
 	scripts/make-icons.sh
+
+# Retake the pictures in the guide (docs/guide/images), as a released version
+# would look. Needs Firefox and ImageMagick.
+screenshots:
+	go run -ldflags "-X github.com/bradyloveland/taper/internal/version.override=$(subst -dev,,$(VERSION))" ./tools/screenshots
 
 clean:
 	rm -rf bin dist tmp

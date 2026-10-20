@@ -794,3 +794,8 @@ details.card[open] > summary { margin-bottom: 12px; }
 .msg-file > span:last-child { display: flex; flex-direction: column; min-width: 0; }
 .msg-file strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .msg-file-icon { font-size: 1.4rem; }
+
+/* Pictures in the guide. */
+.prose img { display: block; height: auto; margin: 16px 0 20px; border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+/* Pictures of a phone stay phone-sized. */
+.prose img[src*="phone"] { max-width: 320px; }

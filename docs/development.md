@@ -33,6 +33,14 @@ headings, IDs, landmarks). `TestContrast` checks the colours in `app.css`, light
 and dark, including any rule that sets both a text colour and a background. A
 new page or colour is covered automatically.
 
+The pictures in the guide (`docs/guide/images`) come from `make screenshots`
+(Firefox and ImageMagick needed). It builds a made-up school in a throwaway
+database, runs Taper on it, and photographs pages as different people at
+desktop and phone sizes, as a release would look. Run it after changing what
+pages look like, and check the pictures before committing them. `TestGuide`
+fails if the guide shows a missing picture, one without alt text, or if a
+picture isn't used. Pictures of phones need "phone" in their name.
+
 `TestPerformance` fills a school of 641 people (60 classes, 1,800 assignments,
 31,000 pieces of work, 20,000 messages) and times the main pages for each kind
 of person, and writes that tell many people at once. It's slow to set up, so

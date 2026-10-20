@@ -15,6 +15,8 @@ scholars, and a link to the class chat. See [Assignments](assignments.md),
 
 Mentors and admins see usernames. Scholars see their classmates' names only.
 
+![A class's page, as its mentor sees it: what's coming up, assignments, the class chat and its members](images/class-mentor.png)
+
 ## Creating a class (admins)
 
 1. Select **New class**.

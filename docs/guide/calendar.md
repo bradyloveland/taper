@@ -16,6 +16,8 @@ The home page shows what's coming up in the next two weeks. Each class's page
 has a **Coming up** card with that class's events and due dates for the next
 month, a link to its calendar, and **Add event** for its mentors.
 
+![The calendar's month view, with school events, class events and assignments' due dates](images/calendar.png)
+
 ## Subscribing in Google, Apple or Outlook calendars
 
 Select **Subscribe** on the calendar page (or **Subscribe to this class** on a

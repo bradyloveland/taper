@@ -157,7 +157,7 @@ M8 comes in several pull requests:
 - Passkeys, counting as two-step sign-in. *(Third.)*
 - Accessibility: automated WCAG checks on every page, and colour contrast. *(Fourth.)*
 - Performance: a large-school test, and compressed static files. *(Fifth.)*
-- A full guide with screenshots.
+- A full guide with screenshots, retaken with `make screenshots`. *(Sixth.)*
 - Tested upgrade path from every pre-release, then **1.0.0**.
 
 Later ideas, not planned yet: portfolios, direct messages,

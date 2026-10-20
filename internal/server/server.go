@@ -52,6 +52,7 @@ type Server struct {
 	pages   map[string]*template.Template
 	assets  *assets
 	guide   *guide
+	guideFS fs.FS // the guide's files, for its pictures
 	handler http.Handler
 
 	userThrottle   *auth.Throttle // failed sign-ins per username
@@ -151,6 +152,7 @@ func New(opts Options) (*Server, error) {
 	if s.pages, err = s.parseTemplates(web.Templates); err != nil {
 		return nil, fmt.Errorf("parsing templates: %w", err)
 	}
+	s.guideFS = docs.Guide
 	if s.guide, err = loadGuide(docs.Guide); err != nil {
 		return nil, fmt.Errorf("loading the guide: %w", err)
 	}
@@ -214,6 +216,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /account/two-step/disable", s.signedIn(s.handleTwoStepDisable))
 	mux.HandleFunc("GET /guide", s.signedIn(s.handleGuide))
 	mux.HandleFunc("GET /guide/{page}", s.signedIn(s.handleGuide))
+	mux.HandleFunc("GET /guide/images/{name}", s.signedIn(s.handleGuideImage))
 	mux.HandleFunc("GET /classes", s.signedIn(s.handleClasses))
 	mux.HandleFunc("GET /classes/new", s.leader(s.handleClassNewForm))
 	mux.HandleFunc("POST /classes/new", s.leader(s.handleClassCreate))

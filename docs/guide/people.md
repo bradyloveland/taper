@@ -8,6 +8,8 @@ Board members add and look after mentors, parents and scholars. Only admins add 
 change admin and board accounts, reset their passwords, or turn off their
 two-step sign-in, so a board member can't take over an admin's account.
 
+![The People page: everyone at the school, with search and filters](images/people.png)
+
 ## Adding someone
 
 1. Select **Add a person**.
@@ -101,6 +103,8 @@ class they mentor, they see it as its mentor.
 
 If a parent's account becomes a scholar's, or a scholar's account changes to
 another role, their links are removed.
+
+![A parent's page: their details, the scholars they're a parent of, and Add a scholar](images/person-parent.png)
 
 ## A person's classes
 
