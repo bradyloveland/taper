@@ -15,6 +15,7 @@ on GitHub.
 - [Notifications](notifications.md): the bell, what you're told about, and getting notifications by email or on your lock screen.
 - [Calendars](calendar.md): the school and class calendars, adding events, and subscribing in Google, Apple or Outlook.
 - [Your account](account.md): your name, password, and signing out on other devices.
+- [Passkeys](passkeys.md): sign in with your fingerprint, face or device PIN instead of a password.
 - [Two-step sign-in](two-step.md): add a code from your phone, and what to do if you lose it.
 - [Taper on your phone](phone-app.md): add Taper to your home screen on iPhone, iPad and Android.
 - [Reporting a problem](reporting-problems.md): tell the people who make Taper when something's wrong.
@@ -30,5 +31,6 @@ on GitHub.
 
 ## Coming in later versions
 
-Signing in with a passkey. See
-the [plan and milestones](../plan.md).
+Version 1.0 brings an accessibility check, a guide with screenshots, and a
+tested upgrade from every earlier version. See the
+[plan and milestones](../plan.md).

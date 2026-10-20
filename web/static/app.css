@@ -637,6 +637,9 @@ details.card[open] > summary { margin-bottom: 12px; }
 @media (max-width: 700px) { .bell { display: none; } } /* it's in the menu on phones */
 
 .notice-list { list-style: none; margin: 0; padding: 0; }
+.passkey-signin { margin-top: 16px; }
+.or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: .9rem; margin: 0 0 12px; }
+.or::before, .or::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
 .push-device { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
 .push-device h3 { margin: 0 0 6px; font-size: 1.05rem; }
 .notice { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 10px; color: inherit; text-decoration: none; }

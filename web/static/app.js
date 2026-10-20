@@ -545,4 +545,112 @@
     const n = bell && !bell.hidden ? parseInt(bell.textContent, 10) : 0;
     (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
   }
+
+  // ------------------------------------------------------------- passkeys
+
+  const pk = window.PublicKeyCredential && navigator.credentials && window.isSecureContext;
+  const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64 = (s) => {
+    const raw = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  };
+  const postForm = (url, data) => fetch(url, { method: 'POST', body: new URLSearchParams(data), credentials: 'same-origin', headers: { Accept: 'application/json' } })
+    .then((r) => r.json().then((j) => ({ ok: r.ok, j })));
+  const cancelled = (err) => err && (err.name === 'NotAllowedError' || err.name === 'AbortError');
+
+  // Adding a passkey (My account → Passkeys).
+  const pkAdd = document.querySelector('[data-passkey-add]');
+  if (pkAdd) {
+    const btn = pkAdd.querySelector('[data-passkey-add-button]');
+    const say = (t) => { pkAdd.querySelector('[data-passkey-status]').textContent = t; };
+    pkAdd.hidden = false;
+    if (!pk || !window.AuthenticatorAttestationResponse || !('getPublicKey' in AuthenticatorAttestationResponse.prototype)) {
+      btn.hidden = true;
+      say(window.isSecureContext ? "This browser can't make passkeys. Try Safari, Chrome, Edge or Firefox, up to date."
+        : 'Passkeys need Taper to be at a secure (https) address. Ask an admin.');
+    } else {
+      btn.addEventListener('click', () => {
+        btn.disabled = true;
+        say('Follow what your device asks…');
+        postForm('/account/passkeys/options', { csrf })
+          .then(({ ok, j }) => {
+            if (!ok) throw new Error(j.error);
+            const o = j;
+            o.challenge = unb64(o.challenge);
+            o.user.id = unb64(o.user.id);
+            o.excludeCredentials = o.excludeCredentials.map((c) => ({ type: c.type, id: unb64(c.id) }));
+            return navigator.credentials.create({ publicKey: o });
+          })
+          .then((cred) => {
+            const res = cred.response;
+            return postForm('/account/passkeys', {
+              csrf, id: b64(cred.rawId), clientData: b64(res.clientDataJSON), authData: b64(res.getAuthenticatorData()),
+              publicKey: b64(res.getPublicKey()), alg: res.getPublicKeyAlgorithm(),
+            });
+          })
+          .then(({ ok, j }) => {
+            if (!ok) throw new Error(j.error);
+            window.location.href = j.next;
+          })
+          .catch((err) => {
+            if (err && err.name === 'InvalidStateError') say('This device already has a passkey for your account.');
+            else if (cancelled(err)) say('No passkey was added.');
+            else say((err && err.message) || 'Something went wrong. Try again.');
+          })
+          .finally(() => { btn.disabled = false; });
+      });
+    }
+  }
+
+  // Signing in with a passkey: the button, and passkeys offered in the
+  // username box's suggestions where the browser can.
+  const pkLogin = document.querySelector('[data-passkey-login]');
+  if (pkLogin && pk) {
+    const form = document.querySelector('form[action="/login"]');
+    const btn = pkLogin.querySelector('[data-passkey-signin]');
+    const say = (t) => { pkLogin.querySelector('[data-passkey-status]').textContent = t; };
+    let waiting = null; // the quiet request behind the username box
+    pkLogin.hidden = false;
+    const signIn = (mediation) => {
+      const ctl = new AbortController();
+      return postForm('/login/passkey/options', {})
+        .then(({ ok, j }) => {
+          if (!ok) throw new Error(j.error);
+          const o = { challenge: unb64(j.challenge), rpId: j.rpId, userVerification: j.userVerification, timeout: j.timeout, allowCredentials: [] };
+          const opts = { publicKey: o, signal: ctl.signal };
+          if (mediation) opts.mediation = mediation;
+          if (mediation === 'conditional') waiting = ctl;
+          return navigator.credentials.get(opts);
+        })
+        .then((cred) => {
+          if (!cred) throw Object.assign(new Error(''), { name: 'AbortError' });
+          if (mediation !== 'conditional' || waiting === ctl) waiting = null;
+          const res = cred.response;
+          say('Signing in…');
+          const remember = form && form.querySelector('[name=remember]');
+          const next = form && form.querySelector('[name=next]');
+          return postForm('/login/passkey', {
+            id: b64(cred.rawId), clientData: b64(res.clientDataJSON), authData: b64(res.authenticatorData),
+            signature: b64(res.signature), userHandle: res.userHandle ? b64(res.userHandle) : '',
+            remember: remember && remember.checked ? '1' : '', next: next ? next.value : '',
+          });
+        })
+        .then(({ ok, j }) => {
+          if (!ok) throw new Error(j.error);
+          window.location.href = j.next;
+        });
+    };
+    btn.addEventListener('click', () => {
+      if (waiting) { waiting.abort(); waiting = null; }
+      btn.disabled = true;
+      say('Follow what your device asks…');
+      signIn().catch((err) => say(cancelled(err) ? '' : ((err && err.message) || 'Something went wrong. Try again.')))
+        .finally(() => { btn.disabled = false; });
+    });
+    if (PublicKeyCredential.isConditionalMediationAvailable) {
+      PublicKeyCredential.isConditionalMediationAvailable().then((yes) => {
+        if (yes) signIn('conditional').catch((err) => { if (!cancelled(err) && err && err.message) say(err.message); });
+      }).catch(() => {});
+    }
+  }
 })();

@@ -80,6 +80,7 @@ type accountData struct {
 	Prefs         *store.NotifyPrefs
 	Kinds         []noticeKind
 	EmailReady    bool // the school has set up email
+	Passkeys      int
 	Sessions      []*store.Session
 	Current       string
 	ProfileError  string
@@ -99,6 +100,7 @@ func (s *Server) renderAccount(w http.ResponseWriter, r *http.Request, status in
 		return
 	}
 	d.Kinds, d.EmailReady = noticeKinds(ri.user), s.emailReady()
+	d.Passkeys, _ = s.store.CountPasskeys(ri.user.ID)
 	s.render(w, r, status, "account", "My account", "account", d)
 }
 

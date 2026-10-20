@@ -29,7 +29,7 @@ Usage:
   taper setup-code          Show the one-time code for first-time setup
   taper passwd USERNAME     Give someone a new temporary password (and turn their account on)
   taper backup FILE         Write a copy of the database to FILE
-  taper mfa-reset USERNAME  Turn off someone's two-step sign-in (a lost phone and recovery codes)
+  taper mfa-reset USERNAME  Turn off someone's two-step sign-in and remove their passkeys (a lost phone)
   taper rollback            Go back to the version from before the last update (with the service stopped)
   taper network             Show the network settings in use
   taper network --reset     Forget network settings changed in the web interface (then restart the service)
@@ -269,8 +269,15 @@ func mfaReset(username string) error {
 	if err := st.DisableTOTP(u.ID); err != nil {
 		return err
 	}
+	keys, err := st.DeleteUserPasskeys(u.ID)
+	if err != nil {
+		return err
+	}
 	if err := st.DeleteUserSessions(u.ID, ""); err != nil {
 		return err
+	}
+	if keys > 0 {
+		fmt.Printf("Removed %d passkey(s). ", keys)
 	}
 	fmt.Printf("Two-step sign-in is off for %s (%s). They can sign in with just their password", u.DisplayName, u.Username)
 	fmt.Println(", and turn it on again under My account (or they'll be asked to, if your school requires it).")

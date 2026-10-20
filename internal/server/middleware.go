@@ -201,7 +201,7 @@ func (s *Server) gate(next http.Handler) http.Handler {
 		}
 		ri := current(r)
 		if ri.sess != nil && ri.sess.MFAPending {
-			if p != "/login/verify" && p != "/logout" {
+			if p != "/login/verify" && p != "/logout" && !strings.HasPrefix(p, "/login/passkey") {
 				http.Redirect(w, r, "/login/verify", http.StatusSeeOther)
 				return
 			}
@@ -212,8 +212,9 @@ func (s *Server) gate(next http.Handler) http.Handler {
 			http.Redirect(w, r, "/password", http.StatusSeeOther)
 			return
 		}
-		if u := ri.user; u != nil && !u.TOTPEnabled && !strings.HasPrefix(p, "/account/two-step") && p != "/logout" &&
-			s.mfaRequired(u) {
+		// A passkey counts as two-step sign-in.
+		if u := ri.user; u != nil && !u.TOTPEnabled && !strings.HasPrefix(p, "/account/two-step") &&
+			!strings.HasPrefix(p, "/account/passkeys") && p != "/logout" && s.mfaRequired(u) && !s.hasPasskey(u) {
 			http.Redirect(w, r, "/account/two-step", http.StatusSeeOther)
 			return
 		}

@@ -3,6 +3,8 @@
 Two-step sign-in adds a code from an app on your phone to your password. Someone
 who learns your password still can't get in without your phone.
 
+A [passkey](passkeys.md) also counts as two-step sign-in, with nothing to type.
+
 ## Turning it on
 
 1. Install an authenticator app on your phone: Google Authenticator, Microsoft

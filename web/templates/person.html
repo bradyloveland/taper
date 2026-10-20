@@ -94,7 +94,20 @@
   </form>
   {{end}}
   {{else}}
-  <p><span class="badge">Off</span>{{if .D.TwoStepRequired}} Your school requires it for {{roleNoun .D.Person.Role}}s, so they'll set it up when they next sign in.{{else}} They can turn it on under My account.{{end}}</p>
+  <p><span class="badge">Off</span>{{if .D.Passkeys}} They sign in with a passkey instead.{{else if .D.TwoStepRequired}} Your school requires it for {{roleNoun .D.Person.Role}}s, so they'll set it up when they next sign in.{{else}} They can turn it on under My account.{{end}}</p>
+  {{end}}
+  <h2 class="section-gap">Passkeys</h2>
+  {{if .D.Passkeys}}
+  <p><span class="badge ok">{{.D.Passkeys}}</span> {{.D.Form.display_name}} can sign in with {{if eq .D.Passkeys 1}}a passkey{{else}}passkeys{{end}} on their devices.</p>
+  {{if not .D.Self}}
+  <p class="help">If a device was lost or stolen, remove their passkeys. They'll sign in with their password{{if .D.Person.TOTPEnabled}} and code{{end}}, and can add passkeys again.</p>
+  <form method="post" action="/admin/people/{{.D.Person.ID}}/passkeys-off" data-confirm="Remove all of {{.D.Form.display_name}}'s passkeys?">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit" class="button">Remove passkeys</button>
+  </form>
+  {{end}}
+  {{else}}
+  <p class="muted">None. They can add passkeys under My account.</p>
   {{end}}
 </section>
 {{end}}

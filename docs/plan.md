@@ -154,7 +154,7 @@ M8 comes in several pull requests:
   summary), for assignments, work and feedback, work due tomorrow, chat and calendar
   changes. *(First.)*
 - Web push where the phone supports it, per device, tied to the session. *(Second.)*
-- Passkeys (sign in with Face ID or a fingerprint).
+- Passkeys, counting as two-step sign-in. *(Third.)*
 - Accessibility check, performance, a full guide with screenshots.
 - Tested upgrade path from every pre-release, then **1.0.0**.
 
