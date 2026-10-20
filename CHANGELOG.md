@@ -6,6 +6,8 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-20
+
 ### Added
 - **Upgrade testing** (milestone 8): a new CI job installs every published release (0.3.0 to
   0.8.0), fills in a school through its pages, upgrades to the new version and checks

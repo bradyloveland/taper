@@ -18,9 +18,10 @@ server. Roles: **admin**, **board**, **mentor** (teacher), **scholar**
 
 ## What's built
 
-Milestones 1–7 of 8 are done, plus the Parent role, and M8 is under way
-(notifications and web push are done). Releases v0.3.0 to v0.7.0 are tagged;
-0.8.0 (notifications, web push, the Dev/Beta label) is in a release pull request.
+All eight milestones are done, plus the Parent role. Releases v0.3.0 to v0.8.0
+are tagged; 0.9.0 (the rest of M8) is in a release pull request. The owner is
+running 0.9.0 on the beta copy for a while, and expects a few additions before
+1.0.0.
 
 | Milestone | What it added |
 |-----------|---------------|
@@ -31,7 +32,7 @@ Milestones 1–7 of 8 are done, plus the Parent role, and M8 is under way
 | **M5 Calendars** | School and class calendars, repeating events, school time zone. Month, week and list views. Private iCal subscription links per calendar, each resettable on its own. |
 | **M6 Assignments** | Formatted instructions and attachments, due dates (on the calendars and feeds), publish now, later or as a draft. Scholar work saves itself as they type; files; turn in or take back. Mentor review with feedback, plus Undo complete and Return to scholar. Backups that include uploaded files. |
 | **M7 Chat** | Community, class and group chats, live over server-sent events, with unread counts. Photos and files. Moderation (remove messages, mute people). Admins and the board can turn chats off. Plus the **Board** role. |
-| **M8, so far** | **Notifications**: the bell, five kinds (new assignments, work and feedback, due tomorrow, chat, calendar), combined while unread, chosen per person; email each or a daily summary (off by default, no content in emails). **Web push** per device, tied to the session, encrypted (`internal/webpush`, stdlib only). The **Dev/Beta label** under the logo (`TAPER_LABEL`). |
+| **M8** | **Notifications**: the bell, five kinds (new assignments, work and feedback, due tomorrow, chat, calendar), combined while unread, chosen per person; email each or a daily summary (off by default, no content in emails). **Web push** per device, tied to the session, encrypted (`internal/webpush`, stdlib only). The **Taper DEV / BETA label** in the header (`TAPER_LABEL`). **Passkeys** (`internal/passkey`, stdlib only; count as two-step sign-in). **Accessibility** and **contrast** tests over every page. A **large-school performance test** (`TAPER_PERF=1`) and compressed static files. **Guide pictures** (`make screenshots`). **Upgrade testing** from every release (`make upgrade-test`, CI job `upgrade`). On phones, one menu under the person's initials. |
 | **Parents** (after M7) | The **Parent** role and a `parents` link table: anyone who isn't a scholar can be linked to scholars. Parents see their scholars' classes, calendars and work, turn work in for them (history says "(parent)"), and talk in class chats. Linked on the person page or by a "Parent of" import column. |
 
 Between M6 and M7 the header was simplified. The top bar has Home, Calendar,
@@ -121,8 +122,8 @@ minutes), they're undone, so a school can't lock itself out from the browser.
 
 ## Current state
 
-- **`main`** has everything through web push (PR #18).
-- **`release-0.8.0`** sets VERSION to `0.8.0`. After it merges, tag `v0.8.0`.
+- **`main`** has all of M8 (through PR #25).
+- **`release-0.9.0`** sets VERSION to `0.9.0`. After it merges, tag `v0.9.0`.
 - **Dev VM** (hostname `dev`, 10.10.10.34) runs two copies of Taper:
 
   | | **Beta** | **Dev** |
@@ -183,14 +184,16 @@ minutes), they're undone, so a school can't lock itself out from the browser.
 
 ## Next steps
 
-1. **Release 0.8.0:** merge `release-0.8.0`, then tag `v0.8.0` and check that
-   the release has the archives, with `MANIFEST` and `MANIFEST.sig` inside. The
-   owner then updates the beta copy, which starts showing its **Beta** label.
-2. **The rest of M8** (see [plan.md](plan.md#m8-polish-and-10)):
-   - Passkeys (next).
-   - An accessibility pass, a performance check, and the guide with screenshots.
-   - A tested upgrade path from every pre-release, then **1.0.0**.
-   - The chat loose ends above are good M8 candidates.
+1. **Release 0.9.0:** merge `release-0.9.0`, tag `v0.9.0`, and check the
+   archives hold `MANIFEST` and `MANIFEST.sig`. The owner updates the beta copy.
+2. **Before 1.0.0:** the owner runs 0.9.0 for a while and will bring a few
+   additions. Then set VERSION to `1.0.0` and release it the same way.
+3. **Loose ends worth a look** (from "Open bugs and loose ends" above): chat
+   removals aren't replayed after a reconnect, muting doesn't take away the
+   message box until a reload, no message editing, no photo thumbnails, and the
+   People page still links admin and board rows for board members.
+4. Later ideas from the plan: portfolios, direct messages, attendance, a school
+   library or reading lists.
 
 ## Working agreements with the owner
 
