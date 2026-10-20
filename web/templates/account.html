@@ -70,6 +70,12 @@
   </div>
 </section>
 
+<section class="card" id="passkeys">
+  <h2>Passkeys</h2>
+  <p>{{if .D.Passkeys}}<span class="badge ok">{{.D.Passkeys}} added</span> {{end}}Sign in with your fingerprint, face or device PIN instead of your password.</p>
+  <p><a class="button" href="/account/passkeys">{{if .D.Passkeys}}Manage passkeys{{else}}Add a passkey{{end}}</a></p>
+</section>
+
 <section class="card">
   <h2>Two-step sign-in</h2>
   {{if .User.TOTPEnabled}}

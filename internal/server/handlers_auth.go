@@ -150,6 +150,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.userThrottle.Reset(username)
+	if !u.TOTPEnabled && s.mfaRequired(u) && s.hasPasskey(u) {
+		// Their passkey is their second step; a password alone isn't enough.
+		fail(http.StatusUnauthorized, "Your school requires two-step sign-in, so sign in with your passkey: select Sign in with a passkey.")
+		return
+	}
 	if u.TOTPEnabled {
 		if old := current(r).sess; old != nil {
 			_ = s.store.DeleteSession(old.TokenHash)

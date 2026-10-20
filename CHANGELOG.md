@@ -6,6 +6,14 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Passkeys**: sign in with your fingerprint, face or device PIN instead of a password.
+  Add them under **My account → Passkeys**; sign in with **Sign in with a passkey** (or the
+  suggestion in the username box). A passkey counts as two-step sign-in: where the school
+  requires it, a passkey is enough, and a password alone isn't. Admins and the board can
+  remove someone's passkeys from their page, and `taper mfa-reset` removes them too.
+  Standard library only (ES256, EdDSA and RS256 keys, via `getPublicKey()`, so no CBOR).
+
 ### Changed
 - The top left now always says **Taper**, with the label after it on copies that aren't a
   school's real one (**Taper BETA**, **Taper DEV**). The school's name is on the sign-in page,

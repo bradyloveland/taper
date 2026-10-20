@@ -7,7 +7,7 @@
   <form method="post" action="/login" class="form">
     <input type="hidden" name="next" value="{{.D.Next}}">
     <label for="username">Username</label>
-    <input id="username" name="username" required autocomplete="username" autocapitalize="none" spellcheck="false" autofocus value="{{.D.Username}}">
+    <input id="username" name="username" required autocomplete="username webauthn" autocapitalize="none" spellcheck="false" autofocus value="{{.D.Username}}">
 
     <label for="password">Password</label>
     <input id="password" name="password" type="password" required autocomplete="current-password">
@@ -20,6 +20,11 @@
 
     <button type="submit" class="button primary block">Sign in</button>
   </form>
+  <div class="passkey-signin" data-passkey-login hidden>
+    <p class="or" aria-hidden="true"><span>or</span></p>
+    <button type="button" class="button block" data-passkey-signin>Sign in with a passkey</button>
+    <p class="help" data-passkey-status aria-live="polite"></p>
+  </div>
   {{if .D.CanReset}}
   <p class="small"><a href="/forgot">Forgot your password?</a></p>
   {{else}}

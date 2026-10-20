@@ -73,6 +73,7 @@ func (s *Server) handlePeople(w http.ResponseWriter, r *http.Request) {
 
 type personData struct {
 	Classes         []*store.Class
+	Passkeys        int
 	Family          []*store.User // a scholar's parents, or anyone else's scholars
 	Candidates      []*store.User // who can be added to Family
 	IsNew           bool
@@ -176,6 +177,7 @@ func (s *Server) handlePersonForm(w http.ResponseWriter, r *http.Request) {
 	}
 	d := personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: assignableRoles(current(r).user),
 		TwoStepRequired: s.mfaRequired(u), Classes: classes}
+	d.Passkeys, _ = s.store.CountPasskeys(u.ID)
 	if d.Family, d.Candidates, err = s.family(u); err != nil {
 		s.serverError(w, r, "listing family", err)
 		return

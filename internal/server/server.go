@@ -76,6 +76,9 @@ type Server struct {
 
 	wg sync.WaitGroup // background email and pushes
 
+	pkMu         sync.Mutex
+	pkChallenges map[string]pkChallenge // passkey ceremonies under way
+
 	pushMu         sync.Mutex
 	vapid          *webpush.Key // loaded or made on first use
 	pushClient     *http.Client
@@ -187,6 +190,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /forgot", s.handleForgot)
 	mux.HandleFunc("GET /reset/{token}", s.handleResetForm)
 	mux.HandleFunc("POST /reset/{token}", s.handleReset)
+	mux.HandleFunc("POST /login/passkey/options", s.handlePasskeyLoginOptions)
+	mux.HandleFunc("POST /login/passkey", s.handlePasskeyLogin)
 	mux.HandleFunc("GET /login/verify", s.handleVerifyForm)
 	mux.HandleFunc("POST /login/verify", s.handleVerify)
 
@@ -199,6 +204,10 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /account/profile", s.signedIn(s.handleAccountProfile))
 	mux.HandleFunc("POST /account/password", s.signedIn(s.handleAccountPassword))
 	mux.HandleFunc("POST /account/sessions/revoke", s.signedIn(s.handleRevokeSessions))
+	mux.HandleFunc("GET /account/passkeys", s.signedIn(s.handlePasskeys))
+	mux.HandleFunc("POST /account/passkeys/options", s.signedIn(s.handlePasskeyOptions))
+	mux.HandleFunc("POST /account/passkeys", s.signedIn(s.handlePasskeyAdd))
+	mux.HandleFunc("POST /account/passkeys/{id}/delete", s.signedIn(s.handlePasskeyDelete))
 	mux.HandleFunc("GET /account/two-step", s.signedIn(s.handleTwoStep))
 	mux.HandleFunc("POST /account/two-step/enable", s.signedIn(s.handleTwoStepEnable))
 	mux.HandleFunc("POST /account/two-step/recovery", s.signedIn(s.handleTwoStepRecovery))
@@ -280,6 +289,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /admin/people/{id}", s.leader(s.handlePersonUpdate))
 	mux.HandleFunc("POST /admin/people/{id}/reset-password", s.leader(s.handlePersonResetPassword))
 	mux.HandleFunc("POST /admin/people/{id}/two-step-off", s.leader(s.handlePersonTwoStepOff))
+	mux.HandleFunc("POST /admin/people/{id}/passkeys-off", s.leader(s.handlePersonPasskeysOff))
 	mux.HandleFunc("POST /admin/people/{id}/family/add", s.leader(s.handleFamilyAdd))
 	mux.HandleFunc("POST /admin/people/{id}/family/{oid}/remove", s.leader(s.handleFamilyRemove))
 	mux.HandleFunc("GET /admin/settings", s.admin(s.handleSettings))

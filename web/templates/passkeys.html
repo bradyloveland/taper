@@ -1,0 +1,46 @@
+{{define "content"}}
+<p class="crumbs"><a href="/account">My account</a> /</p>
+<div class="page-head">
+  <h1>Passkeys</h1>
+  <p class="muted">Sign in with your fingerprint, face or device PIN instead of typing your password. A passkey only works on this school's Taper, so it can't be tricked into signing in somewhere else.</p>
+</div>
+{{if .D.Required}}<div class="flash flash-warn" role="status">Your school requires two-step sign-in. Add a passkey, or <a href="/account/two-step">set up a code from an app</a> instead.</div>{{end}}
+
+<div class="grid-2">
+<section class="card">
+  <h2>Your passkeys</h2>
+  {{if .D.Passkeys}}
+  <ul class="list">
+    {{range .D.Passkeys}}
+    <li class="list-row family-row">
+      <div>
+        <strong>{{.Name}}</strong>{{if .BackedUp}} <span class="badge">Synced</span>{{end}}
+        <div class="muted small">Added {{date .CreatedAt}} · {{if .LastUsedAt}}last used {{ago .LastUsedAt}}{{else}}not used yet{{end}}</div>
+      </div>
+      <form method="post" action="/account/passkeys/{{.ID}}/delete" class="inline-form" data-confirm="Remove the passkey from {{.Name}}? You can't sign in with it after this.">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="link-button danger-text">Remove</button>
+      </form>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="muted">You haven't added a passkey yet.</p>
+  {{end}}
+  <div data-passkey-add hidden>
+    <p class="actions"><button type="button" class="button primary" data-passkey-add-button>Add a passkey on this device</button></p>
+    <p class="help" data-passkey-status aria-live="polite"></p>
+  </div>
+  <noscript><p class="help">Adding a passkey needs JavaScript turned on.</p></noscript>
+</section>
+
+<section class="card">
+  <h2>How passkeys work</h2>
+  <ul>
+    <li>Your phone or computer keeps the passkey, and asks for your fingerprint, face or PIN each time you use it. It counts as two-step sign-in.</li>
+    <li>On an iPhone, iPad or Mac, passkeys sync through iCloud Keychain; on Android, through your Google account. A passkey made on one of your devices usually works on the others. Those show <span class="badge">Synced</span>.</li>
+    <li>To sign in, select <strong>Sign in with a passkey</strong> on the sign-in page.</li>
+    <li>Your password still works{{if .D.Required}}, together with a code,{{end}} if you lose your devices. If a device is lost or stolen, remove its passkey here.</li>
+  </ul>
+</section>
+</div>
+{{end}}
