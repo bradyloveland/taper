@@ -57,6 +57,19 @@ jobs:
       - name: Update, roll back, and recover from a broken update
         run: scripts/ci-update-test.sh
 
+  # Upgrades a school from every published release to this build, one at a
+  # time and in a chain, and checks its data is all there and still works.
+  upgrade:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Upgrade from every release
+        run: make upgrade-test
+
   # Changing network settings from the web interface on a real systemd
   # machine: confirm, restart, automatic undo, installer override.
   network:

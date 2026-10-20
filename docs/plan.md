@@ -158,7 +158,8 @@ M8 comes in several pull requests:
 - Accessibility: automated WCAG checks on every page, and colour contrast. *(Fourth.)*
 - Performance: a large-school test, and compressed static files. *(Fifth.)*
 - A full guide with screenshots, retaken with `make screenshots`. *(Sixth.)*
-- Tested upgrade path from every pre-release, then **1.0.0**.
+- Tested upgrade path from every release (`make upgrade-test`, in CI). *(Seventh.)*
+- Then **1.0.0**.
 
 Later ideas, not planned yet: portfolios, direct messages,
 attendance, a school library or reading lists.

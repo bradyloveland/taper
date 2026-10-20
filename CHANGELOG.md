@@ -7,6 +7,10 @@ All notable changes to Taper are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Upgrade testing** (milestone 8): a new CI job installs every published release (0.3.0 to
+  0.8.0), fills in a school through its pages, upgrades to the new version and checks
+  everything is still there and works; it also upgrades one school through every release in
+  turn. All of them pass.
 - **Passkeys**: sign in with your fingerprint, face or device PIN instead of a password.
   Add them under **My account → Passkeys**; sign in with **Sign in with a passkey** (or the
   suggestion in the username box). A passkey counts as two-step sign-in: where the school
