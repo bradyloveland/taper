@@ -27,6 +27,12 @@ make check   # gofmt, go vet, staticcheck, shellcheck, and go test -race ./...
 drives it like a browser (cookies, forms, CSRF tokens). Add tests there for every
 new page or form.
 
+`TestAccessibility` signs in as each kind of person, follows every link, and
+checks each page for the WCAG problems the HTML shows (labels, names, alt text,
+headings, IDs, landmarks). `TestContrast` checks the colours in `app.css`, light
+and dark, including any rule that sets both a text colour and a background. A
+new page or colour is covered automatically.
+
 `TestPerformance` fills a school of 641 people (60 classes, 1,800 assignments,
 31,000 pieces of work, 20,000 messages) and times the main pages for each kind
 of person, and writes that tell many people at once. It's slow to set up, so

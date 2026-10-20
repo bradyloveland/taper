@@ -15,6 +15,13 @@ All notable changes to Taper are recorded here. The format follows
   Standard library only (ES256, EdDSA and RS256 keys, via `getPublicKey()`, so no CBOR).
 
 ### Changed
+- **Accessibility** (milestone 8): an automated check now opens every page as an admin, a
+  mentor, a scholar, a parent and someone signed out, and checks it against WCAG 2.2 AA
+  (labels, names, alt text, headings, IDs and references, language, landmarks); another
+  checks colour contrast in both themes. Fixes from it: a stronger focus outline on light
+  backgrounds, a darker blue for buttons in the dark theme, the chat moderation panel's
+  heading order, new chat messages announced to screen readers, focused items no longer
+  hidden under the top bar, and the phone menu saying when something's new.
 - **Performance** (milestone 8): a new test times every main page against a school of 641
   people with 1,800 assignments, 31,000 pieces of work and 20,000 messages. Every page
   answers in under 15 ms on the test server, and a Community post that notifies everyone in
