@@ -35,6 +35,7 @@ type Config struct {
 	TrustedProxies []netip.Prefix
 	DataDir        string // holds taper.db and certificates
 	AppDir         string // the program folder
+	Label          string // shown under the logo, like "beta"; from TAPER_LABEL
 	// ConfirmTimeout is how long a network change waits to be confirmed.
 	ConfirmTimeout time.Duration
 }
@@ -173,6 +174,10 @@ func Parse(getenv func(string) string) (*Config, error) {
 		Email:   strings.TrimSpace(getenv("TAPER_EMAIL")),
 		DataDir: strings.TrimSpace(getenv("TAPER_DATA_DIR")),
 		AppDir:  strings.TrimSpace(getenv("TAPER_APP_DIR")),
+		Label:   strings.TrimSpace(getenv("TAPER_LABEL")),
+	}
+	if !validLabel(c.Label) {
+		return nil, fmt.Errorf("TAPER_LABEL must be one word of up to 12 letters, numbers or dashes, like beta, not %q", c.Label)
 	}
 	if c.Mode == "" {
 		c.Mode = ModeHTTP
@@ -272,4 +277,17 @@ func (c *Config) Describe() string {
 	default:
 		return "Plain HTTP on " + c.Listen()
 	}
+}
+
+// validLabel checks TAPER_LABEL: empty, or one short word.
+func validLabel(s string) bool {
+	if len(s) > 12 {
+		return false
+	}
+	for _, r := range s {
+		if !(r == '-' || r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z') {
+			return false
+		}
+	}
+	return true
 }

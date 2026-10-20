@@ -130,3 +130,22 @@ func TestSameListeners(t *testing.T) {
 		t.Fatal("tiny confirm timeout accepted")
 	}
 }
+
+func TestLabelSetting(t *testing.T) {
+	get := func(label string) func(string) string {
+		return func(k string) string {
+			if k == "TAPER_LABEL" {
+				return label
+			}
+			return ""
+		}
+	}
+	if c, err := Parse(get(" beta ")); err != nil || c.Label != "beta" {
+		t.Fatalf("beta: %+v %v", c, err)
+	}
+	for _, bad := range []string{"two words", "<b>", "much-too-long-label"} {
+		if _, err := Parse(get(bad)); err == nil {
+			t.Errorf("%q should be refused", bad)
+		}
+	}
+}

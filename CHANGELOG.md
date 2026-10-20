@@ -6,6 +6,12 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- A **label under the logo** for copies of Taper that aren't a school's real one: **Dev** on
+  development builds, **Beta** on pre-releases, or any word set with the installer's
+  `--label` option (`TAPER_LABEL`). It's also at the start of the browser tab's title. A
+  school's copy running a release shows none.
+
 ## [0.7.0] - 2026-10-19
 
 ### Added

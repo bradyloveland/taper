@@ -29,7 +29,8 @@ type pageData struct {
 	Path       string // the page's own address, for "Report a problem"
 	User       *store.User
 	Flash      *flash
-	ChatUnread int // unread chat messages, for the menu
+	ChatUnread int    // unread chat messages, for the menu
+	Label      string // "Dev", "Beta"…: shown under the logo on copies that aren't a school's real one
 	D          any
 }
 
@@ -136,7 +137,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, status int, page
 		panic("no template " + page)
 	}
 	name, short := s.appNames()
-	pd := &pageData{Title: title, Section: section, AppName: name, ShortName: short, School: s.store.SchoolName(),
+	pd := &pageData{Title: title, Section: section, AppName: name, ShortName: short, School: s.store.SchoolName(), Label: s.label(),
 		Version: version.Version, Repo: version.Repo, Path: r.URL.Path, Flash: s.takeFlash(w, r), D: d}
 	if ri := current(r); ri.user != nil {
 		pd.CSRF = ri.sess.CSRF
@@ -303,4 +304,24 @@ func device(ua string) string {
 		return system
 	}
 	return "Unknown device"
+}
+
+// label is the word shown under the logo: TAPER_LABEL if it's set, or Dev
+// for development builds and Beta for pre-releases. A school's real copy,
+// running a release, shows none.
+func (s *Server) label() string {
+	if l := s.cfg.Label; l != "" {
+		return capitalize(strings.ToLower(l))
+	}
+	return versionLabel(version.Version)
+}
+
+func versionLabel(v string) string {
+	switch {
+	case strings.Contains(v, "-dev"):
+		return "Dev"
+	case strings.Contains(v, "-"):
+		return "Beta"
+	}
+	return ""
 }
