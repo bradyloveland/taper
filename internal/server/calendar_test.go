@@ -22,8 +22,10 @@ type calEnv struct {
 	today, tomorrow string
 }
 
-func newCalEnv(t *testing.T) *calEnv {
-	e := newEnvReady(t)
+func newCalEnv(t *testing.T) *calEnv { return newCalEnvWith(t, nil) }
+
+func newCalEnvWith(t *testing.T, adjust func(*Options)) *calEnv {
+	e := newEnvReadyWith(t, adjust)
 	c := &calEnv{env: e}
 	c.mia = e.addUser("mia", "Mia Mentor", store.RoleMentor, "mentor-password", false)
 	c.sam = e.addUser("sam", "Sam Scholar", store.RoleScholar, "scholar-password", false)

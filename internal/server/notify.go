@@ -36,12 +36,13 @@ func (s *Server) notify(n store.Notice, users []int64, except int64) {
 			to = append(to, id)
 		}
 	}
-	emails, err := s.store.Notify(n, to)
+	emails, changed, err := s.store.Notify(n, to)
 	if err != nil {
 		slog.Error("saving notifications", "kind", n.Kind, "err", err)
 		return
 	}
 	s.emailEach(emails)
+	s.pushEach(changed)
 }
 
 // emailEach emails notifications one by one, in the background.

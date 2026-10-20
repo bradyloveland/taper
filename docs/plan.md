@@ -153,7 +153,7 @@ M8 comes in several pull requests:
 - Notifications in the app and by email (each person chooses: each one, or a daily
   summary), for assignments, work and feedback, work due tomorrow, chat and calendar
   changes. *(First.)*
-- Web push where the phone supports it.
+- Web push where the phone supports it, per device, tied to the session. *(Second.)*
 - Passkeys (sign in with Face ID or a fingerprint).
 - Accessibility check, performance, a full guide with screenshots.
 - Tested upgrade path from every pre-release, then **1.0.0**.

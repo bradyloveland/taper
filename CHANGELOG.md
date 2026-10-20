@@ -7,6 +7,12 @@ All notable changes to Taper are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Notifications on your lock screen** (web push). Under **My account → Notifications**, turn
+  them on for each phone, tablet or computer, and send a test. They follow the same choices
+  as the bell; messages in one chat replace each other; the app's icon shows the unread
+  count. They stop on a device when you sign out there. On iPhone and iPad, Taper must be on
+  the Home Screen. Messages are encrypted for the device (RFC 8291) and signed with the
+  server's own key (VAPID, made on first use and stored encrypted), with no new dependencies.
 - **Notifications** (the start of milestone 8). A bell in the top bar shows what's new:
   - new assignments (when they're published, including ones set to publish later);
   - work turned in (for mentors), and feedback, Complete and Return (for scholars and their

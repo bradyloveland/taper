@@ -233,6 +233,7 @@
   const showNotices = (n) => {
     if (!bell || typeof n !== 'number') return;
     bell.textContent = n; bell.hidden = !(n > 0); bell.setAttribute('aria-label', n + ' unread');
+    if ('setAppBadge' in navigator) (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
   };
 
   const chat = document.querySelector('[data-chat]');
@@ -450,5 +451,105 @@
         .replace(/^\.+|\.+$/g, '')
         .slice(0, 40);
     });
+  }
+
+  // ----------------------------------------------------------- web push
+
+  // Notifications on this device's lock screen. Each device is turned on
+  // under My account; its subscription is tied to the session that turned it
+  // on, so it's saved again after signing in anew.
+  const csrfInput = document.querySelector('input[name=csrf]');
+  const csrf = csrfInput ? csrfInput.value : '';
+  const canPush = window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const post = (url, data) => {
+    const body = new URLSearchParams(data || {});
+    body.set('csrf', csrf);
+    return fetch(url, { method: 'POST', body, credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, j })));
+  };
+  const subData = (sub) => {
+    const j = sub.toJSON();
+    return { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth };
+  };
+  const keyBytes = (b64) => {
+    const raw = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  };
+  const currentSub = () => navigator.serviceWorker.ready.then((reg) => reg.pushManager.getSubscription().then((sub) => ({ reg, sub })));
+  const syncKey = 'taper-push-session';
+  const remember = (v) => { try { localStorage.setItem(syncKey, v); } catch (e) { /* private mode */ } };
+  const remembered = () => { try { return localStorage.getItem(syncKey); } catch (e) { return null; } };
+
+  if (canPush && csrf && Notification.permission === 'granted') {
+    // Keep this device tied to the current session.
+    currentSub().then(({ sub }) => {
+      if (sub && remembered() !== csrf) {
+        post('/push/subscribe', subData(sub)).then(({ ok }) => { if (ok) remember(csrf); }).catch(() => {});
+      }
+    }).catch(() => {});
+  }
+
+  const panel = document.querySelector('[data-push]');
+  if (panel) {
+    const status = panel.querySelector('[data-push-status]');
+    const on = panel.querySelector('[data-push-on]');
+    const off = panel.querySelector('[data-push-off]');
+    const test = panel.querySelector('[data-push-test]');
+    const say = (t) => { status.textContent = t; };
+    const show = (subscribed) => {
+      on.hidden = subscribed; off.hidden = !subscribed; test.hidden = !subscribed;
+      say(subscribed ? 'On for this device.' : 'Off for this device.');
+    };
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    panel.hidden = false;
+    if (!window.isSecureContext) {
+      say('Notifications on devices need Taper to be at a secure (https) address. Ask an admin.');
+    } else if (!canPush) {
+      say(ios && !navigator.standalone
+        ? 'On iPhone and iPad, add Taper to your Home Screen first (Share, then Add to Home Screen). Open it from there and turn this on.'
+        : "This browser can't show notifications from Taper.");
+    } else if (Notification.permission === 'denied') {
+      say("Notifications are blocked for Taper in this browser's settings. Allow them there, then reload this page.");
+    } else {
+      show(false); // until the service worker says otherwise
+      currentSub().then(({ sub }) => show(!!sub)).catch(() => {});
+      on.addEventListener('click', () => {
+        on.disabled = true;
+        say('Asking this device…');
+        Notification.requestPermission()
+          .then((perm) => {
+            if (perm !== 'granted') throw new Error('Notifications weren\'t allowed. To change that, allow them in this browser\'s settings.');
+            return fetch('/push/key', { credentials: 'same-origin' }).then((r) => r.json());
+          })
+          .then((j) => {
+            if (!j.key) throw new Error(j.error || 'Something went wrong.');
+            return currentSub().then(({ reg, sub }) => sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(j.key) }));
+          })
+          .then((sub) => post('/push/subscribe', subData(sub)))
+          .then(({ ok, j }) => {
+            if (!ok) throw new Error(j.error || 'Something went wrong.');
+            remember(csrf);
+            show(true);
+          })
+          .catch((err) => say(err.message || 'Something went wrong. Try again.'))
+          .finally(() => { on.disabled = false; });
+      });
+      off.addEventListener('click', () => {
+        currentSub().then(({ sub }) => {
+          if (!sub) return null;
+          const data = subData(sub);
+          return sub.unsubscribe().then(() => post('/push/unsubscribe', data));
+        }).then(() => show(false)).catch(() => say('Something went wrong. Try again.'));
+      });
+      test.addEventListener('click', () => {
+        post('/push/test').then(({ j }) => say(j.ok || j.error)).catch(() => say('Something went wrong. Try again.'));
+      });
+    }
+  }
+
+  // The badge on the app's icon follows the bell.
+  if ('setAppBadge' in navigator) {
+    const n = bell && !bell.hidden ? parseInt(bell.textContent, 10) : 0;
+    (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
   }
 })();

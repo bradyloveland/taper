@@ -44,3 +44,40 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+// ------------------------------------------------------------- notifications
+
+// A push from Taper: show it, replacing any earlier one about the same thing
+// (like "3 new messages in Latin I"), and update the badge on the app's icon.
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data && event.data.text() }; }
+  const shown = self.registration.showNotification(d.title || 'Taper', {
+    body: d.body || '',
+    tag: d.tag || undefined,
+    icon: d.icon || undefined,
+    data: { url: d.url || '/notifications' },
+  });
+  const badge = (typeof d.unread === 'number' && self.navigator.setAppBadge)
+    ? (d.unread > 0 ? self.navigator.setAppBadge(d.unread) : self.navigator.clearAppBadge()).catch(() => {})
+    : Promise.resolve();
+  event.waitUntil(Promise.all([shown, badge]));
+});
+
+// Tapping a notification opens what it's about, in an open Taper window if
+// there is one.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || '/notifications', self.location.origin);
+  if (target.origin !== self.location.origin) return;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (new URL(c.url).origin === self.location.origin && 'navigate' in c) {
+          return c.focus().then(() => c.navigate(target.href));
+        }
+      }
+      return self.clients.openWindow(target.href);
+    })
+  );
+});

@@ -23,6 +23,7 @@ import (
 	"github.com/bradyloveland/taper/internal/store"
 	"github.com/bradyloveland/taper/internal/update"
 	"github.com/bradyloveland/taper/internal/version"
+	"github.com/bradyloveland/taper/internal/webpush"
 	"github.com/bradyloveland/taper/web"
 )
 
@@ -38,6 +39,10 @@ type Options struct {
 	GitHubAPI  string // as github.DefaultAPI
 	Supervised func() bool
 	Executable string
+
+	// For tests: how pushes are sent, and which push services are allowed.
+	PushClient     *http.Client
+	PushEndpointOK func(endpoint string) bool
 }
 
 // Server handles HTTP requests.
@@ -69,7 +74,12 @@ type Server struct {
 	restart     chan struct{}
 	restartOnce sync.Once
 
-	wg sync.WaitGroup // background email
+	wg sync.WaitGroup // background email and pushes
+
+	pushMu         sync.Mutex
+	vapid          *webpush.Key // loaded or made on first use
+	pushClient     *http.Client
+	pushEndpointOK func(string) bool
 
 	netMu     sync.Mutex
 	netCur    *listenerSet // nil before Serve, and while swapping listeners
@@ -100,10 +110,20 @@ func New(opts Options) (*Server, error) {
 		chatThrottle:   auth.NewThrottle(20, time.Minute),
 		chat:           newChatHub(),
 		githubAPI:      opts.GitHubAPI,
+		pushClient:     opts.PushClient,
+		pushEndpointOK: opts.PushEndpointOK,
 		restart:        make(chan struct{}),
 		netFatal:       make(chan error, 1),
 	}
 	s.streamCheck.Store(int64(defaultStreamCheck))
+	if s.pushClient == nil {
+		// Push services don't redirect; following one could reach somewhere else.
+		s.pushClient = &http.Client{Timeout: 15 * time.Second,
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	}
+	if s.pushEndpointOK == nil {
+		s.pushEndpointOK = webpush.KnownService
+	}
 	var err error
 	if s.box, err = secret.LoadOrCreate(filepath.Join(s.cfg.DataDir, "secret.key")); err != nil {
 		return nil, err
@@ -214,6 +234,10 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /notifications/{id}", s.signedIn(s.handleNotification))
 	mux.HandleFunc("POST /notifications/read", s.signedIn(s.handleNotificationsRead))
 	mux.HandleFunc("POST /account/notifications", s.signedIn(s.handleNotifyPrefs))
+	mux.HandleFunc("GET /push/key", s.signedIn(s.handlePushKey))
+	mux.HandleFunc("POST /push/subscribe", s.signedIn(s.handlePushSubscribe))
+	mux.HandleFunc("POST /push/unsubscribe", s.signedIn(s.handlePushUnsubscribe))
+	mux.HandleFunc("POST /push/test", s.signedIn(s.handlePushTest))
 	mux.HandleFunc("GET /chat", s.signedIn(s.handleChatList))
 	mux.HandleFunc("GET /chat/unread", s.signedIn(s.handleChatUnread))
 	mux.HandleFunc("GET /chat/new", s.leader(s.handleGroupNewForm))
