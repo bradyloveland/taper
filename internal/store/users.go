@@ -81,6 +81,14 @@ func (u *User) IsScholar() bool { return u.Role == RoleScholar }
 // RoleLabel is the user's role as shown in the interface.
 func (u *User) RoleLabel() string { return RoleLabel(u.Role) }
 
+// FirstName is the first word of the person's name, for greetings.
+func (u *User) FirstName() string {
+	if f := strings.Fields(u.DisplayName); len(f) > 0 {
+		return f[0]
+	}
+	return u.Username
+}
+
 // Initials are up to two letters for the avatar.
 func (u *User) Initials() string {
 	var out []rune
