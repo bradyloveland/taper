@@ -1,7 +1,10 @@
 package server
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -275,5 +278,36 @@ func TestBaseURL(t *testing.T) {
 	e.srv.cfg.Mode, e.srv.cfg.Domain = config.ModeHTTPS, "learn.example.org"
 	if got := e.srv.baseURL(req); got != "https://learn.example.org" {
 		t.Fatalf("baseURL = %q", got)
+	}
+}
+
+func TestStaticCompression(t *testing.T) {
+	e := newEnvReady(t)
+	b := e.browser()
+	css := e.srv.assets.url("app.css")
+	want := e.srv.assets.files["app.css"]
+	// Asking for gzip itself, the test's HTTP client leaves the body compressed.
+	b.header = http.Header{"Accept-Encoding": {"gzip"}}
+	r := b.get(css)
+	if r.Header.Get("Content-Encoding") != "gzip" || r.Header.Get("Vary") != "Accept-Encoding" || len(r.Body) >= len(want)/2 {
+		t.Fatalf("compressed: %v, %d bytes", r.Header, len(r.Body))
+	}
+	zr, err := gzip.NewReader(strings.NewReader(r.Body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := io.ReadAll(zr); !bytes.Equal(got, want) {
+		t.Fatal("the compressed stylesheet doesn't unpack to the original")
+	}
+	b.header = http.Header{"If-None-Match": {r.Header.Get("ETag")}, "Accept-Encoding": {"gzip"}}
+	expect(t, b.get(css), http.StatusNotModified)
+	b.header = http.Header{"Accept-Encoding": {"identity"}}
+	if r := b.get(css); r.Header.Get("Content-Encoding") != "" || r.Body != string(want) {
+		t.Fatal("without gzip, the plain file")
+	}
+	// Pages are never compressed (BREACH).
+	b.header = http.Header{"Accept-Encoding": {"gzip"}}
+	if r := b.get("/login"); r.Header.Get("Content-Encoding") != "" {
+		t.Fatal("pages mustn't be compressed")
 	}
 }
