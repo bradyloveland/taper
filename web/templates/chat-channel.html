@@ -25,7 +25,7 @@
           {{end}}
           {{if eq .D.A.Ch.Kind "group"}}<p><a class="button small" href="/chat/{{.D.A.Ch.ID}}/people">People, name and delete</a></p>{{end}}
           {{if .D.A.Moderate}}
-          <h3>Muted</h3>
+          <h2>Muted</h2>
           {{if .D.Mutes}}
           <ul class="mute-list">
             {{range .D.Mutes}}
@@ -42,7 +42,7 @@
     {{if not .D.A.Ch.Enabled}}<div class="flash flash-warn chat-off" role="status">Chat is turned off here. Messages are kept; no one can post.</div>{{end}}
     <div class="chat-scroll" data-chat-scroll>
       {{if .D.More}}<p class="chat-more"><a href="/chat/{{.D.A.Ch.ID}}?before={{(index .D.Messages 0).M.ID}}">Show earlier messages</a></p>{{end}}
-      <ol class="chat-log" id="chat-log">
+      <ol class="chat-log" id="chat-log" role="log" aria-label="Messages">
         {{range .D.Messages}}{{if .NewDay}}<li class="chat-day"><span>{{.DayLabel}}</span></li>{{end}}{{template "chat-message" .}}{{end}}
       </ol>
       {{if not .D.Messages}}<p class="chat-empty muted" data-chat-empty>No messages yet. Say hello!</p>{{end}}

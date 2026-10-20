@@ -220,7 +220,12 @@
   const baseTitle = document.title;
   const setCount = (el, n) => { el.textContent = n; el.hidden = !(n > 0); el.setAttribute('aria-label', n + ' unread'); };
   const count = (el) => (el && !el.hidden ? parseInt(el.textContent, 10) || 0 : 0);
-  const showDot = () => { if (dot) dot.hidden = !(count(badge) + count(bell) > 0); };
+  const dotText = document.querySelector('[data-any-dot-text]');
+  const showDot = () => {
+    const none = !(count(badge) + count(bell) > 0);
+    if (dot) dot.hidden = none;
+    if (dotText) dotText.hidden = none;
+  };
   const showUnread = (n) => { badges.forEach((b) => setCount(b, n)); showDot(); };
   const showNotices = (n) => {
     if (typeof n !== 'number') return;

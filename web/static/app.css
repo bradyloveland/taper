@@ -19,7 +19,8 @@
   --error-text: #8a1f17;
   --warn-bg: #fff4d6;
   --warn-text: #7a5300;
-  --focus: #f0a830;
+  --focus: #b8660b;        /* 3:1 or more on the light backgrounds */
+  --focus-bright: #f0a830; /* for dark backgrounds: the top bar, and the dark theme */
   --shadow: 0 1px 2px rgba(20, 30, 50, .06), 0 2px 8px rgba(20, 30, 50, .05);
   --radius: 12px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -35,8 +36,9 @@
     --text: #e6e9ee;
     --muted: #9aa4b2;
     --border: #2d3644;
-    --primary: #4f7fbf;
-    --primary-hover: #6491cc;
+    --primary: #3f6ead;       /* white text on it: 5.2:1 */
+    --primary-hover: #36639f;
+    --focus: #f0a830;
     --primary-text: #ffffff;
     --accent: #f0b04a;
     --accent-soft: #3a2e17;
@@ -54,7 +56,11 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+  /* Keep focused things and #anchors clear of the sticky top bar (WCAG 2.4.11). */
+  scroll-padding-top: calc(64px + env(safe-area-inset-top));
+}
 
 body {
   margin: 0;
@@ -91,6 +97,7 @@ code { font-family: var(--mono); font-size: .92em; background: var(--surface-2);
 /* ------------------------------------------------------------- top bar */
 
 .topbar {
+  --focus: var(--focus-bright);
   background: var(--primary);
   color: var(--primary-text);
   padding-top: env(safe-area-inset-top);
@@ -743,7 +750,7 @@ details.card[open] > summary { margin-bottom: 12px; }
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 6; width: min(320px, 80vw); padding: 14px;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(20, 30, 50, .18);
 }
-.chat-tools-panel h3 { font-size: .95rem; margin: 12px 0 6px; }
+.chat-tools-panel h2 { font-size: .95rem; margin: 12px 0 6px; }
 .chat-tools-panel form { margin: 0; }
 .mute-list { list-style: none; margin: 0; padding: 0; }
 .mute-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
