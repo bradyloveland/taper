@@ -33,6 +33,15 @@ headings, IDs, landmarks). `TestContrast` checks the colours in `app.css`, light
 and dark, including any rule that sets both a text colour and a background. A
 new page or colour is covered automatically.
 
+`make upgrade-test` (also a CI job) downloads every published release,
+checking its checksum. For each one it fills a fresh school through that
+version's own pages with what it could do: people, classes, events,
+assignments with work and feedback, chat, parents, notification choices. Then
+it starts this build on the same data and checks it's all there and still
+works. It also upgrades one school through every release in turn. A new
+release is included automatically; add a step to `tools/upgradetest` when a
+release adds something new to keep.
+
 The pictures in the guide (`docs/guide/images`) come from `make screenshots`
 (Firefox and ImageMagick needed). It builds a made-up school in a throwaway
 database, runs Taper on it, and photographs pages as different people at
