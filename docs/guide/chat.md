@@ -5,7 +5,8 @@ you haven't read yet (on a phone, a dot on the menu button).
 
 - **Community** is the whole school's chat. Everyone can read it; admins and
   board members post in it, so it stays a place for news and announcements.
-- Each of your classes has a **class chat** for its mentors and scholars.
+- Each of your classes has a **class chat** for its mentors and scholars, and the
+  scholars' parents.
 - **Group chats** have their own name and members, such as a committee, a
   project team or the parents of a class. Admins and board members make them.
 

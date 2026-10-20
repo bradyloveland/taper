@@ -78,6 +78,7 @@
     <strong class="class-card-name">{{.Name}}</strong>
     {{if .Meets}}<span class="muted small">{{.Meets}}</span>{{end}}
     {{if eq .MyRole "mentor"}}<span class="small">{{.Scholars}} scholar{{if ne .Scholars 1}}s{{end}} · you mentor</span>
+    {{else if eq .MyRole "parent"}}<span class="small">For {{.ChildNames}}{{with .MentorNames}} · with {{.}}{{end}}</span>
     {{else if .Mentors}}<span class="small">With {{.MentorNames}}</span>{{end}}
   </span>
 </a>
@@ -85,7 +86,7 @@
 
 {{/* An assignment in a list. Pass (pair item reviewer). */}}
 {{define "assign-item"}}
-<li><a href="/assignments/{{.A.ID}}" class="agenda-item assign-item">
+<li><a href="{{.A.Link}}" class="agenda-item assign-item">
   <span class="bar c-{{.A.ClassColor}}" aria-hidden="true"></span>
   <span class="agenda-what"><strong>{{.A.Title}}</strong>{{with .A.Status}} <span class="badge muted">{{.}}</span>{{end}}<br>
     <span class="muted small">{{.A.ClassName}} · <span class="{{if and .A.Overdue (not .B)}}{{if or (eq .A.State.Kind "late") (eq .A.State.Kind "needs")}}late-text{{end}}{{end}}">{{.A.Due}}</span></span></span>
@@ -93,6 +94,8 @@
   {{if .B}}
     {{if .A.TurnedIn}}<span class="badge state-in">{{.A.TurnedIn}} to review</span>{{end}}
     <span class="muted small">{{.A.Done}} of {{.A.Scholars}} complete</span>
+  {{else if gt (len .A.For) 1}}
+    {{range .A.For}}<span class="small child-state">{{.Scholar.DisplayName}} <span class="badge state-{{.State.Kind}}">{{if eq .State.Kind "late"}}Past due{{else}}{{.State.Label}}{{end}}</span></span>{{end}}
   {{else if .A.State.Label}}
     <span class="badge state-{{.A.State.Kind}}">{{if eq .A.State.Kind "late"}}Past due{{else}}{{.A.State.Label}}{{end}}</span>{{if and .A.State.Late (eq .A.State.Kind "in")}} <span class="muted small">late</span>{{end}}
   {{end}}

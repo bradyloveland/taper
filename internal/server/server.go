@@ -252,6 +252,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /admin/people/{id}", s.leader(s.handlePersonUpdate))
 	mux.HandleFunc("POST /admin/people/{id}/reset-password", s.leader(s.handlePersonResetPassword))
 	mux.HandleFunc("POST /admin/people/{id}/two-step-off", s.leader(s.handlePersonTwoStepOff))
+	mux.HandleFunc("POST /admin/people/{id}/family/add", s.leader(s.handleFamilyAdd))
+	mux.HandleFunc("POST /admin/people/{id}/family/{oid}/remove", s.leader(s.handleFamilyRemove))
 	mux.HandleFunc("GET /admin/settings", s.admin(s.handleSettings))
 	mux.HandleFunc("POST /admin/settings", s.admin(s.handleSettingsSave))
 	mux.HandleFunc("POST /admin/settings/reports", s.admin(s.handleReportSettingsSave))

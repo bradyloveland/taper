@@ -5,7 +5,7 @@
     <span class="bar tall c-{{.D.A.ClassColor}}" aria-hidden="true"></span>
     <div>
       <h1>{{.D.A.Title}}</h1>
-      <p class="muted"><span class="{{if and .D.Overdue .D.Access.Scholar (or (eq .D.State.Kind "late") (eq .D.State.Kind "needs"))}}late-text{{end}}">{{.D.Due}}</span>{{if .D.Access.Scholar}} · <span class="badge state-{{.D.State.Kind}}">{{if eq .D.State.Kind "late"}}Past due{{else}}{{.D.State.Label}}{{end}}</span>{{end}}</p>
+      <p class="muted"><span class="{{if and .D.Overdue .D.Scholar (or (eq .D.State.Kind "late") (eq .D.State.Kind "needs"))}}late-text{{end}}">{{.D.Due}}</span>{{if .D.Scholar}} · <span class="badge state-{{.D.State.Kind}}">{{if eq .D.State.Kind "late"}}Past due{{else}}{{.D.State.Label}}{{end}}</span>{{end}}</p>
     </div>
   </div>
   {{with .D.Status}}{{if $.D.Access.CanReview}}<div class="flash flash-warn" role="status">{{.}}</div>{{end}}{{end}}
@@ -17,12 +17,20 @@
   {{if .D.Access.CanEdit}}<div class="actions spaced"><a class="button" href="/assignments/{{.D.A.ID}}/edit">Edit</a></div>{{end}}
 </section>
 
-{{if .D.Access.Scholar}}
+{{if .D.Scholar}}
 <section class="card readable" id="work">
+  {{if .D.Access.Parent}}
+  <h2>{{.D.Scholar.DisplayName}}'s work</h2>
+  {{if gt (len .D.Children) 1}}
+  <nav class="switcher" aria-label="Your scholars">{{range .D.Children}}<a href="/assignments/{{$.D.A.ID}}?scholar={{.ID}}#work"{{if eq .ID $.D.Scholar.ID}} aria-current="page"{{end}}>{{.DisplayName}}</a>{{end}}</nav>
+  {{end}}
+  <p class="muted small">You can write, attach files and turn this in for {{.D.Scholar.DisplayName}}. Their mentor sees that you did.</p>
+  {{else}}
   <h2>Your work</h2>
+  {{end}}
   {{if .D.Feedback}}
   <div class="feedback{{if eq .D.State.Kind "needs"}} needs{{end}}">
-    <p class="small"><strong>Feedback from your mentor</strong>{{with .D.Work}} · {{when .FeedbackAt}}{{end}}</p>
+    <p class="small"><strong>Feedback from {{if .D.Access.Parent}}the{{else}}your{{end}} mentor</strong>{{with .D.Work}} · {{when .FeedbackAt}}{{end}}</p>
     <div class="prose">{{.D.Feedback}}</div>
   </div>
   {{end}}
@@ -32,16 +40,16 @@
   <ul class="file-list">
     {{range .D.WorkFiles}}
     <li><a href="{{.Link}}">{{.Name}}</a> <span class="muted small">{{.Size}}</span>
-      <form method="post" action="/assignments/{{$.D.A.ID}}/work/files/{{.ID}}/delete" class="inline-form" data-confirm="Remove {{.Name}}?">
+      <form method="post" action="/assignments/{{$.D.A.ID}}/work/files/{{.ID}}/delete{{$.D.ForQuery}}" class="inline-form" data-confirm="Remove {{.Name}}?">
         <input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="link-button danger-text">Remove</button>
       </form></li>
     {{end}}
   </ul>
   {{end}}
-  <form method="post" enctype="multipart/form-data" action="/assignments/{{.D.A.ID}}/work" class="form work-form" {{if .D.A.WorkOnline}}data-autosave="/assignments/{{.D.A.ID}}/work/autosave"{{end}}>
+  <form method="post" enctype="multipart/form-data" action="/assignments/{{.D.A.ID}}/work{{.D.ForQuery}}" class="form work-form" {{if .D.A.WorkOnline}}data-autosave="/assignments/{{.D.A.ID}}/work/autosave{{.D.ForQuery}}"{{end}}>
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     {{if .D.A.WorkOnline}}
-    <label for="body" class="sr-only">Your work</label>
+    <label for="body" class="sr-only">{{if .D.Access.Parent}}{{.D.Scholar.DisplayName}}'s work{{else}}Your work{{end}}</label>
     <textarea id="body" name="body" rows="14" maxlength="100000" placeholder="Write here. It saves as you go.">{{.D.Body}}</textarea>
     <p class="help"><span data-save-status aria-live="polite"></span></p>
     {{end}}
@@ -60,15 +68,15 @@
   {{if .D.BodyHTML}}<div class="prose work-body">{{.D.BodyHTML}}</div>{{end}}
   {{if .D.WorkFiles}}<ul class="file-list">{{range .D.WorkFiles}}<li><a href="{{.Link}}">{{.Name}}</a> <span class="muted small">{{.Size}}</span></li>{{end}}</ul>{{end}}
   {{if and .D.Work (eq .D.Work.Status "turned_in")}}
-  <p class="muted">Turned in {{when .D.Work.TurnedInAt}}{{if .D.State.Late}}, after the due time{{end}}. Your mentor will look at it.</p>
+  <p class="muted">Turned in {{when .D.Work.TurnedInAt}}{{if .D.State.Late}}, after the due time{{end}}. {{if .D.Access.Parent}}The{{else}}Your{{end}} mentor will look at it.</p>
   {{if not .D.Access.Class.Archived}}
-  <form method="post" action="/assignments/{{.D.A.ID}}/work/take-back">
+  <form method="post" action="/assignments/{{.D.A.ID}}/work/take-back{{.D.ForQuery}}">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <button type="submit" class="button">Take it back to change it</button>
   </form>
   {{end}}
   {{else if and .D.Work (eq .D.Work.Status "complete")}}
-  <p class="muted">Your mentor marked this complete. Well done.</p>
+  <p class="muted">{{if .D.Access.Parent}}The mentor marked this complete.{{else}}Your mentor marked this complete. Well done.{{end}}</p>
   {{else if .D.Access.Class.Archived}}
   <p class="muted">This class is archived, so work can't be turned in any more.</p>
   {{end}}
@@ -77,7 +85,7 @@
   {{if .D.History}}
   <details class="history">
     <summary class="small">History</summary>
-    <ul class="history-list">{{range .D.History}}<li><span class="muted small">{{when .At}}</span> {{happened .Kind}}{{if and .By (or (eq .Kind "needs_work") (eq .Kind "complete") (eq .Kind "returned") (eq .Kind "uncompleted"))}} by {{.By}}{{end}}</li>{{end}}</ul>
+    <ul class="history-list">{{range .D.History}}<li><span class="muted small">{{when .At}}</span> {{happened .Kind}}{{if .ByParent}} by {{.By}} (parent){{else if and .By (or (eq .Kind "needs_work") (eq .Kind "complete") (eq .Kind "returned") (eq .Kind "uncompleted"))}} by {{.By}}{{end}}</li>{{end}}</ul>
   </details>
   {{end}}
 </section>

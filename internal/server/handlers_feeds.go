@@ -161,9 +161,10 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	// A class link only works while its owner is in the class.
+	// A class link only works while its owner is in the class (or their
+	// scholar is).
 	if class != nil {
-		if role, _ := s.store.ClassRole(class.ID, u.ID); role == "" {
+		if role, _ := s.store.ClassRelation(class.ID, u.ID); role == "" {
 			http.NotFound(w, r)
 			return
 		}

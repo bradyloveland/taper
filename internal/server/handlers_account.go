@@ -18,7 +18,9 @@ type homeData struct {
 	ToDo     []assignItem // for scholars: work not turned in yet, across their classes
 	Mentored []assignItem // for mentors: work to review, then what's due soon
 	Greeting string
-	Classes  []*store.Class // the person's own classes
+	Classes  []*store.Class // the person's own classes, and for parents their scholars'
+	InClass  bool           // the person mentors or is in a class themselves
+	Children []childCard    // for parents: each of their scholars' work
 	NClasses int            // current classes at the school, for admins
 	Counts   map[string]int
 	Update   string // a newer version, for admins
@@ -48,7 +50,14 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		q.ClassIDs = append(q.ClassIDs, c.ID)
 	}
 	d.Upcoming = s.upcoming(q, 14, 8)
+	for _, c := range d.Classes {
+		d.InClass = d.InClass || c.MyRole != store.ClassParent
+	}
 	d.ToDo, d.Mentored = s.homeAssignments(current(r).user, d.Classes, 8)
+	if d.Children, err = s.childCards(current(r).user, 8); err != nil {
+		s.serverError(w, r, "listing scholars' work", err)
+		return
+	}
 	if current(r).user.IsLeader() {
 		d.NClasses, _ = s.store.CountClasses()
 		counts, err := s.store.RoleCounts()

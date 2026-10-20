@@ -63,7 +63,7 @@
 {{if .D.History}}
 <section class="card readable">
   <h2>History</h2>
-  <ul class="history-list">{{range .D.History}}<li><span class="muted small">{{when .At}}</span> {{happened .Kind}}{{with .By}} by {{.}}{{end}}{{with .Note}}<br><span class="muted small">“{{.}}”</span>{{end}}</li>{{end}}</ul>
+  <ul class="history-list">{{range .D.History}}<li><span class="muted small">{{when .At}}</span> {{happened .Kind}}{{with .By}} by {{.}}{{end}}{{if .ByParent}} (parent){{end}}{{with .Note}}<br><span class="muted small">“{{.}}”</span>{{end}}</li>{{end}}</ul>
 </section>
 {{end}}
 {{end}}

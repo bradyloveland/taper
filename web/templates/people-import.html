@@ -9,7 +9,7 @@
   <p>{{.D.Good}} {{if eq .D.Good 1}}person is{{else}}people are{{end}} ready to add.{{if .D.Bad}} <strong>{{if eq .D.Bad 1}}1 row has a problem and is skipped</strong>; fix it in the spreadsheet and import it again later.{{else}}{{.D.Bad}} rows have problems and are skipped</strong>; fix them in the spreadsheet and import them again later.{{end}}{{end}}</p>
   <div class="table-wrap">
   <table class="table">
-    <thead><tr><th>Row</th><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Classes</th></tr></thead>
+    <thead><tr><th>Row</th><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Classes</th><th>Parent of</th></tr></thead>
     <tbody>
     {{range .D.Rows}}
     <tr class="{{if not .OK}}row-problem{{end}}">
@@ -19,6 +19,7 @@
       <td data-label="Email">{{.Email}}</td>
       <td data-label="Role">{{roleLabel .Role}}</td>
       <td data-label="Classes">{{.ClassNames}}</td>
+      <td data-label="Parent of">{{.ChildNames}}</td>
     </tr>
     {{end}}
     </tbody>
@@ -58,8 +59,9 @@
       <tr><td><strong>Name</strong></td><td>Full name. Or use <strong>First name</strong> and <strong>Last name</strong> columns.</td></tr>
       <tr><td>Username</td><td>Optional. Made from the name if empty (like <code>ann.adams</code>).</td></tr>
       <tr><td>Email</td><td>Optional.</td></tr>
-      <tr><td>Role</td><td>scholar, mentor or admin. Empty means scholar.</td></tr>
+      <tr><td>Role</td><td>scholar, parent, mentor, board or admin. Empty means scholar.</td></tr>
       <tr><td>Classes</td><td>Optional. Class names, separated by <code>;</code>. They must already exist.</td></tr>
+      <tr><td>Parent of</td><td>Optional, for parents (or mentors and board members with children here). Their scholars' usernames or names, separated by <code>;</code>. The scholars can be in the same list or already at the school.</td></tr>
     </tbody>
   </table>
   <p class="help">In Excel, Numbers or Google Sheets, use "Save as" or "Download" with CSV. Copying the cells and pasting them works too.</p>

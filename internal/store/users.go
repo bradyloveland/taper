@@ -11,11 +11,12 @@ const (
 	RoleAdmin   = "admin"
 	RoleBoard   = "board"
 	RoleMentor  = "mentor"
+	RoleParent  = "parent"
 	RoleScholar = "scholar"
 )
 
 // Roles lists every role, most powerful first.
-var Roles = []string{RoleAdmin, RoleBoard, RoleMentor, RoleScholar}
+var Roles = []string{RoleAdmin, RoleBoard, RoleMentor, RoleParent, RoleScholar}
 
 // RoleLabel is a role's name as shown in the interface.
 func RoleLabel(role string) string {
@@ -26,6 +27,8 @@ func RoleLabel(role string) string {
 		return "Board"
 	case RoleMentor:
 		return "Mentor"
+	case RoleParent:
+		return "Parent"
 	case RoleScholar:
 		return "Scholar"
 	}
@@ -70,6 +73,10 @@ func (u *User) IsMentor() bool { return u.Role == RoleMentor || u.IsLeader() }
 // They see and run every class, calendar and chat. Only admins manage the
 // server itself.
 func (u *User) IsLeader() bool { return u.Role == RoleAdmin || u.Role == RoleBoard }
+
+// IsScholar reports whether the user is a scholar. Anyone else can be linked
+// as a parent of scholars.
+func (u *User) IsScholar() bool { return u.Role == RoleScholar }
 
 // RoleLabel is the user's role as shown in the interface.
 func (u *User) RoleLabel() string { return RoleLabel(u.Role) }
@@ -156,7 +163,10 @@ func (s *Store) UpdateUser(u *User) error {
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotFound
 	}
-	return nil
+	// Only scholars have parents, and scholars aren't parents.
+	_, err = s.db.Exec(`DELETE FROM parents WHERE (scholar_id = ?1 AND ?2 <> 'scholar') OR (parent_id = ?1 AND ?2 = 'scholar')`,
+		u.ID, u.Role)
+	return err
 }
 
 // SetPassword replaces a user's password hash. mustChange makes them pick a

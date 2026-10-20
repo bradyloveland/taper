@@ -10,16 +10,16 @@ import (
 	"github.com/bradyloveland/taper/internal/store"
 )
 
-// Admins manage everyone. Board members manage mentors and scholars, and
-// their own profile; only admins add or change admin and board accounts, so
-// a board member can't take over an admin's account.
+// Admins manage everyone. Board members manage mentors, parents and
+// scholars, and their own profile; only admins add or change admin and board
+// accounts, so a board member can't take over an admin's account.
 
 // assignableRoles lists the roles actor can give people.
 func assignableRoles(actor *store.User) []string {
 	if actor.IsAdmin() {
 		return store.Roles
 	}
-	return []string{store.RoleMentor, store.RoleScholar}
+	return []string{store.RoleMentor, store.RoleParent, store.RoleScholar}
 }
 
 func canAssign(actor *store.User, role string) bool {
@@ -73,6 +73,8 @@ func (s *Server) handlePeople(w http.ResponseWriter, r *http.Request) {
 
 type personData struct {
 	Classes         []*store.Class
+	Family          []*store.User // a scholar's parents, or anyone else's scholars
+	Candidates      []*store.User // who can be added to Family
 	IsNew           bool
 	Self            bool
 	TwoStepRequired bool
@@ -172,9 +174,104 @@ func (s *Server) handlePersonForm(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, "listing classes", err)
 		return
 	}
-	s.render(w, r, http.StatusOK, "person", u.DisplayName, "people",
-		personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: assignableRoles(current(r).user),
-			TwoStepRequired: s.mfaRequired(u), Classes: classes})
+	d := personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: assignableRoles(current(r).user),
+		TwoStepRequired: s.mfaRequired(u), Classes: classes}
+	if d.Family, d.Candidates, err = s.family(u); err != nil {
+		s.serverError(w, r, "listing family", err)
+		return
+	}
+	s.render(w, r, http.StatusOK, "person", u.DisplayName, "people", d)
+}
+
+// family returns a scholar's parents, or the scholars someone else is a
+// parent of, and the active people who could be added.
+func (s *Server) family(u *store.User) (linked, candidates []*store.User, err error) {
+	var all []*store.User
+	if u.IsScholar() {
+		linked, err = s.store.ParentsOf(u.ID)
+		if err == nil {
+			all, err = s.store.ListUsers(store.UserFilter{})
+		}
+	} else {
+		linked, err = s.store.ScholarsOf(u.ID)
+		if err == nil {
+			all, err = s.store.ListUsers(store.UserFilter{Role: store.RoleScholar})
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	have := map[int64]bool{u.ID: true}
+	for _, l := range linked {
+		have[l.ID] = true
+	}
+	for _, c := range all {
+		if !have[c.ID] && c.IsScholar() != u.IsScholar() {
+			candidates = append(candidates, c)
+		}
+	}
+	return linked, candidates, nil
+}
+
+// handleFamilyAdd links a scholar and a parent, from either one's page.
+func (s *Server) handleFamilyAdd(w http.ResponseWriter, r *http.Request) {
+	u := s.manageable(w, r)
+	if u == nil {
+		return
+	}
+	back := "/admin/people/" + strconv.FormatInt(u.ID, 10) + "#family"
+	id, _ := strconv.ParseInt(r.PostFormValue("person"), 10, 64)
+	other, err := s.store.GetUser(id)
+	if err != nil {
+		s.setFlash(w, r, "error", "Choose someone to add.")
+		http.Redirect(w, r, back, http.StatusSeeOther)
+		return
+	}
+	parent, scholar := other, u
+	if !u.IsScholar() {
+		parent, scholar = u, other
+	}
+	added, err := s.store.LinkParent(parent.ID, scholar.ID)
+	if errors.Is(err, store.ErrNotScholar) {
+		s.setFlash(w, r, "error", "Only scholars have parents, and a scholar can't be a parent. Choose someone else.")
+		http.Redirect(w, r, back, http.StatusSeeOther)
+		return
+	}
+	if err != nil {
+		s.serverError(w, r, "linking parent", err)
+		return
+	}
+	msg := parent.DisplayName + " is already a parent of " + scholar.DisplayName + "."
+	if added {
+		slog.Info("parent linked", "by", current(r).user.Username, "parent", parent.Username, "scholar", scholar.Username)
+		msg = parent.DisplayName + " is now a parent of " + scholar.DisplayName + ", and can follow and turn in their work."
+	}
+	s.redirect(w, r, back, msg)
+}
+
+// handleFamilyRemove takes away a parent link, from either one's page.
+func (s *Server) handleFamilyRemove(w http.ResponseWriter, r *http.Request) {
+	u := s.manageable(w, r)
+	if u == nil {
+		return
+	}
+	id, _ := strconv.ParseInt(r.PathValue("oid"), 10, 64)
+	other, err := s.store.GetUser(id)
+	if err != nil {
+		s.notFound(w, r)
+		return
+	}
+	parent, scholar := other, u
+	if !u.IsScholar() {
+		parent, scholar = u, other
+	}
+	if err := s.store.UnlinkParent(parent.ID, scholar.ID); err != nil {
+		s.serverError(w, r, "unlinking parent", err)
+		return
+	}
+	slog.Info("parent unlinked", "by", current(r).user.Username, "parent", parent.Username, "scholar", scholar.Username)
+	s.redirect(w, r, "/admin/people/"+strconv.FormatInt(u.ID, 10)+"#family",
+		parent.DisplayName+" is no longer linked to "+scholar.DisplayName+" and can't see their work.")
 }
 
 func (s *Server) handlePersonUpdate(w http.ResponseWriter, r *http.Request) {

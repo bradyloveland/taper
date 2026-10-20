@@ -15,7 +15,8 @@ import (
 
 // classAccess is what the signed-in person may do with a class.
 type classAccess struct {
-	Role        string // their role in the class, or ""
+	Role        string // their role in the class (mentor, scholar or parent), or ""
+	Parent      bool   // a parent of a scholar in the class, who isn't in it themselves
 	CanSee      bool
 	CanEdit     bool // details and scholars: admins and the class's mentors
 	CanMentors  bool // mentors, archiving, deleting: admins
@@ -23,11 +24,11 @@ type classAccess struct {
 }
 
 func (s *Server) access(u *store.User, c *store.Class) (classAccess, error) {
-	role, err := s.store.ClassRole(c.ID, u.ID)
+	role, err := s.store.ClassRelation(c.ID, u.ID)
 	if err != nil {
 		return classAccess{}, err
 	}
-	a := classAccess{Role: role}
+	a := classAccess{Role: role, Parent: role == store.ClassParent}
 	a.CanSee = u.IsMentor() || role != ""
 	a.CanEdit = u.IsLeader() || (role == store.ClassMentor && !c.Archived)
 	a.CanMentors = u.IsLeader()
@@ -114,6 +115,7 @@ type classData struct {
 	Description template.HTML
 	Mentors     []*store.Member
 	Scholars    []*store.Member
+	Children    []*store.User // for parents: their scholars in the class
 }
 
 func splitMembers(list []*store.Member) (mentors, scholars []*store.Member) {
@@ -139,8 +141,14 @@ func (s *Server) handleClass(w http.ResponseWriter, r *http.Request) {
 	}
 	d := classData{Class: c, Access: a}
 	d.Mentors, d.Scholars = splitMembers(members)
-	d.Upcoming = s.upcoming(store.EventQuery{ClassIDs: []int64{c.ID}}, 31, 6)
 	u := current(r).user
+	if a.Parent {
+		if d.Children, err = s.store.ScholarsInClass(u.ID, c.ID); err != nil {
+			s.serverError(w, r, "listing scholars", err)
+			return
+		}
+	}
+	d.Upcoming = s.upcoming(store.EventQuery{ClassIDs: []int64{c.ID}}, 31, 6)
 	d.Reviewer = u.IsLeader() || a.Role == store.ClassMentor
 	d.Assignments, d.NAssign = s.classAssignments(c, a, u, 6)
 	if a.Role != "" || u.IsLeader() {
@@ -409,7 +417,7 @@ func (s *Server) handleClassMembersAdd(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		// Mentors come from admins and mentors, scholars from scholars.
-		if (role == store.ClassMentor) != u.IsMentor() {
+		if (role == store.ClassMentor && !u.IsMentor()) || (role == store.ClassScholar && !u.IsScholar()) {
 			continue
 		}
 		ids = append(ids, id)

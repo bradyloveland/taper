@@ -15,7 +15,7 @@
   </div>
   <div class="table-wrap">
   <table class="table credentials-table">
-    <thead><tr><th>Name</th><th>Username</th><th>Temporary password</th><th>Role</th><th>Classes</th></tr></thead>
+    <thead><tr><th>Name</th><th>Username</th><th>Temporary password</th><th>Role</th><th>Classes</th><th>Parent of</th></tr></thead>
     <tbody>
     {{range .D.Created}}
     <tr>
@@ -24,6 +24,7 @@
       <td data-label="Temporary password"><code>{{.Password}}</code></td>
       <td data-label="Role">{{.Role}}</td>
       <td data-label="Classes">{{.Classes}}</td>
+      <td data-label="Parent of">{{.Children}}</td>
     </tr>
     {{end}}
     </tbody>

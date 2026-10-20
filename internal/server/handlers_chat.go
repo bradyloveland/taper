@@ -127,7 +127,7 @@ func (s *Server) chanAccess(u *store.User, ch *store.Channel) (chanAccess, error
 		a.See = (in || leader) && (ch.Enabled || leader)
 		poster = poster || in
 	default:
-		role, err := s.store.ClassRole(ch.ClassID, u.ID)
+		role, err := s.store.ClassRelation(ch.ClassID, u.ID)
 		if err != nil {
 			return a, err
 		}

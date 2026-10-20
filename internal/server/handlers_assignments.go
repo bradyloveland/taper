@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,6 +21,8 @@ import (
 
 // Assignments belong to a class. Its mentors (and admins) set and review
 // them; its scholars see them once published, and turn in their work.
+// Parents see their scholars' work and can do anything with it that the
+// scholar can.
 // There are no grades: work is turned in, then marked Complete or sent back
 // as Needs another look, with written feedback.
 
@@ -29,9 +32,11 @@ const maxWork = 100000 // characters of written work
 type assignAccess struct {
 	Class     *store.Class
 	CanSee    bool
-	CanEdit   bool // change it: admins and the class's mentors, while the class is current
-	CanReview bool // see everyone's work and give feedback: admins and the class's mentors
-	Scholar   bool // a scholar in the class, who turns in work
+	CanEdit   bool          // change it: admins and the class's mentors, while the class is current
+	CanReview bool          // see everyone's work and give feedback: admins and the class's mentors
+	Scholar   bool          // a scholar in the class, who turns in work
+	Parent    bool          // a parent of scholars in the class, who can turn in work for them
+	Children  []*store.User // the parent's scholars in the class
 }
 
 func (s *Server) assignmentAccess(u *store.User, a *store.Assignment) (assignAccess, error) {
@@ -43,10 +48,44 @@ func (s *Server) assignmentAccess(u *store.User, a *store.Assignment) (assignAcc
 	if err != nil {
 		return assignAccess{}, err
 	}
-	acc := assignAccess{Class: c, CanEdit: ca.CanEdit, Scholar: ca.Role == store.ClassScholar}
+	acc := assignAccess{Class: c, CanEdit: ca.CanEdit, Scholar: ca.Role == store.ClassScholar, Parent: ca.Parent}
 	acc.CanReview = u.IsLeader() || ca.Role == store.ClassMentor
 	acc.CanSee = acc.CanReview || (ca.CanSee && a.Published(time.Now().Unix()))
+	if acc.Parent {
+		if acc.Children, err = s.store.ScholarsInClass(u.ID, c.ID); err != nil {
+			return assignAccess{}, err
+		}
+	}
 	return acc, nil
+}
+
+// worker is whose work the signed-in person is looking at or changing: a
+// scholar's own, or for a parent one of their scholars in the class (the one
+// in the URL's "scholar" parameter, or the first).
+func worker(r *http.Request, acc assignAccess) *store.User {
+	if acc.Scholar {
+		return current(r).user
+	}
+	if !acc.Parent || len(acc.Children) == 0 {
+		return nil
+	}
+	id, _ := strconv.ParseInt(r.URL.Query().Get("scholar"), 10, 64)
+	for _, c := range acc.Children {
+		if c.ID == id {
+			return c
+		}
+	}
+	return acc.Children[0]
+}
+
+// workPath is the assignment page showing sch's work. Parents' links name
+// the scholar.
+func workPath(a *store.Assignment, acc assignAccess, sch *store.User) string {
+	p := assignmentPath(a.ID)
+	if acc.Parent {
+		p += "?scholar=" + strconv.FormatInt(sch.ID, 10)
+	}
+	return p + "#work"
 }
 
 // assignment loads the assignment in the URL if the signed-in person may
@@ -159,21 +198,71 @@ type assignItem struct {
 	*store.Assignment
 	Due      string
 	Overdue  bool
-	State    workState // for scholars
-	TurnedIn int       // for mentors: turned in, waiting for review
-	Done     int       // marked complete
+	State    workState    // for scholars; for parents, the one of their scholars' most needing attention
+	For      []childState // for parents: each of their scholars' work
+	Scholar  int64        // for parents: the scholar whose work the link opens
+	TurnedIn int          // for mentors: turned in, waiting for review
+	Done     int          // marked complete
 	Scholars int
 	Status   string // for mentors: Draft, Scheduled, or ""
 }
 
-func (s *Server) assignItems(list []*store.Assignment, u *store.User, reviewer func(*store.Assignment) bool) []assignItem {
+// childState is how one of a parent's scholars is doing on an assignment.
+type childState struct {
+	Scholar *store.User
+	State   workState
+}
+
+// Link is the assignment page, naming the scholar for a parent.
+func (it assignItem) Link() string {
+	if it.Scholar != 0 {
+		return assignmentPath(it.ID) + "?scholar=" + strconv.FormatInt(it.Scholar, 10)
+	}
+	return assignmentPath(it.ID)
+}
+
+// urgency orders work states from most to least in need of attention.
+var urgency = map[string]int{"late": 0, "needs": 1, "todo": 2, "in": 3, "done": 4}
+
+// forChildren shows each of a parent's scholars' work on the items, and
+// sets the items' state to the one most in need of attention.
+func (s *Server) forChildren(items []assignItem, kids []*store.User) {
+	if len(kids) == 0 {
+		return
+	}
+	loc, now := s.loc(), time.Now()
+	ids := make([]int64, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	for _, k := range kids {
+		work, err := s.store.SubmissionsFor(k.ID, ids)
+		if err != nil {
+			slog.Error("listing work", "err", err)
+		}
+		for i := range items {
+			st := stateOf(items[i].Assignment, work[items[i].ID], loc, now)
+			items[i].For = append(items[i].For, childState{Scholar: k, State: st})
+			if len(items[i].For) == 1 || urgency[st.Kind] < urgency[items[i].State.Kind] {
+				items[i].State = st
+			}
+		}
+	}
+	if len(kids) == 1 {
+		for i := range items {
+			items[i].Scholar = kids[0].ID
+		}
+	}
+}
+
+func (s *Server) assignItems(list []*store.Assignment, forID int64, reviewer func(*store.Assignment) bool) []assignItem {
 	loc, now := s.loc(), time.Now()
 	today := s.today()
 	var ids []int64
 	for _, a := range list {
 		ids = append(ids, a.ID)
 	}
-	mine, err := s.store.SubmissionsFor(u.ID, ids)
+	mine, err := s.store.SubmissionsFor(forID, ids)
 	if err != nil {
 		slog.Error("listing work", "err", err)
 	}
@@ -271,8 +360,17 @@ func (s *Server) handleClassAssignments(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	d := assignmentsData{Class: c, Access: ca, Reviewer: reviewer}
-	d.Upcoming, d.Past = s.splitByDue(s.assignItems(list, u, func(*store.Assignment) bool { return reviewer }), ca.Role == store.ClassScholar)
-	if !reviewer && ca.Role != store.ClassScholar { // a mentor looking in: no statuses
+	items := s.assignItems(list, u.ID, func(*store.Assignment) bool { return reviewer })
+	if ca.Parent {
+		kids, err := s.store.ScholarsInClass(u.ID, c.ID)
+		if err != nil {
+			s.serverError(w, r, "listing scholars", err)
+			return
+		}
+		s.forChildren(items, kids)
+	}
+	d.Upcoming, d.Past = s.splitByDue(items, ca.Role == store.ClassScholar || ca.Parent)
+	if !reviewer && ca.Role != store.ClassScholar && !ca.Parent { // a mentor looking in: no statuses
 		for i := range d.Upcoming {
 			d.Upcoming[i].State = workState{}
 		}
@@ -307,13 +405,19 @@ func (s *Server) classAssignments(c *store.Class, ca classAccess, u *store.User,
 		slog.Error("listing assignments", "err", err)
 		return nil, 0
 	}
-	items := s.assignItems(list, u, func(*store.Assignment) bool { return reviewer })
-	if !reviewer && ca.Role != store.ClassScholar {
+	items := s.assignItems(list, u.ID, func(*store.Assignment) bool { return reviewer })
+	if ca.Parent {
+		kids, err := s.store.ScholarsInClass(u.ID, c.ID)
+		if err != nil {
+			slog.Error("listing scholars", "err", err)
+		}
+		s.forChildren(items, kids)
+	} else if !reviewer && ca.Role != store.ClassScholar {
 		for i := range items {
 			items[i].State = workState{}
 		}
 	}
-	upcoming, _ := s.splitByDue(items, ca.Role == store.ClassScholar)
+	upcoming, _ := s.splitByDue(items, ca.Role == store.ClassScholar || ca.Parent)
 	if len(upcoming) > limit {
 		upcoming = upcoming[:limit]
 	}
@@ -358,7 +462,10 @@ type assignmentData struct {
 	Instructions template.HTML
 	Files        []fileItem
 
-	// A scholar's own work.
+	// A scholar's own work, or for a parent their scholar's.
+	Scholar   *store.User   // whose work it is
+	Children  []*store.User // for a parent: their scholars in the class
+	ForQuery  string        // "?scholar=ID" on a parent's links and forms
 	Work      *store.Submission
 	WorkFiles []fileItem
 	State     workState
@@ -380,7 +487,6 @@ func (s *Server) handleAssignment(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	u := current(r).user
 	loc, now := s.loc(), time.Now()
 	d := assignmentData{A: a, Access: acc, Due: dueText(a, loc, s.today())}
 	if due := dueAt(a, loc); !due.IsZero() {
@@ -401,8 +507,12 @@ func (s *Server) handleAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d.Files = fileItems(files)
-	if acc.Scholar {
-		wk, err := s.store.GetSubmission(a.ID, u.ID)
+	if sch := worker(r, acc); sch != nil {
+		d.Scholar, d.Children = sch, acc.Children
+		if acc.Parent {
+			d.ForQuery = "?scholar=" + strconv.FormatInt(sch.ID, 10)
+		}
+		wk, err := s.store.GetSubmission(a.ID, sch.ID)
 		if err != nil && !errors.Is(err, store.ErrNotFound) {
 			s.serverError(w, r, "loading work", err)
 			return
@@ -743,47 +853,70 @@ func (s *Server) handleAssignmentDelete(w http.ResponseWriter, r *http.Request) 
 
 // ------------------------------------------------------------ scholars' work
 
-// scholarWork checks that the signed-in scholar can work on the assignment
-// now, and returns their work (started if needed).
-func (s *Server) scholarWork(w http.ResponseWriter, r *http.Request) (*store.Assignment, *store.Submission, bool) {
+// workTarget is the work a scholar, or a parent for their scholar, is
+// changing.
+type workTarget struct {
+	A       *store.Assignment
+	Work    *store.Submission
+	Scholar *store.User // whose work it is
+	Parent  bool        // a parent is acting for the scholar
+	Back    string      // the assignment page, showing this work
+}
+
+// notEditable says why turned-in work can't be changed.
+func (t workTarget) notEditable() string {
+	if t.Parent {
+		return t.Scholar.DisplayName + "'s work is turned in, so it can't be changed. Take it back first if their mentor hasn't looked at it yet."
+	}
+	return "Your work is turned in, so it can't be changed. Take it back first if your mentor hasn't looked at it yet."
+}
+
+// scholarWork checks that the signed-in scholar, or a parent of a scholar in
+// the class, can work on the assignment now, and returns the work (started if
+// needed).
+func (s *Server) scholarWork(w http.ResponseWriter, r *http.Request) (workTarget, bool) {
 	a, acc, ok := s.assignment(w, r)
 	if !ok {
-		return nil, nil, false
+		return workTarget{}, false
 	}
-	if !acc.Scholar {
-		s.renderError(w, r, http.StatusForbidden, "Only scholars turn in work", "Scholars in the class turn in their work here.")
-		return nil, nil, false
+	sch := worker(r, acc)
+	if sch == nil {
+		s.renderError(w, r, http.StatusForbidden, "Only scholars turn in work",
+			"Scholars in the class, and their parents, turn in work here.")
+		return workTarget{}, false
 	}
 	if acc.Class.Archived {
 		s.renderError(w, r, http.StatusForbidden, "This class is archived", "Work can't be changed in an archived class.")
-		return nil, nil, false
+		return workTarget{}, false
 	}
-	wk, err := s.store.StartSubmission(a.ID, current(r).user.ID)
+	wk, err := s.store.StartSubmission(a.ID, sch.ID)
 	if err != nil {
 		s.serverError(w, r, "starting work", err)
-		return nil, nil, false
+		return workTarget{}, false
 	}
-	return a, wk, true
+	return workTarget{A: a, Work: wk, Scholar: sch, Parent: acc.Parent, Back: workPath(a, acc, sch)}, true
 }
-
-const notEditable = "Your work is turned in, so it can't be changed. Take it back first if your mentor hasn't looked at it yet."
 
 // handleWork saves a scholar's work, with any new files, and turns it in if
 // asked.
 func (s *Server) handleWork(w http.ResponseWriter, r *http.Request) {
 	if err := parseUpload(r); err != nil {
 		id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		back := assignmentPath(id)
+		if sch := r.URL.Query().Get("scholar"); sch != "" {
+			back += "?scholar=" + url.QueryEscape(sch)
+		}
 		s.setFlash(w, r, "error", s.uploadError(r, err))
-		http.Redirect(w, r, assignmentPath(id), http.StatusSeeOther)
+		http.Redirect(w, r, back+"#work", http.StatusSeeOther)
 		return
 	}
-	a, wk, ok := s.scholarWork(w, r)
+	t, ok := s.scholarWork(w, r)
 	if !ok {
 		return
 	}
-	back := assignmentPath(a.ID) + "#work"
+	a, wk, back := t.A, t.Work, t.Back
 	if !wk.Editable() {
-		s.setFlash(w, r, "error", notEditable)
+		s.setFlash(w, r, "error", t.notEditable())
 		http.Redirect(w, r, back, http.StatusSeeOther)
 		return
 	}
@@ -823,21 +956,25 @@ func (s *Server) handleWork(w http.ResponseWriter, r *http.Request) {
 	if a.WorkOnline || a.AllowFiles {
 		files, _ := s.store.ListFiles(store.FileForSubmission, wk.ID)
 		if strings.TrimSpace(wk.Body) == "" && len(files) == 0 {
-			s.setFlash(w, r, "error", "There's nothing to turn in yet. Write your work or attach a file first.")
+			s.setFlash(w, r, "error", "There's nothing to turn in yet. Write the work or attach a file first.")
 			http.Redirect(w, r, back, http.StatusSeeOther)
 			return
 		}
 	}
 	if err := s.store.SetWorkStatus(wk.ID, []string{store.WorkDraft, store.WorkNeedsWork}, store.WorkTurnedIn, u.ID, nil); err != nil {
 		if errors.Is(err, store.ErrWrongStatus) {
-			s.setFlash(w, r, "error", notEditable)
+			s.setFlash(w, r, "error", t.notEditable())
 			http.Redirect(w, r, back, http.StatusSeeOther)
 			return
 		}
 		s.serverError(w, r, "turning in work", err)
 		return
 	}
-	slog.Info("work turned in", "by", u.Username, "assignment", a.ID)
+	slog.Info("work turned in", "by", u.Username, "scholar", t.Scholar.Username, "assignment", a.ID)
+	if t.Parent {
+		s.redirect(w, r, back, "Turned in for "+t.Scholar.DisplayName+". Their mentor will look at it.")
+		return
+	}
 	s.redirect(w, r, back, "Turned in. Your mentor will look at it.")
 }
 
@@ -862,7 +999,11 @@ func (s *Server) handleWorkAutosave(w http.ResponseWriter, r *http.Request) {
 	}
 	u := current(r).user
 	acc, err := s.assignmentAccess(u, a)
-	if err != nil || !acc.CanSee || !acc.Scholar || acc.Class.Archived || !a.WorkOnline {
+	var sch *store.User
+	if err == nil && acc.CanSee {
+		sch = worker(r, acc)
+	}
+	if sch == nil || acc.Class.Archived || !a.WorkOnline {
 		reply(http.StatusForbidden, map[string]string{"error": "This work can't be saved here."})
 		return
 	}
@@ -871,7 +1012,7 @@ func (s *Server) handleWorkAutosave(w http.ResponseWriter, r *http.Request) {
 		reply(http.StatusRequestEntityTooLarge, map[string]string{"error": "Too long to save."})
 		return
 	}
-	wk, err := s.store.StartSubmission(a.ID, u.ID)
+	wk, err := s.store.StartSubmission(a.ID, sch.ID)
 	if err != nil {
 		s.logError(r, "starting work", err)
 		reply(http.StatusInternalServerError, map[string]string{"error": "Not saved."})
@@ -892,14 +1033,14 @@ func (s *Server) handleWorkAutosave(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWorkTakeBack(w http.ResponseWriter, r *http.Request) {
-	a, wk, ok := s.scholarWork(w, r)
+	t, ok := s.scholarWork(w, r)
 	if !ok {
 		return
 	}
-	back := assignmentPath(a.ID) + "#work"
-	err := s.store.SetWorkStatus(wk.ID, []string{store.WorkTurnedIn}, store.WorkDraft, current(r).user.ID, nil)
+	back := t.Back
+	err := s.store.SetWorkStatus(t.Work.ID, []string{store.WorkTurnedIn}, store.WorkDraft, current(r).user.ID, nil)
 	if errors.Is(err, store.ErrWrongStatus) {
-		s.setFlash(w, r, "error", "It can't be taken back now: your mentor has already looked at it.")
+		s.setFlash(w, r, "error", "It can't be taken back now: the mentor has already looked at it.")
 		http.Redirect(w, r, back, http.StatusSeeOther)
 		return
 	}
@@ -911,17 +1052,17 @@ func (s *Server) handleWorkTakeBack(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWorkFileDelete(w http.ResponseWriter, r *http.Request) {
-	a, wk, ok := s.scholarWork(w, r)
+	t, ok := s.scholarWork(w, r)
 	if !ok {
 		return
 	}
-	back := assignmentPath(a.ID) + "#work"
-	if !wk.Editable() {
-		s.setFlash(w, r, "error", notEditable)
+	back := t.Back
+	if !t.Work.Editable() {
+		s.setFlash(w, r, "error", t.notEditable())
 		http.Redirect(w, r, back, http.StatusSeeOther)
 		return
 	}
-	f, ok := s.ownedFile(w, r, store.FileForSubmission, wk.ID)
+	f, ok := s.ownedFile(w, r, store.FileForSubmission, t.Work.ID)
 	if !ok {
 		return
 	}
@@ -1137,9 +1278,10 @@ func (s *Server) handleReviewUndo(w http.ResponseWriter, r *http.Request, a *sto
 func (s *Server) homeAssignments(u *store.User, classes []*store.Class, limit int) (todo, mentored []assignItem) {
 	var asScholar, asMentor []int64
 	for _, c := range classes {
-		if c.MyRole == store.ClassMentor {
+		switch c.MyRole {
+		case store.ClassMentor:
 			asMentor = append(asMentor, c.ID)
-		} else {
+		case store.ClassScholar:
 			asScholar = append(asScholar, c.ID)
 		}
 	}
@@ -1149,7 +1291,7 @@ func (s *Server) homeAssignments(u *store.User, classes []*store.Class, limit in
 		if err != nil {
 			slog.Error("listing assignments", "err", err)
 		}
-		for _, it := range s.assignItems(list, u, func(*store.Assignment) bool { return false }) {
+		for _, it := range s.assignItems(list, u.ID, func(*store.Assignment) bool { return false }) {
 			if k := it.State.Kind; (k == "todo" || k == "late" || k == "needs") && len(todo) < limit {
 				todo = append(todo, it)
 			}
@@ -1163,7 +1305,7 @@ func (s *Server) homeAssignments(u *store.User, classes []*store.Class, limit in
 		today := s.today()
 		from, to := cal.FormatDate(today), cal.FormatDate(today.AddDate(0, 0, 14))
 		var review, soon []assignItem
-		for _, it := range s.assignItems(list, u, func(*store.Assignment) bool { return true }) {
+		for _, it := range s.assignItems(list, u.ID, func(*store.Assignment) bool { return true }) {
 			switch {
 			case it.TurnedIn > 0:
 				review = append(review, it)
@@ -1177,4 +1319,52 @@ func (s *Server) homeAssignments(u *store.User, classes []*store.Class, limit in
 		}
 	}
 	return todo, mentored
+}
+
+// childCard is one of a parent's scholars on the home page.
+type childCard struct {
+	Scholar *store.User
+	Items   []assignItem // work to do, sent back or waiting for review
+	Classes int
+}
+
+// childCards lists a parent's active scholars with the work that needs
+// doing or is waiting for a mentor, past due first, then by due date.
+func (s *Server) childCards(u *store.User, limit int) ([]childCard, error) {
+	kids, err := s.store.ScholarsOf(u.ID)
+	if err != nil {
+		return nil, err
+	}
+	var out []childCard
+	for _, k := range kids {
+		if !k.Active {
+			continue
+		}
+		card := childCard{Scholar: k}
+		classes, err := s.store.ListClassesFor(k.ID)
+		if err != nil {
+			return nil, err
+		}
+		var ids []int64
+		for _, c := range classes {
+			if c.MyRole == store.ClassScholar {
+				ids = append(ids, c.ID)
+			}
+		}
+		card.Classes = len(ids)
+		if len(ids) > 0 {
+			list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: ids, PublishedOnly: true, Now: time.Now().Unix()})
+			if err != nil {
+				return nil, err
+			}
+			for _, it := range s.assignItems(list, k.ID, func(*store.Assignment) bool { return false }) {
+				if k := it.State.Kind; (k == "todo" || k == "late" || k == "needs" || k == "in") && len(card.Items) < limit {
+					it.Scholar = card.Scholar.ID
+					card.Items = append(card.Items, it)
+				}
+			}
+		}
+		out = append(out, card)
+	}
+	return out, nil
 }

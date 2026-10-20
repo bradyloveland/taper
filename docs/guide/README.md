@@ -8,7 +8,7 @@ on GitHub.
 
 ## For everyone
 
-- [Getting started](getting-started.md): signing in for the first time, and what admins, mentors and scholars can do.
+- [Getting started](getting-started.md): signing in for the first time, and what admins, the board, mentors, parents and scholars can do.
 - [Classes](classes.md): your classes, and how admins and mentors set them up.
 - [Assignments](assignments.md): setting work, turning it in, and feedback without grades.
 - [Chat](chat.md): the community and class chats, and keeping them friendly.
@@ -20,7 +20,7 @@ on GitHub.
 
 ## For admins
 
-- [Managing people](people.md): add mentors and scholars, reset passwords, and deactivate accounts.
+- [Managing people](people.md): add mentors, parents and scholars, link parents to their scholars, reset passwords, and deactivate accounts.
 - [Network and HTTPS](network.md): how people reach Taper, HTTPS with Let's Encrypt, reverse proxies.
 - [Email](email.md): send password reset links and notices to admins.
 - [Updates and backups](updates.md): install new versions from the web interface, go back if needed, and back up.

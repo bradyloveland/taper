@@ -277,6 +277,9 @@ func (s *Server) canSeeFile(u *store.User, f *store.File) bool {
 		if wk.ScholarID == u.ID {
 			return true
 		}
+		if parent, err := s.store.IsParentOf(u.ID, wk.ScholarID); err == nil && parent {
+			return true
+		}
 		a, err := s.store.GetAssignment(wk.AssignmentID)
 		if err != nil {
 			return false

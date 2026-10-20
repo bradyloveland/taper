@@ -107,10 +107,24 @@ Under **Change your mind?** on a scholar's work, without writing feedback:
 
 Their writing and files stay as they are, and the history shows what you did.
 
+## For parents
+
+Your home page has a card for each of your scholars, listing the work they
+haven't turned in yet, work sent back for another look, and work waiting for
+their mentor. Their classes are under **Your classes**, and a class's
+assignments show where each of your scholars stands.
+
+Open an assignment to see your scholar's work. If you have more than one
+scholar in the class, choose whose work to see at the top of it. You can do
+anything your scholar can: write (it saves as you type), attach files (photos
+of work done on paper, for example), **Turn in**, and **Take it back**. The
+history says **by** your name, **(parent)**, so the mentor knows.
+
 ## Who sees what
 
 - Scholars see their classes' published assignments and only **their own**
   work and feedback.
+- Parents see the same as their scholars, for each of their scholars.
 - A class's mentors and admins see every scholar's work in it.
 - Other mentors can see a class's published assignments, but not scholars' work.
 - Files can only be downloaded by people who can see the assignment or work

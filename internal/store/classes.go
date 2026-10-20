@@ -37,9 +37,10 @@ type Class struct {
 	CreatedAt   int64
 	UpdatedAt   int64
 
-	Mentors  []*User // filled in by ClassMentors/ListClasses
-	Scholars int     // number of active scholars
-	MyRole   string  // the viewer's role in the class, from ListClassesFor
+	Mentors  []*User  // filled in by ClassMentors/ListClasses
+	Scholars int      // number of active scholars
+	MyRole   string   // the viewer's role in the class, from ListClassesFor
+	Children []string // for a parent: their scholars in the class, by name
 }
 
 // MentorNames joins the mentors' names for display.
@@ -130,7 +131,8 @@ func (s *Store) ListClasses(f ClassFilter) ([]*Class, error) {
 }
 
 // ListClassesFor returns the current (not archived) classes a user is in,
-// with their role in each.
+// with their role in each, and the classes of their scholars for parents
+// (role ClassParent).
 func (s *Store) ListClassesFor(userID int64) ([]*Class, error) {
 	rows, err := s.db.Query(`SELECT `+classCols+`, m.role FROM classes c JOIN class_members m ON m.class_id = c.id
 		WHERE m.user_id = ? AND c.archived = 0 ORDER BY c.name COLLATE NOCASE, c.id`, userID)
@@ -150,6 +152,15 @@ func (s *Store) ListClassesFor(userID int64) ([]*Class, error) {
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	rows.Close()
+	theirs, err := s.parentClasses(userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(theirs) > 0 {
+		out = append(out, theirs...)
+		sortClasses(out)
 	}
 	return out, s.fillClasses(out)
 }

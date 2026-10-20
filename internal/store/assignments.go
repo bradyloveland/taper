@@ -282,15 +282,18 @@ func (s *Store) MoveWork(id int64, from []string, to, kind string, by int64, fee
 
 // HistoryItem is one thing that happened to a piece of work.
 type HistoryItem struct {
-	Kind string
-	By   string // the person's name
-	Note string
-	At   int64
+	Kind     string
+	By       string // the person's name
+	ByParent bool   // a parent of the scholar, acting for them
+	Note     string
+	At       int64
 }
 
 // SubmissionHistory lists what happened to a piece of work, oldest first.
 func (s *Store) SubmissionHistory(id int64) ([]HistoryItem, error) {
-	rows, err := s.db.Query(`SELECT h.kind, COALESCE(u.display_name, ''), h.note, h.at FROM submission_history h
+	rows, err := s.db.Query(`SELECT h.kind, COALESCE(u.display_name, ''),
+		EXISTS (SELECT 1 FROM parents p WHERE p.parent_id = h.by_user AND p.scholar_id = w.scholar_id), h.note, h.at
+		FROM submission_history h JOIN submissions w ON w.id = h.submission_id
 		LEFT JOIN users u ON u.id = h.by_user WHERE h.submission_id = ? ORDER BY h.at, h.id`, id)
 	if err != nil {
 		return nil, err
@@ -299,7 +302,7 @@ func (s *Store) SubmissionHistory(id int64) ([]HistoryItem, error) {
 	var out []HistoryItem
 	for rows.Next() {
 		var h HistoryItem
-		if err := rows.Scan(&h.Kind, &h.By, &h.Note, &h.At); err != nil {
+		if err := rows.Scan(&h.Kind, &h.By, &h.ByParent, &h.Note, &h.At); err != nil {
 			return nil, err
 		}
 		out = append(out, h)

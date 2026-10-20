@@ -915,3 +915,91 @@ func TestGroups(t *testing.T) {
 		t.Fatal("only group chats can be deleted")
 	}
 }
+
+// TestParentsMigration checks that rebuilding users for migration 10 keeps
+// people and what points at them, and that parent links work afterwards.
+func TestParentsMigration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "old.db")
+	s, err := openTo(path, 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bo := &User{Username: "bo", DisplayName: "Bo", Role: RoleBoard, PasswordHash: "h1", Active: true, Email: "b@x.org"}
+	sam := &User{Username: "sam", DisplayName: "Sam", Role: RoleScholar, PasswordHash: "h2", Active: true}
+	for _, u := range []*User{bo, sam} {
+		if err := s.CreateUser(u); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tok, _, err := s.CreateSession(sam.ID, false, "ua", "1.2.3.4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &Class{Name: "Logic", Color: "blue"}
+	s.CreateClass(c)
+	s.AddMembers(c.ID, ClassScholar, []int64{sam.ID})
+	a := &Assignment{ClassID: c.ID, Title: "Essay", PublishAt: 1, CreatedBy: bo.ID}
+	s.CreateAssignment(a)
+	wk, err := s.StartSubmission(a.ID, sam.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetWorkStatus(wk.ID, []string{WorkDraft}, WorkTurnedIn, sam.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	s, err = Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if v, _ := s.SchemaVersion(); v < 10 {
+		t.Fatalf("schema %d", v)
+	}
+	if got, err := s.GetUser(bo.ID); err != nil || got.Role != RoleBoard || got.Email != "b@x.org" || got.PasswordHash != "h1" {
+		t.Fatalf("user after migration: %+v %v", got, err)
+	}
+	if _, u, err := s.LookupSession(tok); err != nil || u.ID != sam.ID {
+		t.Fatalf("session after migration: %v", err)
+	}
+	if h, err := s.SubmissionHistory(wk.ID); err != nil || len(h) != 1 || h[0].By != "Sam" || h[0].ByParent {
+		t.Fatalf("history after migration: %+v %v", h, err)
+	}
+
+	// A parent sees their scholar's class, as a parent.
+	pat := &User{Username: "pat", DisplayName: "Pat", Role: RoleParent, PasswordHash: "h3", Active: true}
+	if err := s.CreateUser(pat); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.LinkParent(pat.ID, bo.ID); !errors.Is(err, ErrNotScholar) {
+		t.Fatalf("linking to a non-scholar: %v", err)
+	}
+	if added, err := s.LinkParent(pat.ID, sam.ID); err != nil || !added {
+		t.Fatalf("link: %v %v", added, err)
+	}
+	if added, _ := s.LinkParent(pat.ID, sam.ID); added {
+		t.Fatal("linking twice adds nothing")
+	}
+	classes, err := s.ListClassesFor(pat.ID)
+	if err != nil || len(classes) != 1 || classes[0].MyRole != ClassParent || classes[0].ChildNames() != "Sam" {
+		t.Fatalf("parent's classes: %+v %v", classes, err)
+	}
+	if role, _ := s.ClassRelation(c.ID, pat.ID); role != ClassParent {
+		t.Fatalf("relation %q", role)
+	}
+	if err := s.SetWorkStatus(wk.ID, []string{WorkTurnedIn}, WorkDraft, pat.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	if h, _ := s.SubmissionHistory(wk.ID); !h[1].ByParent {
+		t.Fatalf("history: %+v", h)
+	}
+	// A deactivated scholar's classes drop off.
+	sam.Active = false
+	if err := s.UpdateUser(sam); err != nil {
+		t.Fatal(err)
+	}
+	if role, _ := s.ClassRelation(c.ID, pat.ID); role != "" {
+		t.Fatalf("relation after deactivating: %q", role)
+	}
+}
