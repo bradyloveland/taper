@@ -4,7 +4,7 @@
 the menu under your initials, at the top right); board members open **People**
 in that menu.
 
-Board members add and look after mentors and scholars. Only admins add or
+Board members add and look after mentors, parents and scholars. Only admins add or
 change admin and board accounts, reset their passwords, or turn off their
 two-step sign-in, so a board member can't take over an admin's account.
 
@@ -15,8 +15,8 @@ two-step sign-in, so a board member can't take over an admin's account.
    You can change it. Usernames are 2 to 40 letters, numbers, dots, dashes or
    underscores.
 3. Add an **email** if you like. It's optional, and scholars don't need one.
-4. Choose a **role**: Scholar, Mentor, Board or Admin (board members can choose
-   Scholar or Mentor).
+4. Choose a **role**: Scholar, Parent, Mentor, Board or Admin (board members can
+   choose Scholar, Parent or Mentor).
 5. Select **Add and create a temporary password**.
 
 Taper shows the web address, the username and a **temporary password**. Give
@@ -36,10 +36,14 @@ page.
    - **Name** (or **First name** and **Last name**): required.
    - **Username:** optional. Taper makes one from the name if it's empty.
    - **Email:** optional.
-   - **Role:** scholar, mentor, board or admin. Empty means scholar. (Board
-     members can import scholars and mentors.)
+   - **Role:** scholar, parent, mentor, board or admin. Empty means scholar.
+     (Board members can import scholars, parents and mentors.)
    - **Classes:** optional. Class names separated by `;`. The classes must already
-     exist. Scholars join as scholars and mentors as mentors.
+     exist. Scholars join as scholars and mentors as mentors. Leave it empty for
+     parents: they see their scholars' classes.
+   - **Parent of:** optional. For a parent (or a mentor or board member with
+     children at the school), their scholars' usernames or names, separated by
+     `;`. The scholars can be in the same spreadsheet or already in Taper.
 2. Save it as CSV (Excel, Numbers and Google Sheets all can), and choose the file,
    or copy the cells and paste them.
 3. Select **Check the list**. Taper shows each person, and any row with a problem
@@ -77,6 +81,26 @@ on at any time.
 
 Accounts are deactivated rather than deleted, so classes and assignments keep a
 full record.
+
+## Parents and their scholars
+
+Parents see their scholars' classes, calendars, assignments, work and feedback.
+They can write, attach files and **turn in work for their scholar**, or take it
+back; mentors see in the work's history that a parent did it. They read
+Community and can talk in their scholars' class chats. They can't see other
+scholars' work or give feedback.
+
+To link a parent and a scholar, open either one's page and use **Parent of**
+(on a parent's page) or **Parents** (on a scholar's page): choose the person
+and select **Link**. A scholar can have several parents, and a parent several
+scholars. **Unlink** takes the link away again.
+
+Anyone who isn't a scholar can be linked as a parent, so a mentor or board
+member whose children are at the school doesn't need a second account. In a
+class they mentor, they see it as its mentor.
+
+If a parent's account becomes a scholar's, or a scholar's account changes to
+another role, their links are removed.
 
 ## A person's classes
 

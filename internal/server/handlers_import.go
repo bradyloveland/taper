@@ -26,8 +26,27 @@ type importRow struct {
 	Email     string
 	Role      string
 	Classes   []*store.Class
-	Generated bool // the username was made from the name
+	Children  []importChild // for parents: their scholars
+	Generated bool          // the username was made from the name
 	Problems  []string
+	created   int64 // the new account, once made
+}
+
+// importChild is a parent's scholar named in the import: someone already at
+// the school, or a scholar earlier or later in the same list.
+type importChild struct {
+	Name string
+	ID   int64      // an existing scholar
+	Row  *importRow // a scholar in the list
+}
+
+// ChildNames joins the row's scholars' names for display.
+func (r *importRow) ChildNames() string {
+	names := make([]string, len(r.Children))
+	for i, c := range r.Children {
+		names[i] = c.Name
+	}
+	return strings.Join(names, ", ")
 }
 
 func (r *importRow) OK() bool { return len(r.Problems) == 0 }
@@ -49,11 +68,13 @@ var importHeaders = map[string]string{
 	"email": "email", "e-mail": "email", "email address": "email",
 	"role": "role", "type": "role",
 	"class": "classes", "classes": "classes",
+	"parent of": "children", "children": "children", "child": "children", "scholars": "children", "students": "children",
 }
 
 var importRoles = map[string]string{
 	"": store.RoleScholar, "scholar": store.RoleScholar, "student": store.RoleScholar,
 	"mentor": store.RoleMentor, "teacher": store.RoleMentor,
+	"parent": store.RoleParent, "guardian": store.RoleParent,
 	"admin": store.RoleAdmin, "administrator": store.RoleAdmin,
 	"board": store.RoleBoard, "board member": store.RoleBoard,
 }
@@ -94,7 +115,7 @@ func (s *Server) parseImport(actor *store.User, text string) ([]*importRow, stri
 	_, hasName := cols["name"]
 	_, hasFirst := cols["first"]
 	if !hasName && !hasFirst {
-		return nil, "The first row should name the columns: at least \"Name\" (or \"First name\" and \"Last name\"), and optionally \"Username\", \"Email\", \"Role\" and \"Classes\"."
+		return nil, "The first row should name the columns: at least \"Name\" (or \"First name\" and \"Last name\"), and optionally \"Username\", \"Email\", \"Role\", \"Classes\" and \"Parent of\"."
 	}
 	if len(records)-1 > maxImportRows {
 		return nil, fmt.Sprintf("That's more than %d people. Split the spreadsheet into smaller ones.", maxImportRows)
@@ -112,6 +133,7 @@ func (s *Server) parseImport(actor *store.User, text string) ([]*importRow, stri
 		return strings.TrimSpace(rec[i])
 	}
 	taken := map[string]bool{}
+	children := map[*importRow][]string{}
 	var rows []*importRow
 	for n, rec := range records[1:] {
 		empty := true
@@ -135,7 +157,7 @@ func (s *Server) parseImport(actor *store.User, text string) ([]*importRow, stri
 		}
 		role, ok := importRoles[strings.ToLower(get(rec, "role"))]
 		if !ok {
-			row.Problems = append(row.Problems, "The role should be scholar, mentor, board or admin.")
+			row.Problems = append(row.Problems, "The role should be scholar, parent, mentor, board or admin.")
 			role = store.RoleScholar
 		} else if !canAssign(actor, role) {
 			row.Problems = append(row.Problems, "Only admins can add admins and board members.")
@@ -158,23 +180,90 @@ func (s *Server) parseImport(actor *store.User, text string) ([]*importRow, stri
 			row.Username, row.Generated = s.uniqueUsername(row.Name, taken), true
 		}
 		taken[row.Username] = true
-		for _, cn := range strings.FieldsFunc(get(rec, "classes"), func(r rune) bool { return r == ';' || r == '|' }) {
-			cn = strings.TrimSpace(cn)
-			if cn == "" {
-				continue
-			}
+		for _, cn := range splitList(get(rec, "classes")) {
 			if c, ok := byName[strings.ToLower(cn)]; ok {
 				row.Classes = append(row.Classes, c)
 			} else {
 				row.Problems = append(row.Problems, fmt.Sprintf("There's no current class called %q.", cn))
 			}
 		}
+		if role == store.RoleParent && len(row.Classes) > 0 {
+			row.Problems = append(row.Problems, "Parents aren't put in classes: they see their scholars' classes. Leave Classes empty.")
+		}
+		children[row] = splitList(get(rec, "children"))
+		if role == store.RoleScholar && len(children[row]) > 0 {
+			row.Problems = append(row.Problems, "A scholar can't be a parent. Leave \"Parent of\" empty, or change the role.")
+		}
 		rows = append(rows, row)
 	}
+	s.resolveChildren(rows, children)
 	if len(rows) == 0 {
 		return nil, "There's no one in the list, only the row of column names."
 	}
 	return rows, ""
+}
+
+// splitList splits a cell listing several things, like "History; Latin".
+func splitList(cell string) []string {
+	var out []string
+	for _, v := range strings.FieldsFunc(cell, func(r rune) bool { return r == ';' || r == '|' }) {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// resolveChildren finds the scholars each parent row names, by username or
+// name: scholars in the list first, then scholars already at the school.
+func (s *Server) resolveChildren(rows []*importRow, names map[*importRow][]string) {
+	inList := map[string][]*importRow{}
+	for _, row := range rows {
+		if row.Role == store.RoleScholar {
+			inList[strings.ToLower(row.Username)] = append(inList[strings.ToLower(row.Username)], row)
+			if n := strings.ToLower(row.Name); n != strings.ToLower(row.Username) {
+				inList[n] = append(inList[n], row)
+			}
+		}
+	}
+	var existing []*store.User
+	for _, row := range rows {
+		for _, name := range names[row] {
+			key := strings.ToLower(name)
+			if found := inList[key]; len(found) == 1 {
+				if !found[0].OK() {
+					row.Problems = append(row.Problems, fmt.Sprintf("%s's row has a problem, so they can't be linked yet.", found[0].Name))
+					continue
+				}
+				row.Children = append(row.Children, importChild{Name: found[0].Name, Row: found[0]})
+				continue
+			} else if len(found) > 1 {
+				row.Problems = append(row.Problems, fmt.Sprintf("More than one scholar in the list is called %q. Use their username.", name))
+				continue
+			}
+			if existing == nil {
+				existing, _ = s.store.ListUsers(store.UserFilter{Role: store.RoleScholar, Status: "all"})
+			}
+			var match []*store.User
+			for _, u := range existing {
+				if strings.EqualFold(u.Username, name) {
+					match = []*store.User{u}
+					break
+				}
+				if strings.EqualFold(u.DisplayName, name) {
+					match = append(match, u)
+				}
+			}
+			switch len(match) {
+			case 1:
+				row.Children = append(row.Children, importChild{Name: match[0].DisplayName, ID: match[0].ID})
+			case 0:
+				row.Problems = append(row.Problems, fmt.Sprintf("There's no scholar called %q, here or in the list.", name))
+			default:
+				row.Problems = append(row.Problems, fmt.Sprintf("More than one scholar is called %q. Use their username.", name))
+			}
+		}
+	}
 }
 
 // usernameFrom makes a username like "ann.adams" from a name.
@@ -241,7 +330,7 @@ type importData struct {
 }
 
 type importedPerson struct {
-	Name, Username, Role, Password, Classes string
+	Name, Username, Role, Password, Classes, Children string
 }
 
 func (s *Server) handleImportForm(w http.ResponseWriter, r *http.Request) {
@@ -287,7 +376,7 @@ func (s *Server) handleImportCreate(w http.ResponseWriter, r *http.Request) {
 	d := importData{URL: s.baseURL(r)}
 	var out bytes.Buffer
 	cw := csv.NewWriter(&out)
-	_ = cw.Write([]string{"Name", "Username", "Temporary password", "Role", "Classes"})
+	_ = cw.Write([]string{"Name", "Username", "Temporary password", "Role", "Classes", "Parent of"})
 	for _, row := range rows {
 		if !row.OK() {
 			continue
@@ -306,6 +395,7 @@ func (s *Server) handleImportCreate(w http.ResponseWriter, r *http.Request) {
 			s.serverError(w, r, "creating person", err)
 			return
 		}
+		row.created = u.ID
 		classRole := store.ClassScholar
 		if u.IsMentor() {
 			classRole = store.ClassMentor
@@ -316,9 +406,26 @@ func (s *Server) handleImportCreate(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		p := importedPerson{Name: u.DisplayName, Username: u.Username, Role: u.RoleLabel(), Password: temp, Classes: row.ClassNames()}
+		p := importedPerson{Name: u.DisplayName, Username: u.Username, Role: u.RoleLabel(), Password: temp, Classes: row.ClassNames(),
+			Children: row.ChildNames()}
 		d.Created = append(d.Created, p)
-		_ = cw.Write([]string{p.Name, p.Username, p.Password, p.Role, p.Classes})
+		_ = cw.Write([]string{p.Name, p.Username, p.Password, p.Role, p.Classes, p.Children})
+	}
+	// Link parents once their scholars exist.
+	for _, row := range rows {
+		for _, c := range row.Children {
+			id := c.ID
+			if c.Row != nil {
+				id = c.Row.created
+			}
+			if row.created == 0 || id == 0 {
+				continue
+			}
+			if _, err := s.store.LinkParent(row.created, id); err != nil && !errors.Is(err, store.ErrNotScholar) {
+				s.serverError(w, r, "linking parent", err)
+				return
+			}
+		}
 	}
 	cw.Flush()
 	d.CSV = out.String()

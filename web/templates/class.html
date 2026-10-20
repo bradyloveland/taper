@@ -62,10 +62,17 @@
   {{if .D.Mentors}}
   <ul class="people">{{range .D.Mentors}}<li>{{template "person-chip" (pair . $.D.Access.ShowAccount)}}</li>{{end}}</ul>
   {{else}}<p class="muted">None yet.</p>{{end}}
+  {{if .D.Access.Parent}}
+  <h2>Your scholar{{if gt (len .D.Children) 1}}s{{end}} here</h2>
+  <ul class="people">{{range .D.Children}}<li>{{template "person-chip" (pair . false)}}</li>{{end}}</ul>
+  {{if not .D.Access.ShowAccount}}<p class="muted small">{{len .D.Scholars}} scholar{{if ne (len .D.Scholars) 1}}s{{end}} in the class.</p>{{end}}
+  {{end}}
+  {{if or (not .D.Access.Parent) .D.Access.ShowAccount}}
   <h2>Scholars <span class="muted">({{len .D.Scholars}})</span></h2>
   {{if .D.Scholars}}
   <ul class="people">{{range .D.Scholars}}<li>{{template "person-chip" (pair . $.D.Access.ShowAccount)}}</li>{{end}}</ul>
   {{else}}<p class="muted">None yet.</p>{{end}}
+  {{end}}
 </section>
 </div>
 </div>

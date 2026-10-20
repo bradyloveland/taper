@@ -14,7 +14,7 @@
   {{range .D.Mine}}{{template "class-card" .}}{{end}}
 </div>
 {{else if not .D.ShowAll}}
-<div class="card empty"><p>You're not in any classes yet. Your mentors or an admin will add you.</p></div>
+<div class="card empty"><p>{{if eq .User.Role "parent"}}Your scholars' classes show here once an admin or the board links your children to your account.{{else}}You're not in any classes yet. Your mentors or an admin will add you.{{end}}</p></div>
 {{end}}
 {{end}}
 

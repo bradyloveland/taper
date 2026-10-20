@@ -12,6 +12,7 @@ commonwealth school. One school runs one copy on its own Debian server.
 | **Admin** | School leadership, the person who installs it | Everything a mentor can, plus: manage people and classes, the school calendar, settings, updates and bug-report setup |
 | **Board** | The school's board | Everything an admin does for the school (classes, calendars, assignments, every chat, mentors and scholars), but not the server, or admin and board accounts |
 | **Mentor** | Teachers | Run their classes: class calendar, assignments, feedback, class chat moderation |
+| **Parent** | Parents and guardians | Follow their scholars' classes, calendars and work, and turn work in for them. Anyone who isn't a scholar can be linked as a parent |
 | **Scholar** | Students | See their classes and calendars, work on and turn in assignments, take part in chat |
 
 There are no letter grades. TJEd mentors give written feedback, and an
@@ -144,6 +145,8 @@ updated documentation, and passes `make check`, before it's opened for review.
 - Live updates, unread counts, and notifications in the app.
 - Mentors moderate their class channels and admins moderate everything (delete messages, mute).
 - Admins can turn channels off.
+- A Parent role (added after M7, before 0.7.0): parents are linked to their scholars, see
+  their classes and work on a home-page card per scholar, and can turn work in for them.
 
 ### M8: polish and 1.0
 - Notifications: in the app, by email (each person chooses), and web push where the phone supports it.

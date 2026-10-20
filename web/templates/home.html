@@ -9,7 +9,20 @@
 {{with .D.Unsent}}<div class="flash flash-warn" role="status">{{.}} problem report{{if gt . 1}}s{{end}} from your school {{if gt . 1}}aren't{{else}}isn't{{end}} on GitHub yet. <a href="/admin/reports">See reports</a></div>{{end}}
 {{end}}
 
-{{if .D.Classes}}
+{{range .D.Children}}
+<section class="card child-card">
+  <div class="row-head"><h2><span class="avatar small" aria-hidden="true">{{.Scholar.Initials}}</span> {{.Scholar.DisplayName}}</h2><span class="muted small">{{.Classes}} class{{if ne .Classes 1}}es{{end}}</span></div>
+  {{if .Items}}
+  <ul class="agenda-list">{{range .Items}}{{template "assign-item" (pair . false)}}{{end}}</ul>
+  {{else if .Classes}}
+  <p class="muted">Nothing to do right now, and nothing waiting for a mentor. Each class's page lists all its assignments.</p>
+  {{else}}
+  <p class="muted">{{.Scholar.DisplayName}} isn't in any classes yet.</p>
+  {{end}}
+</section>
+{{end}}
+
+{{if .D.InClass}}
 <section class="card" id="assignments">
   <h2>Assignments</h2>
   {{if .D.Mentored}}
@@ -47,7 +60,13 @@
 {{else if not .User.IsLeader}}
 <section class="card">
   <h2>Your classes</h2>
-  {{if .User.IsMentor}}
+  {{if eq .User.Role "parent"}}
+  {{if .D.Children}}
+  <p class="muted">Your scholars aren't in any classes yet.</p>
+  {{else}}
+  <p class="muted">No scholars are linked to your account yet. Ask an admin or the board to link your children to you.</p>
+  {{end}}
+  {{else if .User.IsMentor}}
   <p class="muted">You're not mentoring any classes yet. An admin adds mentors to classes. <a href="/classes">See all classes</a>.</p>
   {{else}}
   <p class="muted">You're not in any classes yet. Your mentors or an admin will add you.</p>
@@ -60,6 +79,7 @@
   <a class="stat card" href="/classes"><span class="stat-num">{{.D.NClasses}}</span><span class="stat-label">Classes</span></a>
   <a class="stat card" href="/admin/people?role=mentor"><span class="stat-num">{{index .D.Counts "mentor"}}</span><span class="stat-label">Mentors</span></a>
   <a class="stat card" href="/admin/people?role=scholar"><span class="stat-num">{{index .D.Counts "scholar"}}</span><span class="stat-label">Scholars</span></a>
+  <a class="stat card" href="/admin/people?role=parent"><span class="stat-num">{{index .D.Counts "parent"}}</span><span class="stat-label">Parents</span></a>
 </section>
 
 <section class="card">
@@ -68,6 +88,7 @@
     <li class="{{if gt (index .D.Counts "mentor") 0}}done{{end}}"><a href="/admin/people/new?role=mentor">Add your mentors</a> <span class="muted">and give each one their temporary password.</span></li>
     <li class="{{if gt (index .D.Counts "scholar") 0}}done{{end}}"><a href="/admin/people/new?role=scholar">Add your scholars</a>, or <a href="/admin/people/import">import them from a spreadsheet</a>.</li>
     <li class="{{if gt .D.NClasses 0}}done{{end}}"><a href="/classes/new">Create your classes</a> <span class="muted">and add their mentors and scholars.</span></li>
+    <li class="{{if gt (index .D.Counts "parent") 0}}done{{end}}"><a href="/admin/people/new?role=parent">Add parents</a> <span class="muted">and link each one to their scholars, so they can follow their work.</span></li>
     <li><a href="/guide/phone-app">Show everyone how to add Taper to their phone</a>.</li>
     <li><a href="/chat">Say hello in the Community chat</a> <span class="muted">so everyone knows where to find it. <a href="/guide/chat">How chat works</a>.</span></li>
   </ol>

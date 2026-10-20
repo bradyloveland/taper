@@ -25,6 +25,19 @@ All notable changes to Taper are recorded here. The format follows
   and manage mentors and scholars, but not admin or board accounts or the server (settings,
   updates, network, email, backups). Two-step sign-in can be required for board members.
 
+- The **Parent** role. Admins and the board link parents to their scholars on either one's
+  page, or with a **Parent of** column when importing a spreadsheet. Anyone who isn't a
+  scholar can be a parent, so mentors and board members with children at the school don't
+  need a second account. Parents:
+  - see a card for each scholar on their home page, with work to do, sent back, or waiting
+    for a mentor;
+  - see their scholars' classes (without the other scholars' names), calendars and
+    calendar feeds, assignments, work and feedback;
+  - can write, attach files, turn in and take back work **for** their scholar. The work's
+    history says the parent did it;
+  - read Community and talk in their scholars' class chats.
+  Two-step sign-in can be required for parents.
+
 ## [0.6.0] - 2026-10-07
 
 ### Changed

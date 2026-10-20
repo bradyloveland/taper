@@ -29,7 +29,7 @@
     <select id="role" name="role" aria-describedby="role-help">
       {{range .D.Roles}}<option value="{{.}}" {{if eq . $.D.Form.role}}selected{{end}}>{{roleLabel .}}</option>{{end}}
     </select>
-    <p id="role-help" class="help">Scholars take part in classes. Mentors run classes. Board members see and run every class, calendar and chat, and manage mentors and scholars. Admins can do all that and also look after the server and its settings.</p>
+    <p id="role-help" class="help">Scholars take part in classes. Parents follow their scholars' classes and work, and can turn work in for them. Mentors run classes. Board members see and run every class, calendar and chat, and manage mentors, parents and scholars. Admins can do all that and also look after the server and its settings.</p>
     {{end}}
 
     {{if and (not .D.IsNew) (not .D.Self)}}
@@ -50,8 +50,30 @@
 <section class="card">
   <h2>Classes</h2>
   {{if .D.Classes}}
-  <ul class="list">{{range .D.Classes}}<li class="list-row"><span class="dot c-{{.Color}}" aria-hidden="true"></span><a href="/classes/{{.ID}}">{{.Name}}</a> <span class="muted small">{{if eq .MyRole "mentor"}}mentor{{else}}scholar{{end}}</span></li>{{end}}</ul>
+  <ul class="list">{{range .D.Classes}}<li class="list-row"><span class="dot c-{{.Color}}" aria-hidden="true"></span><a href="/classes/{{.ID}}">{{.Name}}</a> <span class="muted small">{{if eq .MyRole "parent"}}parent of {{.ChildNames}}{{else}}{{.MyRole}}{{end}}</span></li>{{end}}</ul>
   {{else}}<p class="muted">Not in any current classes. Add people to a class from the class's Members page.</p>{{end}}
+  <h2 class="section-gap" id="family">{{if eq .D.Person.Role "scholar"}}Parents{{else}}Parent of{{end}}</h2>
+  {{if .D.Family}}
+  <ul class="list">{{range .D.Family}}<li class="list-row family-row"><span class="avatar small" aria-hidden="true">{{.Initials}}</span><a href="/admin/people/{{.ID}}">{{.DisplayName}}</a> <span class="muted small">{{lower .RoleLabel}}{{if not .Active}} · can't sign in{{end}}</span>
+    <form method="post" action="/admin/people/{{$.D.Person.ID}}/family/{{.ID}}/remove" class="inline-form" data-confirm="Unlink {{.DisplayName}}?">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="link-button danger-text">Unlink</button>
+    </form></li>{{end}}</ul>
+  {{else}}
+  <p class="muted">{{if eq .D.Person.Role "scholar"}}No parents linked yet. Parents see this scholar's classes and work, and can turn work in for them.{{else}}Not linked to any scholars. Link {{.D.Form.display_name}} to their children so they can follow their classes and work.{{end}}</p>
+  {{end}}
+  {{if .D.Candidates}}
+  <form method="post" action="/admin/people/{{.D.Person.ID}}/family/add" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="family-person">{{if eq .D.Person.Role "scholar"}}Add a parent{{else}}Add a scholar{{end}}</label>
+    <select id="family-person" name="person" required aria-describedby="family-help">
+      <option value="">Choose…</option>
+      {{range .D.Candidates}}<option value="{{.ID}}">{{.DisplayName}} ({{if eq $.D.Person.Role "scholar"}}{{lower .RoleLabel}}, {{end}}{{.Username}})</option>{{end}}
+    </select>
+    <p id="family-help" class="help">{{if eq .D.Person.Role "scholar"}}Anyone who isn't a scholar can be a parent, including mentors and board members.{{else}}They'll see the scholar's classes, assignments and feedback.{{end}}</p>
+    <button type="submit" class="button">Link</button>
+  </form>
+  {{end}}
+
   <h2 class="section-gap">Password</h2>
   {{if .D.Person.MustChangePassword}}
   <p><span class="badge warn">Temporary password</span> They haven't chosen their own password yet.</p>

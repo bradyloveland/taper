@@ -27,6 +27,7 @@ type mfaPolicy struct {
 	Admin   bool `json:"admin"`
 	Board   bool `json:"board"`
 	Mentor  bool `json:"mentor"`
+	Parent  bool `json:"parent"`
 	Scholar bool `json:"scholar"`
 }
 
@@ -46,6 +47,8 @@ func (s *Server) mfaRequired(u *store.User) bool {
 		return p.Board
 	case store.RoleMentor:
 		return p.Mentor
+	case store.RoleParent:
+		return p.Parent
 	case store.RoleScholar:
 		return p.Scholar
 	}
@@ -353,12 +356,12 @@ func (s *Server) handlePersonTwoStepOff(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) handleSecuritySave(w http.ResponseWriter, r *http.Request) {
 	p := mfaPolicy{Admin: r.PostFormValue("admin") == "1", Board: r.PostFormValue("board") == "1", Mentor: r.PostFormValue("mentor") == "1",
-		Scholar: r.PostFormValue("scholar") == "1"}
+		Parent: r.PostFormValue("parent") == "1", Scholar: r.PostFormValue("scholar") == "1"}
 	if err := s.store.SetSetting(settingRequireMFA, p); err != nil {
 		s.serverError(w, r, "saving security settings", err)
 		return
 	}
-	slog.Info("two-step sign-in policy saved", "by", current(r).user.Username, "admin", p.Admin, "board", p.Board, "mentor", p.Mentor, "scholar", p.Scholar)
+	slog.Info("two-step sign-in policy saved", "by", current(r).user.Username, "admin", p.Admin, "board", p.Board, "mentor", p.Mentor, "parent", p.Parent, "scholar", p.Scholar)
 	msg := "Saved."
 	if s.mfaRequired(current(r).user) && !current(r).user.TOTPEnabled {
 		msg = "Saved. Set up two-step sign-in for yourself now."
