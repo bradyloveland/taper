@@ -7,6 +7,16 @@ All notable changes to Taper are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Notifications** (the start of milestone 8). A bell in the top bar shows what's new:
+  - new assignments (when they're published, including ones set to publish later);
+  - work turned in (for mentors), and feedback, Complete and Return (for scholars and their
+    parents), combined per assignment until looked at;
+  - work due tomorrow and not turned in, from 3 PM the day before;
+  - chat messages, combined per chat until it's opened;
+  - new, changed and cancelled calendar events.
+  Each person chooses the kinds they want under **My account → Notifications**, and can turn
+  on **email**: one for each notification, or a summary each evening. Emails link to Taper
+  and don't include what anyone wrote. Notifications are kept for 60 days.
 - A **label under the logo** for copies of Taper that aren't a school's real one: **Dev** on
   development builds, **Beta** on pre-releases, or any word set with the installer's
   `--label` option (`TAPER_LABEL`). It's also at the start of the browser tab's title. A

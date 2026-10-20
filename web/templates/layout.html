@@ -35,6 +35,11 @@
       <a href="/classes" {{if eq .Section "classes"}}aria-current="page"{{end}}>Classes</a>
       <a href="/chat" {{if eq .Section "chat"}}aria-current="page"{{end}}>Chat<span class="nav-badge" data-chat-badge {{if not .ChatUnread}}hidden{{end}} aria-label="{{.ChatUnread}} unread">{{.ChatUnread}}</span></a>
     </nav>
+    <a class="bell{{if eq .Section "notifications"}} current{{end}}" href="/notifications" title="Notifications">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="sr-only">Notifications</span>
+      <span class="nav-badge bell-badge" data-notice-badge {{if not .Notices}}hidden{{end}} aria-label="{{.Notices}} unread">{{.Notices}}</span>
+    </a>
     <details class="menu" data-menu>
       <summary class="menu-button{{if or (eq .Section "account") (eq .Section "guide") (adminSection .Section)}} current{{end}}" title="{{.User.DisplayName}}">
         <span class="avatar" aria-hidden="true">{{.User.Initials}}</span><span class="sr-only">Account menu for {{.User.DisplayName}}</span>

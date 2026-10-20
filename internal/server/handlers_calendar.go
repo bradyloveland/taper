@@ -637,6 +637,7 @@ func (s *Server) handleEventCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Info("event created", "by", u.Username, "event", e.ID, "class", classID)
+	s.notifyEvent(e, "new event", "", u.ID)
 	s.redirect(w, r, fmt.Sprintf("/events/%d?date=%s", e.ID, e.StartDate), e.Title+" is on the calendar.")
 }
 
@@ -672,6 +673,7 @@ func (s *Server) handleEventUpdate(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, "saving event", err)
 		return
 	}
+	s.notifyEvent(&updated, "changed", "", current(r).user.ID)
 	s.redirect(w, r, fmt.Sprintf("/events/%d?date=%s", e.ID, updated.StartDate), "Saved.")
 }
 
@@ -699,6 +701,7 @@ func (s *Server) handleEventDelete(w http.ResponseWriter, r *http.Request) {
 			s.serverError(w, r, "removing a date", err)
 			return
 		}
+		s.notifyEvent(e, "cancelled", date, current(r).user.ID)
 		t, _ := cal.ParseDate(date)
 		s.redirect(w, r, back, e.Title+" on "+t.Format("Monday, January 2")+" is removed. The other dates stay.")
 		return
@@ -708,6 +711,7 @@ func (s *Server) handleEventDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Info("event deleted", "by", current(r).user.Username, "event", e.ID)
+	s.notifyEvent(e, "cancelled", "", current(r).user.ID)
 	s.redirect(w, r, back, e.Title+" is deleted.")
 }
 

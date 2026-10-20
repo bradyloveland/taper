@@ -77,6 +77,9 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 // ----------------------------------------------------------------- account
 
 type accountData struct {
+	Prefs         *store.NotifyPrefs
+	Kinds         []noticeKind
+	EmailReady    bool // the school has set up email
 	Sessions      []*store.Session
 	Current       string
 	ProfileError  string
@@ -91,6 +94,11 @@ func (s *Server) renderAccount(w http.ResponseWriter, r *http.Request, status in
 		return
 	}
 	d.Sessions, d.Current = list, ri.sess.TokenHash
+	if d.Prefs, err = s.store.GetNotifyPrefs(ri.user.ID); err != nil {
+		s.serverError(w, r, "loading notification choices", err)
+		return
+	}
+	d.Kinds, d.EmailReady = noticeKinds(ri.user), s.emailReady()
 	s.render(w, r, status, "account", "My account", "account", d)
 }
 

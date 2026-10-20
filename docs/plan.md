@@ -149,10 +149,14 @@ updated documentation, and passes `make check`, before it's opened for review.
   their classes and work on a home-page card per scholar, and can turn work in for them.
 
 ### M8: polish and 1.0
-- Notifications: in the app, by email (each person chooses), and web push where the phone supports it.
+M8 comes in several pull requests:
+- Notifications in the app and by email (each person chooses: each one, or a daily
+  summary), for assignments, work and feedback, work due tomorrow, chat and calendar
+  changes. *(First.)*
+- Web push where the phone supports it.
 - Passkeys (sign in with Face ID or a fingerprint).
 - Accessibility check, performance, a full guide with screenshots.
 - Tested upgrade path from every pre-release, then **1.0.0**.
 
-Later ideas, not planned yet: parent accounts, portfolios, direct messages,
+Later ideas, not planned yet: portfolios, direct messages,
 attendance, a school library or reading lists.
