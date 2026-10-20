@@ -68,8 +68,10 @@ func (s *Server) checkDaily() bool {
 	return on
 }
 
-// Run does background work until ctx ends: the daily check for updates.
+// Run does background work until ctx ends: notifications that go at set
+// times, and the daily check for updates.
 func (s *Server) Run(ctx context.Context) {
+	go s.runNotices(ctx)
 	first := time.After(2 * time.Minute)
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()

@@ -30,6 +30,7 @@ type pageData struct {
 	User       *store.User
 	Flash      *flash
 	ChatUnread int    // unread chat messages, for the menu
+	Notices    int    // unread notifications, for the bell
 	Label      string // "Dev", "Beta"…: shown under the logo on copies that aren't a school's real one
 	D          any
 }
@@ -145,6 +146,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, status int, page
 			pd.User = ri.user
 			if !ri.user.MustChangePassword {
 				pd.ChatUnread = s.chatUnread(ri.user)
+				pd.Notices, _ = s.store.UnreadNotifications(ri.user.ID)
 			}
 		}
 	}

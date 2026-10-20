@@ -14,7 +14,7 @@
     <input id="display_name" name="display_name" required maxlength="100" autocomplete="name" value="{{.User.DisplayName}}">
     <label for="email">Email <span class="muted">(optional)</span></label>
     <input id="email" name="email" type="email" maxlength="200" autocomplete="email" value="{{.User.Email}}">
-    <p class="help">Only people at your school who manage accounts can see it. Taper doesn't send email yet.</p>
+    <p class="help">Only people at your school who manage accounts can see it. It's used to reset your password, and for notifications if you choose.</p>
     <button type="submit" class="button primary">Save profile</button>
   </form>
 </section>
@@ -36,6 +36,29 @@
   </form>
 </section>
 </div>
+
+<section class="card" id="notifications">
+  <h2>Notifications</h2>
+  <form method="post" action="/account/notifications" class="form">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <fieldset class="choices">
+      <legend>Tell me about</legend>
+      {{range .D.Kinds}}
+      <label class="check"><input type="checkbox" name="kind_{{.Key}}" value="1" {{if $.D.Prefs.Wants .Key}}checked{{end}}><span><strong>{{.Label}}</strong><br><span class="muted small">{{.Help}}</span></span></label>
+      {{end}}
+    </fieldset>
+    <fieldset class="choices">
+      <legend>Email</legend>
+      <label class="check"><input type="radio" name="email" value="off" {{if eq .D.Prefs.Email "off"}}checked{{end}}><span><strong>No email</strong>: only in Taper, under the bell</span></label>
+      <label class="check"><input type="radio" name="email" value="each" {{if eq .D.Prefs.Email "each"}}checked{{end}} {{if not .User.Email}}disabled{{end}}><span><strong>An email for each one</strong></span></label>
+      <label class="check"><input type="radio" name="email" value="daily" {{if eq .D.Prefs.Email "daily"}}checked{{end}} {{if not .User.Email}}disabled{{end}}><span><strong>A summary each evening</strong>, when there's something new</span></label>
+      {{if not .User.Email}}<p class="help">Add your email address under Profile to get notifications by email.</p>
+      {{else if not .D.EmailReady}}<p class="help">Your school hasn't set up email yet, so nothing is sent until an admin does.</p>
+      {{else}}<p class="help">Emails go to {{.User.Email}}. They say what happened, with a link, but not what was written.</p>{{end}}
+    </fieldset>
+    <button type="submit" class="button primary">Save notifications</button>
+  </form>
+</section>
 
 <section class="card">
   <h2>Two-step sign-in</h2>

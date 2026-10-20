@@ -229,6 +229,11 @@
     if (badge) { badge.textContent = n; badge.hidden = !(n > 0); badge.setAttribute('aria-label', n + ' unread'); }
     if (dot) dot.hidden = !(n > 0);
   };
+  const bell = document.querySelector('[data-notice-badge]');
+  const showNotices = (n) => {
+    if (!bell || typeof n !== 'number') return;
+    bell.textContent = n; bell.hidden = !(n > 0); bell.setAttribute('aria-label', n + ' unread');
+  };
 
   const chat = document.querySelector('[data-chat]');
   if (chat) {
@@ -405,12 +410,14 @@
     document.addEventListener('click', (e) => {
       document.querySelectorAll('.msg-menu[open], .chat-tools[open]').forEach((d) => { if (!d.contains(e.target)) d.open = false; });
     });
-  } else if (badge) {
-    // Elsewhere, check for new messages now and then.
+  }
+  if (badge || bell) {
+    // Check for new messages and notifications now and then. (In a chat, its
+    // own stream keeps the chat count up to date too.)
     const poll = () => {
       if (document.hidden) return;
       fetch('/chat/unread', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-        .then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) showUnread(j.total); }).catch(() => {});
+        .then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) { showUnread(j.total); showNotices(j.notices); } }).catch(() => {});
     };
     setInterval(poll, 60000);
     document.addEventListener('visibilitychange', poll);

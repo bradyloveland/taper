@@ -13,8 +13,8 @@ Open **Settings → Email**.
 - **Notices to admins**, if turned on: a new version of Taper is out, an update
   was undone because it didn't start, and someone reported a problem. They go to
   admins who have an email address on their account.
-- Later versions add notices about assignments and messages. Each person will be
-  able to turn those off.
+- **Notifications**, for people who choose them under My account: an email
+  for each one, or a summary each evening. See [Notifications](notifications.md).
 
 ## Setting it up
 

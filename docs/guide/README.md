@@ -12,6 +12,7 @@ on GitHub.
 - [Classes](classes.md): your classes, and how admins and mentors set them up.
 - [Assignments](assignments.md): setting work, turning it in, and feedback without grades.
 - [Chat](chat.md): the community and class chats, and keeping them friendly.
+- [Notifications](notifications.md): the bell, what you're told about, and getting notifications by email.
 - [Calendars](calendar.md): the school and class calendars, adding events, and subscribing in Google, Apple or Outlook.
 - [Your account](account.md): your name, password, and signing out on other devices.
 - [Two-step sign-in](two-step.md): add a code from your phone, and what to do if you lose it.
@@ -29,5 +30,5 @@ on GitHub.
 
 ## Coming in later versions
 
-Notifications by email and on your phone, and signing in with a passkey. See
+Notifications on your phone's lock screen, and signing in with a passkey. See
 the [plan and milestones](../plan.md).

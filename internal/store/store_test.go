@@ -1003,3 +1003,51 @@ func TestParentsMigration(t *testing.T) {
 		t.Fatalf("relation after deactivating: %q", role)
 	}
 }
+
+// TestNotificationsMigration checks that assignments published before
+// notifications existed aren't announced all at once after the upgrade.
+func TestNotificationsMigration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "old.db")
+	s, err := openTo(path, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ann := &User{Username: "ann", DisplayName: "Ann", Role: RoleMentor, PasswordHash: "h", Active: true}
+	s.CreateUser(ann)
+	c := &Class{Name: "Logic", Color: "blue"}
+	s.CreateClass(c)
+	old := &Assignment{ClassID: c.ID, Title: "Old", PublishAt: 1, CreatedBy: ann.ID}
+	later := &Assignment{ClassID: c.ID, Title: "Later", PublishAt: 4102444800, CreatedBy: ann.ID} // 2100
+	draft := &Assignment{ClassID: c.ID, Title: "Draft", CreatedBy: ann.ID}
+	for _, a := range []*Assignment{old, later, draft} {
+		if err := s.CreateAssignment(a); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.Close()
+
+	s, err = Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	list, err := s.UnannouncedAssignments(4102444801)
+	if err != nil || len(list) != 1 || list[0].Title != "Later" {
+		t.Fatalf("to announce: %v %v", list, err)
+	}
+
+	// Combining, and kinds turned off.
+	s.SetNotifyPrefs(&NotifyPrefs{UserID: ann.ID, Email: EmailEach, Off: map[string]bool{NotifyCalendar: true}})
+	n := Notice{Kind: NotifyChat, Ref: "chat:1", Title: "Bo wrote in 100% Logic", Many: "{n} new messages in 100% Logic"}
+	if mail, err := s.Notify(n, []int64{ann.ID}); err != nil || len(mail) != 1 {
+		t.Fatalf("first: %v %v", mail, err)
+	}
+	if mail, _ := s.Notify(n, []int64{ann.ID}); len(mail) != 0 {
+		t.Fatal("a combined notice isn't emailed again")
+	}
+	s.Notify(Notice{Kind: NotifyCalendar, Title: "Picnic"}, []int64{ann.ID})
+	got, _ := s.ListNotifications(ann.ID, 10)
+	if len(got) != 1 || got[0].Title != "2 new messages in 100% Logic" || got[0].Count != 2 {
+		t.Fatalf("notifications: %+v", got)
+	}
+}

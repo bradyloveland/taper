@@ -375,7 +375,9 @@ func (s *Server) fillLatest(list []chanItem) {
 }
 
 func (s *Server) handleChatUnread(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]int{"total": s.chatUnread(current(r).user)})
+	u := current(r).user
+	n, _ := s.store.UnreadNotifications(u.ID)
+	writeJSON(w, http.StatusOK, map[string]int{"total": s.chatUnread(u), "notices": n})
 }
 
 // ------------------------------------------------------------- messages
@@ -580,6 +582,9 @@ func (s *Server) renderChannel(w http.ResponseWriter, r *http.Request, status in
 			if err := s.store.MarkRead(u.ID, a.Ch.ID, d.LastID); err != nil {
 				s.logError(r, "marking read", err)
 			}
+			if err := s.store.MarkRefRead(u.ID, chatRef(a.Ch.ID)); err != nil {
+				s.logError(r, "marking notifications read", err)
+			}
 		}
 	}
 	if d.Channels, err = s.myChannels(u, true); err != nil {
@@ -670,6 +675,7 @@ func (s *Server) handleChatPost(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.store.MarkRead(u.ID, a.Ch.ID, m.ID)
 	s.chat.publish(a.Ch.ID, chatEvent{ID: m.ID, New: true})
+	s.notifyMessage(a.Ch, a.Name, u)
 	if wantsJSON(r) {
 		html, err := s.fragment(s.viewer(r, a).view(m))
 		if err != nil {
@@ -833,6 +839,9 @@ func (s *Server) handleChatRead(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.store.MarkRead(current(r).user.ID, a.Ch.ID, last); err != nil {
 		s.logError(r, "marking read", err)
+	}
+	if err := s.store.MarkRefRead(current(r).user.ID, chatRef(a.Ch.ID)); err != nil {
+		s.logError(r, "marking notifications read", err)
 	}
 	writeJSON(w, http.StatusOK, map[string]int{"total": s.chatUnread(current(r).user)})
 }

@@ -1,0 +1,25 @@
+{{define "content"}}
+<div class="page-head row">
+  <div>
+    <h1>Notifications</h1>
+    <p class="muted">{{if .D.Unread}}{{.D.Unread}} new.{{else}}You're all caught up.{{end}} <a href="/account#notifications">Choose what you're told, and by email</a>.</p>
+  </div>
+  {{if .D.Unread}}
+  <form method="post" action="/notifications/read"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit" class="button">Mark all as read</button></form>
+  {{end}}
+</div>
+<section class="card">
+  {{if .D.Items}}
+  <ul class="notice-list">
+    {{range .D.Items}}
+    <li><a class="notice{{if .Unread}} unread{{end}}" href="/notifications/{{.ID}}">
+      <span class="notice-dot" aria-hidden="true"></span>
+      <span class="notice-body"><span class="notice-title">{{.Title}}</span><span class="muted small">{{.When}}{{if .Unread}}<span class="sr-only"> · new</span>{{end}}</span></span>
+    </a></li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="muted">Nothing yet. You'll see new assignments, feedback, messages and calendar changes here.</p>
+  {{end}}
+</section>
+{{end}}

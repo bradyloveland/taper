@@ -724,6 +724,7 @@ func (s *Server) handleAssignmentCreate(w http.ResponseWriter, r *http.Request) 
 	case !a.Draft():
 		msg = a.Title + " is saved. Scholars see it from " + time.Unix(a.PublishAt, 0).In(s.loc()).Format("Monday, January 2 at 3:04 PM") + "."
 	}
+	s.announceAssignments(time.Now())
 	s.redirect(w, r, assignmentPath(a.ID), msg)
 }
 
@@ -786,6 +787,7 @@ func (s *Server) handleAssignmentUpdate(w http.ResponseWriter, r *http.Request) 
 		http.Redirect(w, r, assignmentPath(a.ID)+"/edit", http.StatusSeeOther)
 		return
 	}
+	s.announceAssignments(time.Now())
 	s.redirect(w, r, assignmentPath(a.ID), "Saved.")
 }
 
@@ -971,6 +973,11 @@ func (s *Server) handleWork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Info("work turned in", "by", u.Username, "scholar", t.Scholar.Username, "assignment", a.ID)
+	s.notifyTurnedIn(a, t.Scholar, u.ID)
+	if t.Parent { // the scholar hears that it was turned in for them
+		s.notify(store.Notice{Kind: store.NotifyWork, Title: a.Title + " was turned in for you by " + u.DisplayName,
+			Link: assignmentPath(a.ID) + "#work"}, []int64{t.Scholar.ID}, u.ID)
+	}
 	if t.Parent {
 		s.redirect(w, r, back, "Turned in for "+t.Scholar.DisplayName+". Their mentor will look at it.")
 		return
@@ -1213,6 +1220,11 @@ func (s *Server) handleReviewSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Info("work reviewed", "by", u.Username, "assignment", a.ID, "scholar", sch.Username, "status", to)
+	if to == store.WorkComplete {
+		s.notifyScholar(store.NotifyWork, a, sch, "is marked complete", u.ID)
+	} else {
+		s.notifyScholar(store.NotifyWork, a, sch, "needs another look: there's feedback", u.ID)
+	}
 	msg := sch.DisplayName + "'s work is marked Complete."
 	if to == store.WorkNeedsWork {
 		msg = sch.DisplayName + " will see your feedback and can turn it in again."
@@ -1267,6 +1279,9 @@ func (s *Server) handleReviewUndo(w http.ResponseWriter, r *http.Request, a *sto
 		return
 	}
 	slog.Info("work status undone", "by", u.Username, "assignment", a.ID, "scholar", sch.Username, "status", to)
+	if kind == store.WorkReturned {
+		s.notifyScholar(store.NotifyWork, a, sch, "was returned as not turned in, so it can be changed", u.ID)
+	}
 	s.redirect(w, r, back, msg)
 }
 
