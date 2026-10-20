@@ -1039,10 +1039,10 @@ func TestNotificationsMigration(t *testing.T) {
 	// Combining, and kinds turned off.
 	s.SetNotifyPrefs(&NotifyPrefs{UserID: ann.ID, Email: EmailEach, Off: map[string]bool{NotifyCalendar: true}})
 	n := Notice{Kind: NotifyChat, Ref: "chat:1", Title: "Bo wrote in 100% Logic", Many: "{n} new messages in 100% Logic"}
-	if mail, err := s.Notify(n, []int64{ann.ID}); err != nil || len(mail) != 1 {
+	if mail, changed, err := s.Notify(n, []int64{ann.ID}); err != nil || len(mail) != 1 || len(changed) != 1 {
 		t.Fatalf("first: %v %v", mail, err)
 	}
-	if mail, _ := s.Notify(n, []int64{ann.ID}); len(mail) != 0 {
+	if mail, changed, _ := s.Notify(n, []int64{ann.ID}); len(mail) != 0 || len(changed) != 1 || changed[0].Count != 2 {
 		t.Fatal("a combined notice isn't emailed again")
 	}
 	s.Notify(Notice{Kind: NotifyCalendar, Title: "Picnic"}, []int64{ann.ID})

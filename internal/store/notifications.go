@@ -171,19 +171,20 @@ func prefsFor(tx *sql.Tx, ids []int64) (map[int64]*NotifyPrefs, error) {
 // Notify tells each of the people about n, skipping those who turned its kind
 // off, and combining it with an unread notification with the same Ref. It
 // returns the new notifications that are to be emailed now (to people who
-// chose an email for each one).
-func (s *Store) Notify(n Notice, userIDs []int64) ([]*Notification, error) {
+// chose an email for each one), and every notification it made or changed,
+// for pushing to devices.
+func (s *Store) Notify(n Notice, userIDs []int64) (email, changed []*Notification, err error) {
 	if len(userIDs) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	tx, err := s.db.Begin()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer tx.Rollback()
 	prefs, err := prefsFor(tx, userIDs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	now := s.now()
 	var emailNow []*Notification
@@ -204,11 +205,13 @@ func (s *Store) Notify(n Notice, userIDs []int64) ([]*Notification, error) {
 				}
 				if _, err := tx.Exec(`UPDATE notifications SET count = count + 1, title = ?, link = ?, updated_at = ? WHERE id = ?`,
 					title, n.Link, now, id); err != nil {
-					return nil, err
+					return nil, nil, err
 				}
+				changed = append(changed, &Notification{ID: id, UserID: uid, Kind: n.Kind, Ref: n.Ref, Title: title, Link: n.Link,
+					Count: count + 1, UpdatedAt: now})
 				continue
 			} else if !errors.Is(err, sql.ErrNoRows) {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 		var emailed any = now
@@ -218,15 +221,17 @@ func (s *Store) Notify(n Notice, userIDs []int64) ([]*Notification, error) {
 		res, err := tx.Exec(`INSERT INTO notifications (user_id, kind, ref, title, link, created_at, updated_at, emailed_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, uid, n.Kind, n.Ref, n.Title, n.Link, now, now, emailed)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		id, _ := res.LastInsertId()
+		made := &Notification{ID: id, UserID: uid, Kind: n.Kind, Ref: n.Ref, Title: n.Title, Link: n.Link,
+			Count: 1, CreatedAt: now, UpdatedAt: now}
+		changed = append(changed, made)
 		if p.Email == EmailEach {
-			id, _ := res.LastInsertId()
-			emailNow = append(emailNow, &Notification{ID: id, UserID: uid, Kind: n.Kind, Ref: n.Ref, Title: n.Title, Link: n.Link,
-				Count: 1, CreatedAt: now, UpdatedAt: now})
+			emailNow = append(emailNow, made)
 		}
 	}
-	return emailNow, tx.Commit()
+	return emailNow, changed, tx.Commit()
 }
 
 // ListNotifications returns a person's latest notifications, newest first.

@@ -40,5 +40,29 @@ Emails say what happened and link to it. They don't include what anyone wrote,
 like messages or feedback; open Taper to read those. Emails only go out once
 an admin has set up [email](email.md) for the school.
 
-Notifications on your phone's lock screen (web push) are coming in a later
-version.
+## On your phone or computer
+
+Taper can put notifications on your lock screen, like other apps, and a count
+on its icon. Turn it on for each device you use:
+
+1. **On iPhone and iPad**, first add Taper to your Home Screen (see
+   [Taper on your phone](phone-app.md)) and open it from there. Apple only lets
+   home-screen apps show notifications (iOS 16.4 or later). On Android and
+   computers, any browser works.
+2. Open **My account → Notifications**, and under **On this device's lock
+   screen** select **Turn on for this device**.
+3. Allow notifications when your device asks.
+4. Select **Send a test** to check it works.
+
+What you're told about follows your choices above it. Several messages in one
+chat replace each other, so you see one notification, like "3 new messages in
+Latin I". Tap one to open what it's about.
+
+Notifications stop on a device when you sign out there, so a shared family
+tablet doesn't keep showing someone else's notifications. Sign in again and
+they start again. To stop them while staying signed in, select **Turn off for
+this device**.
+
+The notification goes through your device maker's push service (Apple, Google,
+Mozilla or Microsoft). It's encrypted for your device, so they can't read it.
+Taper needs a secure (https) address for this; ask an admin if it's missing.
