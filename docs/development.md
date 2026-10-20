@@ -27,6 +27,18 @@ make check   # gofmt, go vet, staticcheck, shellcheck, and go test -race ./...
 drives it like a browser (cookies, forms, CSRF tokens). Add tests there for every
 new page or form.
 
+`TestPerformance` fills a school of 641 people (60 classes, 1,800 assignments,
+31,000 pieces of work, 20,000 messages) and times the main pages for each kind
+of person, and writes that tell many people at once. It's slow to set up, so
+it only runs when asked:
+
+```bash
+TAPER_PERF=1 go test ./internal/server -run TestPerformance -v
+```
+
+On the dev VM every page answers in under 15 ms, and a Community post to
+everyone takes about 25 ms. The test fails if a page takes over 150 ms.
+
 CI also runs `scripts/ci-network-test.sh` (network changes from the web interface:
 confirm, restart, automatic undo, installer override) and `scripts/ci-update-test.sh`.
 It builds the release archives and runs `scripts/ci-install-test.sh` on a

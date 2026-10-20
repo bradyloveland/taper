@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"io/fs"
@@ -15,12 +17,13 @@ import (
 // pages can link to them with a long cache lifetime.
 type assets struct {
 	files  map[string][]byte // path under static/: content
+	gzips  map[string][]byte // compressed copies of text files, for browsers that accept gzip
 	hashes map[string]string // path: short hash
 	all    string            // hash of every file, for the service worker's cache name
 }
 
 func loadAssets(root fs.FS) (*assets, error) {
-	a := &assets{files: map[string][]byte{}, hashes: map[string]string{}}
+	a := &assets{files: map[string][]byte{}, gzips: map[string][]byte{}, hashes: map[string]string{}}
 	sub := mustFS(root, "static")
 	all := sha256.New()
 	var names []string
@@ -43,6 +46,15 @@ func loadAssets(root fs.FS) (*assets, error) {
 		sum := sha256.Sum256(b)
 		a.files[p] = b
 		a.hashes[p] = hex.EncodeToString(sum[:])[:10]
+		if compressible(p) {
+			var z bytes.Buffer
+			zw, _ := gzip.NewWriterLevel(&z, gzip.BestCompression)
+			zw.Write(b)
+			zw.Close()
+			if z.Len() < len(b) {
+				a.gzips[p] = z.Bytes()
+			}
+		}
 		all.Write([]byte(p))
 		all.Write(sum[:])
 	}
@@ -64,6 +76,17 @@ func (a *assets) precache() []string {
 	return []string{a.url("app.css"), a.url("app.js"), a.url("icons/icon.svg"), a.url("icons/icon-192.png")}
 }
 
+// compressible reports whether a static file is text worth compressing.
+// Only static files are compressed: pages carry a CSRF token alongside what
+// people type, which compression could leak (BREACH).
+func compressible(p string) bool {
+	switch path.Ext(p) {
+	case ".css", ".js", ".svg", ".json", ".txt", ".webmanifest":
+		return true
+	}
+	return false
+}
+
 func contentType(p string) string {
 	if t := mime.TypeByExtension(path.Ext(p)); t != "" {
 		return t
@@ -83,10 +106,22 @@ func (a *assets) serve(w http.ResponseWriter, r *http.Request, p string, immutab
 	} else {
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 	}
-	w.Header().Set("ETag", `"`+a.hashes[p]+`"`)
-	if r.Header.Get("If-None-Match") == `"`+a.hashes[p]+`"` {
+	z, zipped := a.gzips[p]
+	etag := `"` + a.hashes[p] + `"`
+	if zipped {
+		w.Header().Set("Vary", "Accept-Encoding")
+		if acceptsGzip(r) {
+			etag = `"` + a.hashes[p] + `-gz"`
+		}
+	}
+	w.Header().Set("ETag", etag)
+	if r.Header.Get("If-None-Match") == etag {
 		w.WriteHeader(http.StatusNotModified)
 		return
+	}
+	if zipped && acceptsGzip(r) {
+		w.Header().Set("Content-Encoding", "gzip")
+		b = z
 	}
 	_, _ = w.Write(b)
 }
@@ -110,4 +145,15 @@ func (a *assets) file(p string) http.HandlerFunc {
 		panic("unknown static file " + p)
 	}
 	return func(w http.ResponseWriter, r *http.Request) { a.serve(w, r, p, false) }
+}
+
+// acceptsGzip reports whether the browser takes gzip (every current one does).
+func acceptsGzip(r *http.Request) bool {
+	for _, part := range strings.Split(r.Header.Get("Accept-Encoding"), ",") {
+		enc, q, _ := strings.Cut(strings.TrimSpace(part), ";")
+		if strings.EqualFold(strings.TrimSpace(enc), "gzip") && strings.ReplaceAll(strings.TrimSpace(q), " ", "") != "q=0" {
+			return true
+		}
+	}
+	return false
 }

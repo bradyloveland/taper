@@ -155,7 +155,8 @@ M8 comes in several pull requests:
   changes. *(First.)*
 - Web push where the phone supports it, per device, tied to the session. *(Second.)*
 - Passkeys, counting as two-step sign-in. *(Third.)*
-- Accessibility check, performance, a full guide with screenshots.
+- Accessibility check, a full guide with screenshots.
+- Performance: a large-school test, and compressed static files. *(Done.)*
 - Tested upgrade path from every pre-release, then **1.0.0**.
 
 Later ideas, not planned yet: portfolios, direct messages,

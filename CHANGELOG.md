@@ -15,6 +15,11 @@ All notable changes to Taper are recorded here. The format follows
   Standard library only (ES256, EdDSA and RS256 keys, via `getPublicKey()`, so no CBOR).
 
 ### Changed
+- **Performance** (milestone 8): a new test times every main page against a school of 641
+  people with 1,800 assignments, 31,000 pieces of work and 20,000 messages. Every page
+  answers in under 15 ms on the test server, and a Community post that notifies everyone in
+  about 25 ms. Static files (styles, scripts, icons) are now sent compressed, about a quarter
+  of their size; pages aren't, so their security tokens can't be guessed through compression.
 - The top left now always says **Taper**, with the label after it on copies that aren't a
   school's real one (**Taper BETA**, **Taper DEV**). The school's name is on the sign-in page,
   in the account menu, in the footer, and under the home page's greeting, which now uses your
