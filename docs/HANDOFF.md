@@ -121,13 +121,30 @@ minutes), they're undone, so a school can't lock itself out from the browser.
 
 - **`main`** has M7 (PRs #12, #13) and the Parent role (PR #14).
 - **`release-0.7.0`** sets VERSION to `0.7.0`. After it merges, tag `v0.7.0`.
-- **Dev server:**
-  - Hostname `dev`, at 10.10.10.34:8088. Proxied as
-    https://taper-dev.ltekk.com by Nginx Proxy Manager.
-  - Runs the PR #13 build (not yet the parent role).
-  - Database backups taken before each deploy are in `/var/lib/taper/before-*.db`.
-  - Port **8099 on the dev VM is now used by the owner's `pbcm` program**. Use
-    another port, such as 8097, for throwaway test servers.
+- **Dev VM** (hostname `dev`, 10.10.10.34) runs two copies of Taper:
+
+  | | **Beta** | **Dev** |
+  |---|---|---|
+  | What | Official releases only, installed with the installer or Settings → Updates, as a school would | Builds of open pull requests, deployed by Claude for the owner to try before approving |
+  | Service | `taper` | `taper-dev` |
+  | Port | 8088 (https://taper-dev.ltekk.com through Nginx Proxy Manager, for now) | 8090 (needs its own proxy host) |
+  | Folders | `/opt/taper`, `/var/lib/taper`, `/etc/taper/taper.conf` | `/opt/taper-dev`, `/var/lib/taper-dev`, `/etc/taper-dev/taper.conf` |
+  | Label | `TAPER_LABEL=beta` (shown from 0.8.0) | `TAPER_LABEL=dev` |
+  | Commands | `sudo taper …` | `sudo taper-dev …` (wrapper with the dev settings) |
+
+  - Dev was cloned from beta on 2026-10-19 (database, `secret.key`, files), so it has
+    the same people and settings, including email and the public URL. Treat its data
+    as test data.
+  - **Deploying to dev:** build (`make build`; VERSION gives the version), then
+    `sudo systemctl stop taper-dev`, copy `taper.db` to
+    `/var/lib/taper-dev/before-<version>-<time>.db`,
+    `sudo install -o taper -g taper -m 755 bin/taper /opt/taper-dev/taper`, and
+    `sudo systemctl start taper-dev`. When several PRs are open, deploy a local merge
+    of them (branch `deploy-dev`, not pushed).
+  - `taper-dev rollback` checks whether the `taper` service is running, not
+    `taper-dev`; stop both before a manual rollback on dev. The automatic rollback
+    after a failed update works for both.
+  - Port **8099 is the owner's `pbcm` program**; 8097 is free for throwaway servers.
 - **Testing:**
   - `make check`: gofmt, vet, staticcheck, shellcheck, and tests with the race
     detector.
