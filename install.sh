@@ -13,6 +13,9 @@
 #   --http               Plain HTTP on every interface (the default for a new install)
 #   --port N             Port for plain HTTP or the reverse proxy (default 8088)
 #   --version X.Y.Z      Install this release instead of the newest one
+#   --label WORD         Show WORD (like beta or test) under the logo, so people
+#                        know this isn't the school's real copy; --label none
+#                        removes it
 #
 # Run it from an extracted release folder to install that copy, or on its own to
 # download the newest release from GitHub:
@@ -33,7 +36,7 @@ UNIT=/etc/systemd/system/taper.service
 say()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
 fail() { printf '\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
 
-NEW_MODE="" NEW_PORT="" NEW_DOMAIN="" NEW_EMAIL="" NEW_BIND="" NEW_PROXIES="" SET_BIND=0 SET_PROXIES=0
+NEW_MODE="" NEW_PORT="" NEW_DOMAIN="" NEW_EMAIL="" NEW_BIND="" NEW_PROXIES="" SET_BIND=0 SET_PROXIES=0 NEW_LABEL=""
 WANT_VERSION=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -43,6 +46,7 @@ while [[ $# -gt 0 ]]; do
     --proxy-ip) [[ $# -ge 2 ]] || fail "--proxy-ip needs an address"; NEW_MODE=proxy; NEW_BIND=""; NEW_PROXIES="127.0.0.1,::1,$2"; SET_BIND=1; SET_PROXIES=1; shift 2 ;;
     --http) NEW_MODE=http; SET_BIND=1; SET_PROXIES=1; shift ;;
     --port) [[ $# -ge 2 ]] || fail "--port needs a number"; NEW_PORT="$2"; shift 2 ;;
+    --label) [[ $# -ge 2 ]] || fail "--label needs a word, or none"; NEW_LABEL="$2"; shift 2 ;;
     --version) [[ $# -ge 2 ]] || fail "--version needs a version"; WANT_VERSION="${2#v}"; shift 2 ;;
     -h|--help) sed -n '2,22p' "${BASH_SOURCE[0]}" 2>/dev/null | sed 's/^# \{0,1\}//' || true; exit 0 ;;
     *) fail "Unknown option: $1 (see --help)" ;;
@@ -58,6 +62,9 @@ case "$(uname -m)" in
 esac
 if [[ -n "$NEW_PORT" ]] && ! [[ "$NEW_PORT" =~ ^[0-9]+$ && "$NEW_PORT" -ge 1 && "$NEW_PORT" -le 65535 ]]; then
   fail "--port must be a number from 1 to 65535."
+fi
+if [[ -n "$NEW_LABEL" ]] && ! [[ "$NEW_LABEL" =~ ^[A-Za-z0-9-]{1,12}$ ]]; then
+  fail "--label must be one word of up to 12 letters, numbers or dashes, like beta."
 fi
 if [[ "$NEW_MODE" == https ]] && ! [[ "$NEW_DOMAIN" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
   fail "--domain must be a public name like learn.example.org."
@@ -130,12 +137,15 @@ BIND="$(conf_get TAPER_BIND)"
 DOMAIN="$(conf_get TAPER_DOMAIN)"
 EMAIL="$(conf_get TAPER_EMAIL)"
 PROXIES="$(conf_get TAPER_TRUSTED_PROXIES)"
+LABEL="$(conf_get TAPER_LABEL)"
 [[ -n "$NEW_MODE" ]] && MODE="$NEW_MODE"
 [[ -n "$NEW_PORT" ]] && PORT="$NEW_PORT"
 [[ $SET_BIND -eq 1 ]] && BIND="$NEW_BIND"
 [[ $SET_PROXIES -eq 1 ]] && PROXIES="$NEW_PROXIES"
 [[ -n "$NEW_DOMAIN" ]] && DOMAIN="$NEW_DOMAIN"
 [[ -n "$NEW_EMAIL" ]] && EMAIL="$NEW_EMAIL"
+[[ -n "$NEW_LABEL" ]] && LABEL="$NEW_LABEL"
+[[ "$LABEL" == none ]] && LABEL=""
 [[ "$MODE" != https ]] && DOMAIN="" && EMAIL=""
 
 cat > "$CONF.new" <<EOF
@@ -157,6 +167,9 @@ TAPER_EMAIL=$EMAIL
 TAPER_TRUSTED_PROXIES=$PROXIES
 TAPER_DATA_DIR=$DATA_DIR
 TAPER_APP_DIR=$APP_DIR
+# A word shown under the logo, like beta, for a copy that isn't the school's real one.
+# Empty for none (development builds show Dev, and pre-releases Beta).
+TAPER_LABEL=$LABEL
 EOF
 chown root:"$USER_NAME" "$CONF.new"
 chmod 640 "$CONF.new"

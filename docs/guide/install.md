@@ -119,6 +119,7 @@ To go back to plain HTTP: `sudo /opt/taper/install.sh --http`.
 | `--http` | Plain HTTP on every interface |
 | `--port N` | Port for plain HTTP or the proxy (default 8088) |
 | `--version X.Y.Z` | Install a specific release |
+| `--label WORD` | Show a word like `beta` or `test` under the logo, for a copy that isn't the school's real one. `--label none` removes it. Development builds show **Dev** and pre-releases **Beta** on their own |
 
 Running the installer again keeps your data and settings. Only the options you
 pass change. The installer's settings are in `/etc/taper/taper.conf`. Settings
