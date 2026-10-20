@@ -1,0 +1,24 @@
+{{define "content"}}
+<p class="crumbs"><a href="/chat">Chat</a> /</p>
+<div class="page-head"><h1>New group chat</h1><p class="muted">A chat with its own name, for whoever you choose: a committee, the parents of a class, a project team.</p></div>
+<section class="card readable">
+  {{with .D.Error}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <form method="post" action="/chat/new" class="form picker">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="name">Name</label>
+    <input id="name" name="name" required maxlength="100" value="{{.D.Name}}" autofocus placeholder="Board of directors">
+    <label for="filter-people">People</label>
+    <input id="filter-people" type="search" placeholder="Type to find people" data-filter="list-people" autocomplete="off">
+    <ul class="pick-list" id="list-people">
+      {{range .D.Candidates}}
+      <li data-search="{{.Search}}"><label class="check"><input type="checkbox" name="user" value="{{.ID}}"><span>{{.DisplayName}} <span class="muted small">{{.Username}} · {{.RoleLabel}}</span></span></label></li>
+      {{end}}
+    </ul>
+    <p class="help">You're in it too. Admins and board members can always open it to help look after it, and you can add or remove people later.</p>
+    <div class="actions">
+      <button type="submit" class="button primary">Create chat</button>
+      <a class="button" href="/chat">Cancel</a>
+    </div>
+  </form>
+</section>
+{{end}}

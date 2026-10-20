@@ -17,13 +17,14 @@ out after 12 hours, or when the browser is closed.
 
 ## Who can do what
 
-Everyone at the school has one of three roles:
+Everyone at the school has one of four roles:
 
 | Role | Who | What they can do |
 |------|-----|------------------|
-| **Scholar** | Students | See their classes and calendar, work on and turn in assignments, and chat with their classes and the community |
+| **Scholar** | Students | See their classes and calendar, work on and turn in assignments, read Community, and chat with their classes and group chats |
 | **Mentor** | Teachers | Everything scholars can do, plus run their classes: post assignments, give feedback, add class events and look after class chat |
-| **Admin** | School leaders | Everything mentors can do, plus manage people and classes, the school calendar and settings |
+| **Board** | The school's board | See and run every class, calendar, assignment and chat; post in Community; make group chats; manage mentors and scholars |
+| **Admin** | School leaders | Everything the board can do, plus manage admin and board accounts, and the server: settings, updates, network, email and backups |
 
 Taper doesn't use letter grades. In the TJEd way, mentors give written feedback
 on scholars' work.

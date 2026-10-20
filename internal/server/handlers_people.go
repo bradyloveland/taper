@@ -10,6 +10,44 @@ import (
 	"github.com/bradyloveland/taper/internal/store"
 )
 
+// Admins manage everyone. Board members manage mentors and scholars, and
+// their own profile; only admins add or change admin and board accounts, so
+// a board member can't take over an admin's account.
+
+// assignableRoles lists the roles actor can give people.
+func assignableRoles(actor *store.User) []string {
+	if actor.IsAdmin() {
+		return store.Roles
+	}
+	return []string{store.RoleMentor, store.RoleScholar}
+}
+
+func canAssign(actor *store.User, role string) bool {
+	for _, r := range assignableRoles(actor) {
+		if r == role {
+			return true
+		}
+	}
+	return false
+}
+
+// canManage reports whether actor may change target's account.
+func canManage(actor, target *store.User) bool {
+	return actor.IsAdmin() || actor.ID == target.ID || !target.IsLeader()
+}
+
+// manageable loads the person in the URL if the signed-in person may change
+// their account.
+func (s *Server) manageable(w http.ResponseWriter, r *http.Request) *store.User {
+	u := s.person(w, r)
+	if u != nil && !canManage(current(r).user, u) {
+		s.renderError(w, r, http.StatusForbidden, "Only admins can change this account",
+			"Admin and board accounts are looked after by admins.")
+		return nil
+	}
+	return u
+}
+
 type peopleData struct {
 	Users  []*store.User
 	Filter store.UserFilter
@@ -46,25 +84,25 @@ type personData struct {
 
 func (s *Server) handlePersonNewForm(w http.ResponseWriter, r *http.Request) {
 	role := r.URL.Query().Get("role")
-	if !store.ValidRole(role) {
+	if !canAssign(current(r).user, role) {
 		role = store.RoleScholar
 	}
 	s.render(w, r, http.StatusOK, "person", "Add a person", "people",
-		personData{IsNew: true, Form: map[string]string{"role": role}, Roles: store.Roles})
+		personData{IsNew: true, Form: map[string]string{"role": role}, Roles: assignableRoles(current(r).user)})
 }
 
 func (s *Server) handlePersonCreate(w http.ResponseWriter, r *http.Request) {
 	form := formValues(r, "display_name", "username", "email", "role")
 	fail := func(msg string) {
 		s.render(w, r, http.StatusUnprocessableEntity, "person", "Add a person", "people",
-			personData{IsNew: true, Form: form, Roles: store.Roles, Error: msg})
+			personData{IsNew: true, Form: form, Roles: assignableRoles(current(r).user), Error: msg})
 	}
 	u := &store.User{Role: form["role"], Active: true, MustChangePassword: true}
 	if msg := validateProfile(u, form); msg != "" {
 		fail(msg)
 		return
 	}
-	if !store.ValidRole(u.Role) {
+	if !canAssign(current(r).user, u.Role) {
 		fail("Choose a role.")
 		return
 	}
@@ -125,7 +163,7 @@ func personForm(u *store.User) map[string]string {
 }
 
 func (s *Server) handlePersonForm(w http.ResponseWriter, r *http.Request) {
-	u := s.person(w, r)
+	u := s.manageable(w, r)
 	if u == nil {
 		return
 	}
@@ -135,12 +173,12 @@ func (s *Server) handlePersonForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, http.StatusOK, "person", u.DisplayName, "people",
-		personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: store.Roles,
+		personData{Person: u, Self: u.ID == current(r).user.ID, Form: personForm(u), Roles: assignableRoles(current(r).user),
 			TwoStepRequired: s.mfaRequired(u), Classes: classes})
 }
 
 func (s *Server) handlePersonUpdate(w http.ResponseWriter, r *http.Request) {
-	orig := s.person(w, r)
+	orig := s.manageable(w, r)
 	if orig == nil {
 		return
 	}
@@ -148,7 +186,7 @@ func (s *Server) handlePersonUpdate(w http.ResponseWriter, r *http.Request) {
 	form := formValues(r, "display_name", "username", "email", "role", "active")
 	fail := func(msg string) {
 		s.render(w, r, http.StatusUnprocessableEntity, "person", orig.DisplayName, "people",
-			personData{Person: orig, Self: self, Form: form, Roles: store.Roles, Error: msg})
+			personData{Person: orig, Self: self, Form: form, Roles: assignableRoles(current(r).user), Error: msg})
 	}
 	u := *orig
 	if msg := validateProfile(&u, form); msg != "" {
@@ -160,7 +198,7 @@ func (s *Server) handlePersonUpdate(w http.ResponseWriter, r *http.Request) {
 		u.Role, u.Active = orig.Role, true
 		form["role"], form["active"] = orig.Role, "1"
 	}
-	if !store.ValidRole(u.Role) {
+	if !(self || canAssign(current(r).user, u.Role)) {
 		fail("Choose a role.")
 		return
 	}
@@ -199,7 +237,7 @@ func (s *Server) handlePersonUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePersonResetPassword(w http.ResponseWriter, r *http.Request) {
-	u := s.person(w, r)
+	u := s.manageable(w, r)
 	if u == nil {
 		return
 	}

@@ -29,8 +29,8 @@ func (s *Server) access(u *store.User, c *store.Class) (classAccess, error) {
 	}
 	a := classAccess{Role: role}
 	a.CanSee = u.IsMentor() || role != ""
-	a.CanEdit = u.IsAdmin() || (role == store.ClassMentor && !c.Archived)
-	a.CanMentors = u.IsAdmin()
+	a.CanEdit = u.IsLeader() || (role == store.ClassMentor && !c.Archived)
+	a.CanMentors = u.IsLeader()
 	a.ShowAccount = u.IsMentor()
 	return a, nil
 }
@@ -141,9 +141,9 @@ func (s *Server) handleClass(w http.ResponseWriter, r *http.Request) {
 	d.Mentors, d.Scholars = splitMembers(members)
 	d.Upcoming = s.upcoming(store.EventQuery{ClassIDs: []int64{c.ID}}, 31, 6)
 	u := current(r).user
-	d.Reviewer = u.IsAdmin() || a.Role == store.ClassMentor
+	d.Reviewer = u.IsLeader() || a.Role == store.ClassMentor
 	d.Assignments, d.NAssign = s.classAssignments(c, a, u, 6)
-	if a.Role != "" || u.IsAdmin() {
+	if a.Role != "" || u.IsLeader() {
 		if ch, err := s.store.ClassChannel(c.ID); err == nil {
 			if ca, err := s.chanAccess(u, ch); err == nil && ca.See {
 				it := &chanItem{chanAccess: ca}
@@ -269,7 +269,7 @@ func (s *Server) handleClassArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !a.CanMentors {
-		s.renderError(w, r, http.StatusForbidden, "Admins only", "Only admins can archive classes.")
+		s.renderError(w, r, http.StatusForbidden, "Admins and the board only", "Only admins and board members can archive classes.")
 		return
 	}
 	c.Archived = r.PathValue("action") == "archive"
@@ -303,7 +303,7 @@ func (s *Server) handleClassDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !a.CanMentors {
-		s.renderError(w, r, http.StatusForbidden, "Admins only", "Only admins can delete classes.")
+		s.renderError(w, r, http.StatusForbidden, "Admins and the board only", "Only admins and board members can delete classes.")
 		return
 	}
 	if !c.Archived {
@@ -378,7 +378,8 @@ func (s *Server) handleClassMembers(w http.ResponseWriter, r *http.Request) {
 	if a.CanMentors {
 		mentors, _ := s.store.ListUsers(store.UserFilter{Role: store.RoleMentor})
 		admins, _ := s.store.ListUsers(store.UserFilter{Role: store.RoleAdmin})
-		d.AddMentor = candidates(append(mentors, admins...), in)
+		board, _ := s.store.ListUsers(store.UserFilter{Role: store.RoleBoard})
+		d.AddMentor = candidates(append(append(mentors, board...), admins...), in)
 	}
 	s.render(w, r, http.StatusOK, "class-members", "Members of "+c.Name, "classes", d)
 }

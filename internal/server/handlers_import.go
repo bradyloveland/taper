@@ -55,11 +55,12 @@ var importRoles = map[string]string{
 	"": store.RoleScholar, "scholar": store.RoleScholar, "student": store.RoleScholar,
 	"mentor": store.RoleMentor, "teacher": store.RoleMentor,
 	"admin": store.RoleAdmin, "administrator": store.RoleAdmin,
+	"board": store.RoleBoard, "board member": store.RoleBoard,
 }
 
 // parseImport reads CSV (or tab-separated text pasted from a spreadsheet).
 // It returns the rows, or a message if the text can't be read at all.
-func (s *Server) parseImport(text string) ([]*importRow, string) {
+func (s *Server) parseImport(actor *store.User, text string) ([]*importRow, string) {
 	text = strings.TrimPrefix(strings.ReplaceAll(text, "\r\n", "\n"), "\ufeff")
 	if strings.TrimSpace(text) == "" {
 		return nil, "Choose a spreadsheet file, or paste the list."
@@ -134,8 +135,10 @@ func (s *Server) parseImport(text string) ([]*importRow, string) {
 		}
 		role, ok := importRoles[strings.ToLower(get(rec, "role"))]
 		if !ok {
-			row.Problems = append(row.Problems, "The role should be scholar, mentor or admin.")
+			row.Problems = append(row.Problems, "The role should be scholar, mentor, board or admin.")
 			role = store.RoleScholar
+		} else if !canAssign(actor, role) {
+			row.Problems = append(row.Problems, "Only admins can add admins and board members.")
 		}
 		row.Role = role
 		if row.Email, msg = cleanEmail(get(rec, "email")); msg != "" {
@@ -259,7 +262,7 @@ func importText(r *http.Request) string {
 
 func (s *Server) handleImportPreview(w http.ResponseWriter, r *http.Request) {
 	text := importText(r)
-	rows, msg := s.parseImport(text)
+	rows, msg := s.parseImport(current(r).user, text)
 	d := importData{Text: text, Rows: rows, Error: msg}
 	for _, row := range rows {
 		if row.OK() {
@@ -276,7 +279,7 @@ func (s *Server) handleImportPreview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleImportCreate(w http.ResponseWriter, r *http.Request) {
-	rows, msg := s.parseImport(r.PostFormValue("text"))
+	rows, msg := s.parseImport(current(r).user, r.PostFormValue("text"))
 	if msg != "" {
 		s.render(w, r, http.StatusUnprocessableEntity, "people-import", "Import people", "people", importData{Error: msg})
 		return

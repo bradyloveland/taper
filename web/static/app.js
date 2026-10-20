@@ -338,23 +338,56 @@
           form.requestSubmit();
         }
       });
+      // Chosen files show above the box, and can be taken off again.
+      const filesIn = form.querySelector('[data-chat-files]');
+      const picked = form.querySelector('[data-chat-picked]');
+      let chosen = [];
+      const showPicked = () => {
+        picked.textContent = '';
+        chosen.forEach((f, i) => {
+          const li = document.createElement('li');
+          const name = document.createElement('span');
+          name.textContent = f.name;
+          const x = document.createElement('button');
+          x.type = 'button';
+          x.textContent = '×';
+          x.setAttribute('aria-label', 'Remove ' + f.name);
+          x.addEventListener('click', () => { chosen.splice(i, 1); showPicked(); });
+          li.append(name, x);
+          picked.appendChild(li);
+        });
+        picked.hidden = chosen.length === 0;
+      };
+      const addFiles = (list) => { chosen = chosen.concat(Array.from(list)); showPicked(); };
+      filesIn.addEventListener('change', () => { addFiles(filesIn.files); filesIn.value = ''; });
+      // Pasting a picture attaches it.
+      box.addEventListener('paste', (e) => {
+        const files = e.clipboardData && e.clipboardData.files;
+        if (files && files.length) { e.preventDefault(); addFiles(files); }
+      });
       let sending = false;
       form.addEventListener('submit', (e) => {
         e.preventDefault();
-        if (sending || !box.value.trim()) return;
+        if (sending || (!box.value.trim() && chosen.length === 0)) return;
         sending = true;
+        const sendBtn = form.querySelector('button[type=submit]');
+        if (chosen.length) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…'; }
         const fd = new FormData(form);
+        fd.delete('files');
+        chosen.forEach((f) => fd.append('files', f, f.name));
         fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin', headers: { Accept: 'application/json' } })
           .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
           .then(({ ok, j }) => {
             if (!ok) { errBox.textContent = j.error || 'Not sent. Try again.'; errBox.hidden = false; return; }
             errBox.hidden = true;
             box.value = '';
+            chosen = [];
+            showPicked();
             grow();
             receive({ id: j.id, html: j.html, mine: true });
           })
           .catch(() => { errBox.textContent = "Not sent: you may be offline. Your message is still in the box; try again."; errBox.hidden = false; })
-          .finally(() => { sending = false; box.focus(); });
+          .finally(() => { sending = false; sendBtn.disabled = false; sendBtn.textContent = 'Send'; box.focus(); });
       });
     }
 

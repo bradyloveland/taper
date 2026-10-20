@@ -57,7 +57,7 @@ func TestHomeAndSettings(t *testing.T) {
 	for _, p := range []string{"/admin/people", "/admin/updates", "/admin/network", "/admin/email", "/admin/reports"} {
 		expect(t, b.get(p), http.StatusOK, `class="admin-tabs"`, `href="`+p+`" aria-current="page"`)
 	}
-	expect(t, b.get("/admin/settings"), http.StatusOK, `class="admin-tabs"`, "This server", "Plain HTTP", "schema 8", "Download database and files", "Problem reports")
+	expect(t, b.get("/admin/settings"), http.StatusOK, `class="admin-tabs"`, "This server", "Plain HTTP", "schema 9", "Download database and files", "Problem reports")
 	expect(t, b.postForm("/admin/settings", url.Values{"school": {"   "}}), http.StatusUnprocessableEntity, "Enter a school name")
 	expectRedirect(t, b.postForm("/admin/settings", url.Values{"school": {"Freedom   Academy"}}), "/admin/settings")
 	expect(t, b.get("/admin/settings"), http.StatusOK, "Settings saved", "Freedom Academy")

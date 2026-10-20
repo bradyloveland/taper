@@ -776,3 +776,142 @@ func TestChat(t *testing.T) {
 		t.Fatal("class channel should go with the class")
 	}
 }
+
+// TestBoardMigration checks that rebuilding users and files for migration 9
+// keeps everything, and that links between tables still work afterwards.
+func TestBoardMigration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "old.db")
+	s, err := openTo(path, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ann := &User{Username: "ann", DisplayName: "Ann", Role: RoleAdmin, PasswordHash: "h1", Active: true, Email: "a@x.org"}
+	sam := &User{Username: "sam", DisplayName: "Sam", Role: RoleScholar, PasswordHash: "h2", Active: true}
+	for _, u := range []*User{ann, sam} {
+		if err := s.CreateUser(u); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.db.Exec(`UPDATE users SET totp_secret = 'sealed', totp_enabled = 1, totp_last_step = 42 WHERE id = ?`, ann.ID); err != nil {
+		t.Fatal(err)
+	}
+	tok, _, err := s.CreateSession(sam.ID, false, "ua", "1.2.3.4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &Class{Name: "Logic", Color: "blue"}
+	s.CreateClass(c)
+	s.AddMembers(c.ID, ClassScholar, []int64{sam.ID})
+	a := &Assignment{ClassID: c.ID, Title: "Essay", PublishAt: 1, CreatedBy: ann.ID}
+	s.CreateAssignment(a)
+	if err := s.AddFile(&File{OwnerKind: FileForAssignment, OwnerID: a.ID, Name: "a.pdf", Size: 3, ContentType: "application/pdf",
+		Stored: "ab/abc", UploadedBy: ann.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`INSERT INTO channels (class_id, enabled, created_at) VALUES (?, 1, 1)`, c.ID); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	s, err = Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if v, _ := s.SchemaVersion(); v < 9 {
+		t.Fatalf("schema %d", v)
+	}
+	got, err := s.GetUser(ann.ID)
+	if err != nil || got.Email != "a@x.org" || got.TOTPSecret != "sealed" || !got.TOTPEnabled || got.TOTPLastStep != 42 || got.PasswordHash != "h1" {
+		t.Fatalf("user after migration: %+v %v", got, err)
+	}
+	if _, u, err := s.LookupSession(tok); err != nil || u.ID != sam.ID {
+		t.Fatalf("session after migration: %v", err)
+	}
+	if files, _ := s.ListFiles(FileForAssignment, a.ID); len(files) != 1 || files[0].UploadedBy != ann.ID {
+		t.Fatalf("files after migration: %v", files)
+	}
+	if com, err := s.CommunityChannel(); err != nil || com.Kind != ChannelCommunity {
+		t.Fatalf("community: %+v %v", com, err)
+	}
+	if ch, err := s.ClassChannel(c.ID); err != nil || ch.Kind != ChannelClass {
+		t.Fatalf("class channel: %+v %v", ch, err)
+	}
+
+	// The new role and file kind are allowed; others still aren't.
+	bo := &User{Username: "bo", DisplayName: "Bo", Role: RoleBoard, PasswordHash: "x", Active: true}
+	if err := s.CreateUser(bo); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`UPDATE users SET role = 'king' WHERE id = ?`, bo.ID); err == nil {
+		t.Fatal("unknown roles must still be refused")
+	}
+	if err := s.AddFile(&File{OwnerKind: FileForMessage, OwnerID: 1, Name: "p.png", Size: 1, ContentType: "image/png", Stored: "cd/cde"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Links still work: removing a user takes their sessions and class places.
+	if _, err := s.db.Exec(`DELETE FROM users WHERE id = ?`, sam.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.LookupSession(tok); !errors.Is(err, ErrNotFound) {
+		t.Fatal("sessions should go with their user")
+	}
+	if role, _ := s.ClassRole(c.ID, sam.ID); role != "" {
+		t.Fatal("class places should go with their user")
+	}
+	var fk int
+	if err := s.db.QueryRow(`SELECT foreign_keys FROM pragma_foreign_keys`).Scan(&fk); err != nil || fk != 1 {
+		t.Fatalf("foreign keys should be back on: %d %v", fk, err)
+	}
+}
+
+func TestGroups(t *testing.T) {
+	s := openTest(t)
+	var ids []int64
+	for _, n := range []string{"ann", "bo", "cy"} {
+		u := &User{Username: n, DisplayName: strings.ToUpper(n), Role: RoleScholar, PasswordHash: "x", Active: true}
+		s.CreateUser(u)
+		ids = append(ids, u.ID)
+	}
+	g, err := s.CreateGroup("Parents' council", ids[0], ids[:2])
+	if err != nil || g.Kind != ChannelGroup || g.Name != "Parents' council" || g.CreatedBy != ids[0] {
+		t.Fatalf("group: %+v %v", g, err)
+	}
+	if in, _ := s.InChannel(g.ID, ids[1]); !in {
+		t.Fatal("member")
+	}
+	if in, _ := s.InChannel(g.ID, ids[2]); in {
+		t.Fatal("not a member")
+	}
+	if n, _ := s.AddChannelMembers(g.ID, ids); n != 1 {
+		t.Fatalf("added %d", n)
+	}
+	s.RemoveChannelMember(g.ID, ids[0])
+	if list, _ := s.ChannelMembers(g.ID); len(list) != 2 || list[0].Username != "bo" {
+		t.Fatalf("members: %v", list)
+	}
+	if mine, _ := s.ListGroups(ids[0]); len(mine) != 0 {
+		t.Fatal("removed members don't see the group")
+	}
+	if all, _ := s.ListGroups(0); len(all) != 1 {
+		t.Fatal("all groups")
+	}
+	s.RenameChannel(g.ID, "Council")
+	m, _ := s.PostMessage(g.ID, ids[1], "hi")
+	s.AddFile(&File{OwnerKind: FileForMessage, OwnerID: m.ID, Name: "p.png", Size: 1, ContentType: "image/png", Stored: "pp/png"})
+	if byMsg, _ := s.FilesFor(FileForMessage, []int64{m.ID}); len(byMsg[m.ID]) != 1 {
+		t.Fatal("files for message")
+	}
+	if err := s.DeleteChannel(g.ID); err != nil {
+		t.Fatal(err)
+	}
+	if paths, _ := s.OrphanFiles(); len(paths) != 1 || paths[0] != "pp/png" {
+		t.Fatalf("a deleted group's files are left to clean up: %v", paths)
+	}
+	if com, _ := s.CommunityChannel(); s.DeleteChannel(com.ID) != nil {
+		t.Fatal("delete")
+	} else if _, err := s.GetChannel(com.ID); err != nil {
+		t.Fatal("only group chats can be deleted")
+	}
+}

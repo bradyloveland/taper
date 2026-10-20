@@ -73,18 +73,26 @@ func TestChatChannels(t *testing.T) {
 		t.Fatal("scholars don't manage chat")
 	}
 
+	// Community: everyone reads, only admins and the board post.
+	expect(t, s.get(c.com), http.StatusOK, "news from admins and the board")
+	if strings.Contains(s.last, `name="body"`) {
+		t.Fatal("scholars don't get a message box in Community")
+	}
+	expect(t, s.postForm(c.com, url.Values{"body": {"hello"}}), http.StatusForbidden, "news from admins")
+	expect(t, m.postForm(c.com, url.Values{"body": {"hello"}}), http.StatusForbidden)
+
 	// Posting without script: redirect to the message. Text is escaped and
 	// links work.
-	r := s.postForm(c.com, url.Values{"body": {"Hi all <script>alert(1)</script>\nsee https://example.org/a?b=1."}})
+	r := a.postForm(c.com, url.Values{"body": {"Hi all <script>alert(1)</script>\nsee https://example.org/a?b=1."}})
 	msg := lastMessage(t, c.env, c.com)
 	expectRedirect(t, r, fmt.Sprintf("%s#m%d", c.com, msg.ID))
 	page := z.get(c.com)
-	expect(t, page, http.StatusOK, "Sam Scholar", "Hi all &lt;script&gt;", `<a href="https://example.org/a?b=1" rel="noopener noreferrer nofollow" target="_blank">`, "Today")
+	expect(t, page, http.StatusOK, "Admin", "Hi all &lt;script&gt;", `<a href="https://example.org/a?b=1" rel="noopener noreferrer nofollow" target="_blank">`, "Today")
 	if strings.Contains(page.Body, "<script>alert") {
 		t.Fatal("message HTML must be escaped")
 	}
-	expect(t, s.postForm(c.com, url.Values{"body": {"   "}}), http.StatusUnprocessableEntity, "Write a message first")
-	expect(t, s.postForm(c.com, url.Values{"body": {strings.Repeat("x", maxChatMessage+1)}}), http.StatusUnprocessableEntity, "too long")
+	expect(t, s.postForm(c.cls, url.Values{"body": {"   "}}), http.StatusUnprocessableEntity, "Write a message first")
+	expect(t, s.postForm(c.cls, url.Values{"body": {strings.Repeat("x", maxChatMessage+1)}}), http.StatusUnprocessableEntity, "too long")
 	expect(t, z.postForm(c.cls, url.Values{"body": {"sneaking in"}}), http.StatusNotFound)
 
 	// With script: JSON with the rendered message.
@@ -99,12 +107,14 @@ func TestChatChannels(t *testing.T) {
 	}
 
 	// Unread counts in the menu, and on the class page.
-	expect(t, s.get("/chat/unread"), http.StatusOK, `"total":1`)
-	expect(t, s.get("/"), http.StatusOK, `aria-label="1 unread">1</span>`)
+	expect(t, s.get("/chat/unread"), http.StatusOK, `"total":2`)
+	expect(t, s.get("/"), http.StatusOK, `aria-label="2 unread">2</span>`)
 	expect(t, s.get(classPath(c.class.ID)), http.StatusOK, "Class chat", "1 new message")
-	s.get(c.cls) // reading it clears it
+	s.get(c.cls)                                                 // reading it clears it
+	expect(t, s.get("/chat/unread"), http.StatusOK, `"total":1`) // the admin's community message
+	s.get(c.com)
 	expect(t, s.get("/chat/unread"), http.StatusOK, `"total":0`)
-	expect(t, m.get("/chat/unread"), http.StatusOK, `"total":1`) // Sam's community message
+	expect(t, m.get("/chat/unread"), http.StatusOK, `"total":1`) // the admin's community message
 	r = m.postJSON(c.com+"/read", url.Values{"last": {fmt.Sprint(msg.ID)}})
 	expect(t, r, http.StatusOK, `"total":0`)
 }
@@ -136,9 +146,9 @@ func TestChatModeration(t *testing.T) {
 	expect(t, m.get(c.cls), http.StatusOK, "Remove message", "Mute Sam")
 	expectRedirect(t, m.postForm(fmt.Sprintf("%s/messages/%d/delete", c.cls, rude.ID), nil), c.cls)
 	expect(t, s.get(c.cls), http.StatusOK, "Message removed by a moderator")
-	z.postForm(c.com, url.Values{"body": {"community post"}})
-	zp := lastMessage(t, c.env, c.com)
-	expect(t, m.postJSON(fmt.Sprintf("%s/messages/%d/delete", c.com, zp.ID), nil), http.StatusForbidden)
+	a.postForm(c.com, url.Values{"body": {"community post"}})
+	ap := lastMessage(t, c.env, c.com)
+	expect(t, m.postJSON(fmt.Sprintf("%s/messages/%d/delete", c.com, ap.ID), nil), http.StatusForbidden)
 	expect(t, m.postForm(c.com+"/mute", url.Values{"user": {fmt.Sprint(c.zoe.ID)}, "for": {"hour"}}), http.StatusForbidden)
 
 	// Muting: they can read but not post, until unmuted.
@@ -149,15 +159,12 @@ func TestChatModeration(t *testing.T) {
 		t.Fatal("muted people get no message box")
 	}
 	expect(t, s.postJSON(c.cls, url.Values{"body": {"let me talk"}}), http.StatusForbidden, "muted")
-	expect(t, s.postJSON(c.com, url.Values{"body": {"still fine here"}}), http.StatusOK) // only in that channel
 	expectRedirect(t, m.postForm(c.cls+"/unmute", url.Values{"user": {fmt.Sprint(c.sam.ID)}}), c.cls)
 	expect(t, s.postJSON(c.cls, url.Values{"body": {"thanks"}}), http.StatusOK)
 
 	// People who lead a channel can't be muted in it.
 	expectRedirect(t, a.postForm(c.cls+"/mute", url.Values{"user": {fmt.Sprint(c.mia.ID)}, "for": {"day"}}), c.cls)
 	expect(t, a.get(c.cls), http.StatusOK, "can't be muted here")
-	expectRedirect(t, a.postForm(c.com+"/mute", url.Values{"user": {fmt.Sprint(c.mia.ID)}, "for": {"always"}}), c.com)
-	expect(t, m.get(c.com), http.StatusOK, "You've been muted here, so")
 	expect(t, z.postForm(c.cls+"/mute", url.Values{"user": {fmt.Sprint(c.sam.ID)}, "for": {"hour"}}), http.StatusNotFound)
 
 	// Admins turn channels off: hidden from scholars, read-only for mentors.
@@ -184,9 +191,9 @@ func TestChatThrottle(t *testing.T) {
 	c := newChatEnv(t)
 	s := c.signedIn("sam", "scholar-password")
 	for i := 0; i < 20; i++ {
-		expect(t, s.postJSON(c.com, url.Values{"body": {fmt.Sprint("message ", i)}}), http.StatusOK)
+		expect(t, s.postJSON(c.cls, url.Values{"body": {fmt.Sprint("message ", i)}}), http.StatusOK)
 	}
-	expect(t, s.postJSON(c.com, url.Values{"body": {"one too many"}}), http.StatusTooManyRequests, "very quickly")
+	expect(t, s.postJSON(c.cls, url.Values{"body": {"one too many"}}), http.StatusTooManyRequests, "very quickly")
 }
 
 // stream opens a channel's event stream and returns its events' data.

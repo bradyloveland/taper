@@ -8,16 +8,22 @@ All notable changes to Taper are recorded here. The format follows
 
 ### Added
 - Milestone 7, chat:
-  - **Chat** in the top bar: a **Community** chat for the whole school, and a chat for each
-    class (its members, and admins). A count of unread messages next to Chat, a dot on the
-    phone menu, and a **Class chat** card on each class's page.
+  - **Chat** in the top bar: **Community** for the whole school (everyone reads; admins and
+    the board post), a chat for each class, and **group chats** that admins and the board
+    make with any name and anyone in them. A count of unread messages next to Chat, a dot on
+    the phone menu, and a **Class chat** card on each class's page.
+  - **Photos and files** in chat (up to 10 at a time; photos show in the chat; paste a
+    picture to attach it). Links become clickable.
   - Messages arrive **live**, without reloading (server-sent events; no new dependencies).
     After a lost connection, missed messages are filled in. Pages still work without
     JavaScript.
-  - Remove your own messages. Mentors moderate their class chats, admins every chat:
+  - Remove your own messages. Mentors moderate their class chats, admins and the board every chat:
     remove messages and **mute** people for an hour, a day or until unmuted.
-  - Admins can **turn a chat off** (messages are kept). Archived classes' chats are
-    read-only.
+  - Admins and the board can **turn a chat off** (messages are kept). Archived classes'
+    chats are read-only.
+- The **Board** role: board members see and run every class, calendar, assignment and chat,
+  and manage mentors and scholars, but not admin or board accounts or the server (settings,
+  updates, network, email, backups). Two-step sign-in can be required for board members.
 
 ## [0.6.0] - 2026-10-07
 

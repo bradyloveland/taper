@@ -37,7 +37,7 @@ func TestRoleAccess(t *testing.T) {
 			t.Fatalf("%s sees admin links", who)
 		}
 		for _, p := range []string{"/admin/people", "/admin/people/new", "/admin/people/1", "/admin/settings"} {
-			expect(t, b.get(p), http.StatusForbidden, "Admins only")
+			expect(t, b.get(p), http.StatusForbidden, "only")
 		}
 		expect(t, b.postForm("/admin/people/new", url.Values{"display_name": {"X"}, "username": {"xx"}, "role": {"admin"}}), http.StatusForbidden)
 		expect(t, b.postForm("/admin/settings", url.Values{"school": {"Hacked"}}), http.StatusForbidden)

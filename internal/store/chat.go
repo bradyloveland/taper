@@ -6,11 +6,21 @@ import (
 	"strings"
 )
 
-// Channel is a chat channel: the community channel (ClassID 0) or a class's.
+// Channel kinds.
+const (
+	ChannelCommunity = "community" // the whole school
+	ChannelClass     = "class"     // one class
+	ChannelGroup     = "group"     // a group chat with its own name and members
+)
+
+// Channel is a chat channel.
 type Channel struct {
 	ID        int64
-	ClassID   int64
+	Kind      string
+	ClassID   int64  // for class channels
+	Name      string // for group chats
 	Enabled   bool
+	CreatedBy int64
 	CreatedAt int64
 
 	ClassName     string // filled in for class channels
@@ -18,12 +28,13 @@ type Channel struct {
 	ClassArchived bool
 }
 
-const channelCols = `ch.id, COALESCE(ch.class_id, 0), ch.enabled, ch.created_at, COALESCE(c.name, ''), COALESCE(c.color, ''),
-	COALESCE(c.archived, 0)`
+const channelCols = `ch.id, ch.kind, COALESCE(ch.class_id, 0), ch.name, ch.enabled, COALESCE(ch.created_by, 0), ch.created_at,
+	COALESCE(c.name, ''), COALESCE(c.color, ''), COALESCE(c.archived, 0)`
 
 func scanChannel(row interface{ Scan(...any) error }) (*Channel, error) {
 	ch := &Channel{}
-	err := row.Scan(&ch.ID, &ch.ClassID, &ch.Enabled, &ch.CreatedAt, &ch.ClassName, &ch.ClassColor, &ch.ClassArchived)
+	err := row.Scan(&ch.ID, &ch.Kind, &ch.ClassID, &ch.Name, &ch.Enabled, &ch.CreatedBy, &ch.CreatedAt, &ch.ClassName,
+		&ch.ClassColor, &ch.ClassArchived)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -39,12 +50,13 @@ func (s *Store) GetChannel(id int64) (*Channel, error) {
 // CommunityChannel returns the channel for the whole school.
 func (s *Store) CommunityChannel() (*Channel, error) {
 	return scanChannel(s.db.QueryRow(`SELECT ` + channelCols + ` FROM channels ch LEFT JOIN classes c ON c.id = ch.class_id
-		WHERE ch.class_id IS NULL ORDER BY ch.id LIMIT 1`))
+		WHERE ch.kind = 'community' ORDER BY ch.id LIMIT 1`))
 }
 
 // ClassChannel returns a class's channel, making it if needed.
 func (s *Store) ClassChannel(classID int64) (*Channel, error) {
-	if _, err := s.db.Exec(`INSERT INTO channels (class_id, enabled, created_at) VALUES (?, 1, ?) ON CONFLICT (class_id) DO NOTHING`,
+	if _, err := s.db.Exec(`INSERT INTO channels (kind, class_id, enabled, created_at) VALUES ('class', ?, 1, ?)
+		ON CONFLICT (class_id) DO NOTHING`,
 		classID, s.now()); err != nil {
 		return nil, err
 	}
@@ -71,6 +83,121 @@ func (s *Store) ClassChannels(classIDs []int64) (map[int64]*Channel, error) {
 			return nil, err
 		}
 		out[ch.ClassID] = ch
+	}
+	return out, rows.Err()
+}
+
+// CreateGroup makes a group chat with its first members.
+func (s *Store) CreateGroup(name string, by int64, members []int64) (*Channel, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	now := s.now()
+	res, err := tx.Exec(`INSERT INTO channels (kind, name, enabled, created_by, created_at) VALUES ('group', ?, 1, ?, ?)`,
+		name, nullID(by), now)
+	if err != nil {
+		return nil, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range members {
+		if _, err := tx.Exec(`INSERT OR IGNORE INTO channel_members (channel_id, user_id, added_at) VALUES (?, ?, ?)`, id, u, now); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return s.GetChannel(id)
+}
+
+// RenameChannel changes a group chat's name.
+func (s *Store) RenameChannel(id int64, name string) error {
+	_, err := s.db.Exec(`UPDATE channels SET name = ? WHERE id = ? AND kind = 'group'`, name, id)
+	return err
+}
+
+// DeleteChannel removes a group chat with its messages. Remove the files
+// that are no longer used with OrphanFiles.
+func (s *Store) DeleteChannel(id int64) error {
+	_, err := s.db.Exec(`DELETE FROM channels WHERE id = ? AND kind = 'group'`, id)
+	return err
+}
+
+// ListGroups returns group chats, by name: all of them, or with userID only
+// those the person is in.
+func (s *Store) ListGroups(userID int64) ([]*Channel, error) {
+	q := `SELECT ` + channelCols + ` FROM channels ch LEFT JOIN classes c ON c.id = ch.class_id WHERE ch.kind = 'group'`
+	var args []any
+	if userID != 0 {
+		q += ` AND EXISTS (SELECT 1 FROM channel_members m WHERE m.channel_id = ch.id AND m.user_id = ?)`
+		args = append(args, userID)
+	}
+	q += ` ORDER BY ch.name COLLATE NOCASE, ch.id`
+	rows, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*Channel
+	for rows.Next() {
+		ch, err := scanChannel(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ch)
+	}
+	return out, rows.Err()
+}
+
+// AddChannelMembers adds people to a group chat, returning how many were new.
+func (s *Store) AddChannelMembers(channelID int64, userIDs []int64) (int, error) {
+	n := 0
+	for _, u := range userIDs {
+		res, err := s.db.Exec(`INSERT OR IGNORE INTO channel_members (channel_id, user_id, added_at) VALUES (?, ?, ?)`,
+			channelID, u, s.now())
+		if err != nil {
+			return n, err
+		}
+		if k, _ := res.RowsAffected(); k > 0 {
+			n++
+		}
+	}
+	return n, nil
+}
+
+// RemoveChannelMember takes someone out of a group chat.
+func (s *Store) RemoveChannelMember(channelID, userID int64) error {
+	_, err := s.db.Exec(`DELETE FROM channel_members WHERE channel_id = ? AND user_id = ?`, channelID, userID)
+	return err
+}
+
+// InChannel reports whether someone is a member of a group chat.
+func (s *Store) InChannel(channelID, userID int64) (bool, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM channel_members WHERE channel_id = ? AND user_id = ?`, channelID, userID).Scan(&n)
+	return n > 0, err
+}
+
+// ChannelMembers lists a group chat's active members by name.
+func (s *Store) ChannelMembers(channelID int64) ([]*User, error) {
+	rows, err := s.db.Query(`SELECT `+userColsAs("u")+` FROM channel_members m JOIN users u ON u.id = m.user_id
+		WHERE m.channel_id = ? AND u.active = 1 ORDER BY u.display_name COLLATE NOCASE`, channelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
 	}
 	return out, rows.Err()
 }

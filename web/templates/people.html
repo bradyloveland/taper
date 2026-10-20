@@ -16,7 +16,7 @@
   <label class="sr-only" for="role">Role</label>
   <select id="role" name="role">
     <option value="">Every role</option>
-    {{range .D.Roles}}<option value="{{.}}" {{if eq . $.D.Filter.Role}}selected{{end}}>{{roleLabel .}}s</option>{{end}}
+    {{range .D.Roles}}<option value="{{.}}" {{if eq . $.D.Filter.Role}}selected{{end}}>{{title (roleNoun .)}}s</option>{{end}}
   </select>
   <label class="sr-only" for="status">Status</label>
   <select id="status" name="status">

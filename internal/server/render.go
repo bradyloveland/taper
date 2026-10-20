@@ -46,6 +46,9 @@ func (s *Server) templateFuncs() template.FuncMap {
 		"title":     func(s string) string { return capitalize(s) },
 		"when":      func(unix int64) string { return time.Unix(unix, 0).In(s.loc()).Format("Mon, Jan 2 at 3:04 PM") },
 		"happened":  happened,
+		"plural":    plural,
+		"people":    people,
+		"roleNoun":  roleNoun,
 		"initial": func(s string) string {
 			for _, r := range s {
 				return strings.ToUpper(string(r))
@@ -236,6 +239,22 @@ func ago(t, now time.Time) string {
 		return t.Format("Jan 2")
 	}
 	return t.Format("Jan 2, 2006")
+}
+
+// people writes a count of people, like "1 person" or "3 people".
+func people(n int) string {
+	if n == 1 {
+		return "1 person"
+	}
+	return fmt.Sprintf("%d people", n)
+}
+
+// roleNoun names one person with a role, in a sentence: "a board member".
+func roleNoun(role string) string {
+	if role == store.RoleBoard {
+		return "board member"
+	}
+	return strings.ToLower(store.RoleLabel(role))
 }
 
 func plural(n int, word string) string {

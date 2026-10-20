@@ -29,7 +29,7 @@
     <select id="role" name="role" aria-describedby="role-help">
       {{range .D.Roles}}<option value="{{.}}" {{if eq . $.D.Form.role}}selected{{end}}>{{roleLabel .}}</option>{{end}}
     </select>
-    <p id="role-help" class="help">Scholars take part in classes. Mentors run classes. Admins also manage people and settings.</p>
+    <p id="role-help" class="help">Scholars take part in classes. Mentors run classes. Board members see and run every class, calendar and chat, and manage mentors and scholars. Admins can do all that and also look after the server and its settings.</p>
     {{end}}
 
     {{if and (not .D.IsNew) (not .D.Self)}}
@@ -72,7 +72,7 @@
   </form>
   {{end}}
   {{else}}
-  <p><span class="badge">Off</span>{{if .D.TwoStepRequired}} Your school requires it for {{lower .D.Person.RoleLabel}}s, so they'll set it up when they next sign in.{{else}} They can turn it on under My account.{{end}}</p>
+  <p><span class="badge">Off</span>{{if .D.TwoStepRequired}} Your school requires it for {{roleNoun .D.Person.Role}}s, so they'll set it up when they next sign in.{{else}} They can turn it on under My account.{{end}}</p>
   {{end}}
 </section>
 {{end}}

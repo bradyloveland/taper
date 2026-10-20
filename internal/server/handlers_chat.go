@@ -25,6 +25,7 @@ import (
 
 const (
 	maxChatMessage = 2000 // characters
+	maxChatFiles   = 10   // files on one message
 	chatPage       = 60   // messages shown at a time
 )
 
@@ -90,34 +91,50 @@ func (h *chatHub) watchers(channelID int64) int {
 // ---------------------------------------------------------------- access
 
 // chanAccess is what the signed-in person may do in a channel.
+//
+// Admins and the board (leaders) can see, post in and moderate every chat.
+// Community is for everyone to read, but only leaders post in it. A class's
+// chat is for its members, moderated by its mentors. A group chat is for the
+// people a leader added to it.
 type chanAccess struct {
 	Ch       *store.Channel
 	Name     string
 	Color    string
 	Link     string // the class page, for class channels
+	Member   bool   // it's one of the person's own chats (for unread counts)
 	See      bool
 	Post     bool
-	Moderate bool // remove anyone's messages and mute people: admins, and a class's mentors
-	Manage   bool // turn the channel on and off: admins
+	Moderate bool // remove anyone's messages and mute people
+	Manage   bool // turn it on and off, and look after group chats: leaders
 	Mute     *store.Mute
 	Why      string // why they can't post
 }
 
 func (s *Server) chanAccess(u *store.User, ch *store.Channel) (chanAccess, error) {
-	a := chanAccess{Ch: ch, Manage: u.IsAdmin()}
-	archived := false
-	if ch.ClassID == 0 {
-		a.Name, a.Color = "Community", "school"
-		a.Moderate = u.IsAdmin()
-		a.See = ch.Enabled || a.Moderate
-	} else {
+	leader := u.IsLeader()
+	a := chanAccess{Ch: ch, Manage: leader, Moderate: leader}
+	archived, poster := false, leader
+	switch ch.Kind {
+	case store.ChannelCommunity:
+		a.Name, a.Color, a.Member = "Community", "school", true
+		a.See = ch.Enabled || leader
+	case store.ChannelGroup:
+		in, err := s.store.InChannel(ch.ID, u.ID)
+		if err != nil {
+			return a, err
+		}
+		a.Name, a.Color, a.Member = ch.Name, "group", in
+		a.See = (in || leader) && (ch.Enabled || leader)
+		poster = poster || in
+	default:
 		role, err := s.store.ClassRole(ch.ClassID, u.ID)
 		if err != nil {
 			return a, err
 		}
-		a.Name, a.Color, a.Link = ch.ClassName, ch.ClassColor, classPath(ch.ClassID)
-		a.Moderate = u.IsAdmin() || role == store.ClassMentor
-		a.See = (role != "" || u.IsAdmin()) && (ch.Enabled || a.Moderate)
+		a.Name, a.Color, a.Link, a.Member = ch.ClassName, ch.ClassColor, classPath(ch.ClassID), role != ""
+		a.Moderate = leader || role == store.ClassMentor
+		a.See = (role != "" || leader) && (ch.Enabled || a.Moderate)
+		poster = poster || role != ""
 		archived = ch.ClassArchived
 	}
 	if !a.See {
@@ -128,6 +145,10 @@ func (s *Server) chanAccess(u *store.User, ch *store.Channel) (chanAccess, error
 		a.Why = "Chat is turned off here."
 	case archived:
 		a.Why = "This class is archived, so its chat is read-only."
+	case !poster && ch.Kind == store.ChannelCommunity:
+		a.Why = "Community is for news from admins and the board. Everyone can read it."
+	case !poster:
+		a.Why = "You can read this chat but not post in it."
 	default:
 		if !a.Moderate {
 			mu, err := s.store.MuteOf(ch.ID, u.ID)
@@ -187,17 +208,24 @@ func chatPath(id int64) string { return "/chat/" + strconv.FormatInt(id, 10) }
 // chanItem is a channel in the list.
 type chanItem struct {
 	chanAccess
-	Unread int
-	Last   *store.Message
-	Active bool
+	Unread  int
+	Last    *store.Message
+	Active  bool
+	Section string // School, Classes, Groups, or Other chats (leaders)
+	Head    bool   // the first in its section
 }
 
-// myChannels lists the channels u can see: the community channel, then
-// their current classes'. With create, missing class channels are made.
+// myChannels lists the chats u can see: Community, their current classes'
+// and their group chats, then for leaders every other chat. With create,
+// missing class channels are made.
 func (s *Server) myChannels(u *store.User, create bool) ([]chanItem, error) {
-	var list []*store.Channel
+	type entry struct {
+		ch      *store.Channel
+		section string
+	}
+	var list []entry
 	if ch, err := s.store.CommunityChannel(); err == nil {
-		list = append(list, ch)
+		list = append(list, entry{ch, "School"})
 	} else if !errors.Is(err, store.ErrNotFound) {
 		return nil, err
 	}
@@ -205,41 +233,89 @@ func (s *Server) myChannels(u *store.User, create bool) ([]chanItem, error) {
 	if err != nil {
 		return nil, err
 	}
+	mine := map[int64]bool{}
 	var ids []int64
 	for _, c := range classes {
 		if !c.Archived {
 			ids = append(ids, c.ID)
+			mine[c.ID] = true
 		}
 	}
-	if create {
-		for _, id := range ids {
-			ch, err := s.store.ClassChannel(id)
-			if err != nil {
-				return nil, err
-			}
-			list = append(list, ch)
-		}
-	} else {
-		have, err := s.store.ClassChannels(ids)
+	var others []int64
+	if u.IsLeader() {
+		all, err := s.store.ListClasses(store.ClassFilter{})
 		if err != nil {
 			return nil, err
 		}
+		for _, c := range all {
+			if !mine[c.ID] && !c.Archived {
+				others = append(others, c.ID)
+			}
+		}
+	}
+	addClasses := func(ids []int64, section string) error {
+		if create {
+			for _, id := range ids {
+				ch, err := s.store.ClassChannel(id)
+				if err != nil {
+					return err
+				}
+				list = append(list, entry{ch, section})
+			}
+			return nil
+		}
+		have, err := s.store.ClassChannels(ids)
+		if err != nil {
+			return err
+		}
 		for _, id := range ids {
 			if ch := have[id]; ch != nil {
-				list = append(list, ch)
+				list = append(list, entry{ch, section})
+			}
+		}
+		return nil
+	}
+	if err := addClasses(ids, "Classes"); err != nil {
+		return nil, err
+	}
+	groups, err := s.store.ListGroups(u.ID)
+	if err != nil {
+		return nil, err
+	}
+	inGroup := map[int64]bool{}
+	for _, g := range groups {
+		list = append(list, entry{g, "Groups"})
+		inGroup[g.ID] = true
+	}
+	if u.IsLeader() {
+		if err := addClasses(others, "Other chats"); err != nil {
+			return nil, err
+		}
+		all, err := s.store.ListGroups(0)
+		if err != nil {
+			return nil, err
+		}
+		for _, g := range all {
+			if !inGroup[g.ID] {
+				list = append(list, entry{g, "Other chats"})
 			}
 		}
 	}
 	var out []chanItem
 	var chIDs []int64
-	for _, ch := range list {
-		a, err := s.chanAccess(u, ch)
+	for _, e := range list {
+		a, err := s.chanAccess(u, e.ch)
 		if err != nil {
 			return nil, err
 		}
-		if a.See {
-			out = append(out, chanItem{chanAccess: a})
-			chIDs = append(chIDs, ch.ID)
+		if !a.See {
+			continue
+		}
+		it := chanItem{chanAccess: a, Section: e.section}
+		it.Head = len(out) == 0 || out[len(out)-1].Section != e.section
+		out = append(out, it)
+		if a.Member {
+			chIDs = append(chIDs, e.ch.ID)
 		}
 	}
 	unread, err := s.store.UnreadCounts(u.ID, chIDs)
@@ -261,7 +337,7 @@ func (s *Server) chatUnread(u *store.User) int {
 	}
 	n := 0
 	for _, it := range list {
-		if it.Ch.Enabled {
+		if it.Ch.Enabled && it.Member {
 			n += it.Unread
 		}
 	}
@@ -323,6 +399,7 @@ type msgView struct {
 	CanMute   bool
 	FirstName string
 	Removed   string // who removed it
+	Files     []fileItem
 }
 
 // msgViewer renders messages for one person in one channel, remembering
@@ -335,6 +412,7 @@ type msgViewer struct {
 	loc     *time.Location
 	today   time.Time
 	leaders map[int64]bool
+	files   map[int64][]*store.File // loaded for a whole list at once
 }
 
 func (s *Server) viewer(r *http.Request, a chanAccess) *msgViewer {
@@ -345,10 +423,10 @@ func (s *Server) viewer(r *http.Request, a chanAccess) *msgViewer {
 // leads reports whether someone leads the channel (can't be muted, and gets
 // a badge): admins, and in a class channel its mentors.
 func (v *msgViewer) leads(m *store.Message) bool {
-	if m.AuthorRole == store.RoleAdmin {
+	if m.AuthorRole == store.RoleAdmin || m.AuthorRole == store.RoleBoard {
 		return true
 	}
-	if v.a.Ch.ClassID == 0 || m.UserID == 0 {
+	if v.a.Ch.Kind != store.ChannelClass || m.UserID == 0 {
 		return false
 	}
 	l, ok := v.leaders[m.UserID]
@@ -379,7 +457,7 @@ func (v *msgViewer) view(m *store.Message) msgView {
 	leads := v.leads(m)
 	if leads {
 		mv.Badge = store.RoleLabel(m.AuthorRole)
-		if m.AuthorRole != store.RoleAdmin {
+		if m.AuthorRole != store.RoleAdmin && m.AuthorRole != store.RoleBoard {
 			mv.Badge = "Mentor"
 		}
 	}
@@ -392,6 +470,11 @@ func (v *msgViewer) view(m *store.Message) msgView {
 		return mv
 	}
 	mv.Body = chatHTML(m.Body)
+	if files, ok := v.files[m.ID]; ok {
+		mv.Files = fileItems(files)
+	} else if byMsg, err := v.s.store.FilesFor(store.FileForMessage, []int64{m.ID}); err == nil {
+		mv.Files = fileItems(byMsg[m.ID])
+	}
 	mv.CanDelete = mv.Mine || v.a.Moderate
 	mv.CanMute = v.a.Moderate && !mv.Mine && !leads && m.UserID != 0
 	mv.FirstName = strings.Fields(m.AuthorName + " x")[0]
@@ -400,6 +483,18 @@ func (v *msgViewer) view(m *store.Message) msgView {
 
 // views renders a list, marking new days and runs by the same person.
 func (v *msgViewer) views(list []*store.Message) []msgView {
+	ids := make([]int64, len(list))
+	for i, m := range list {
+		ids[i] = m.ID
+	}
+	if files, err := v.s.store.FilesFor(store.FileForMessage, ids); err == nil {
+		v.files = files
+		for _, id := range ids { // messages without files: nothing to look up
+			if _, ok := v.files[id]; !ok {
+				v.files[id] = nil
+			}
+		}
+	}
 	out := make([]msgView, len(list))
 	for i, m := range list {
 		out[i] = v.view(m)
@@ -457,6 +552,7 @@ type channelData struct {
 	Error    string
 	LastID   int64
 	Me       int64
+	People   int // members of a group chat
 }
 
 func (s *Server) handleChannel(w http.ResponseWriter, r *http.Request) {
@@ -501,6 +597,11 @@ func (s *Server) renderChannel(w http.ResponseWriter, r *http.Request, status in
 	if a.Moderate {
 		d.Mutes, _ = s.store.ListMutes(a.Ch.ID)
 	}
+	if a.Ch.Kind == store.ChannelGroup {
+		if members, err := s.store.ChannelMembers(a.Ch.ID); err == nil {
+			d.People = len(members)
+		}
+	}
 	s.render(w, r, status, "chat-channel", a.Name+" chat", "chat", d)
 }
 
@@ -531,13 +632,21 @@ func (s *Server) handleChatPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u := current(r).user
+	if err := parseUpload(r); err != nil {
+		s.chatError(w, r, a, http.StatusRequestEntityTooLarge, "", s.uploadError(r, err))
+		return
+	}
 	body := strings.TrimSpace(strings.ReplaceAll(r.PostFormValue("body"), "\r\n", "\n"))
+	uploads := uploadsIn(r)
 	switch {
 	case !a.Post:
 		s.chatError(w, r, a, http.StatusForbidden, body, a.Why)
 		return
-	case body == "":
+	case body == "" && len(uploads) == 0:
 		s.chatError(w, r, a, http.StatusUnprocessableEntity, "", "Write a message first.")
+		return
+	case len(uploads) > maxChatFiles:
+		s.chatError(w, r, a, http.StatusUnprocessableEntity, body, fmt.Sprintf("Send up to %d files at a time.", maxChatFiles))
 		return
 	case utf8.RuneCountInString(body) > maxChatMessage:
 		s.chatError(w, r, a, http.StatusUnprocessableEntity, body, fmt.Sprintf("That's too long for chat. Keep messages to %d characters.", maxChatMessage))
@@ -553,6 +662,11 @@ func (s *Server) handleChatPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.serverError(w, r, "posting message", err)
 		return
+	}
+	if len(uploads) > 0 {
+		if _, err := s.saveUploads(r, store.FileForMessage, m.ID, 0, u.ID); err != nil {
+			s.logError(r, "saving chat files", err)
+		}
 	}
 	_ = s.store.MarkRead(u.ID, a.Ch.ID, m.ID)
 	s.chat.publish(a.Ch.ID, chatEvent{ID: m.ID, New: true})
@@ -591,6 +705,7 @@ func (s *Server) handleChatDelete(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, "removing message", err)
 		return
 	}
+	s.cleanFiles()
 	if m.UserID != u.ID {
 		slog.Info("chat message removed", "by", u.Username, "channel", a.Ch.ID, "message", m.ID)
 	}
@@ -613,7 +728,7 @@ func (s *Server) handleChatMute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !a.Moderate {
-		s.renderError(w, r, http.StatusForbidden, "You can't mute people here", "Admins, and a class's mentors in its chat, can mute people.")
+		s.renderError(w, r, http.StatusForbidden, "You can't mute people here", "Admins and the board, and a class's mentors in its chat, can mute people.")
 		return
 	}
 	u := current(r).user
@@ -657,7 +772,7 @@ func (s *Server) handleChatUnmute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !a.Moderate {
-		s.renderError(w, r, http.StatusForbidden, "You can't unmute people here", "Admins, and a class's mentors in its chat, can unmute people.")
+		s.renderError(w, r, http.StatusForbidden, "You can't unmute people here", "Admins and the board, and a class's mentors in its chat, can unmute people.")
 		return
 	}
 	uid, err := strconv.ParseInt(r.PostFormValue("user"), 10, 64)
@@ -682,7 +797,7 @@ func (s *Server) handleChatEnabled(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !a.Manage {
-		s.renderError(w, r, http.StatusForbidden, "Admins only", "Only admins can turn chat on and off.")
+		s.renderError(w, r, http.StatusForbidden, "Admins and the board only", "Only admins and board members can turn chat on and off.")
 		return
 	}
 	on := r.PostFormValue("on") == "1"
@@ -691,12 +806,13 @@ func (s *Server) handleChatEnabled(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Info("chat channel changed", "by", current(r).user.Username, "channel", a.Name, "on", on)
-	msg := "Chat in " + a.Name + " is turned off. Messages are kept, and only admins and mentors can see them."
-	if on {
-		msg = "Chat in " + a.Name + " is turned on."
-	}
-	if a.Ch.ClassID == 0 && !on {
-		msg = "Community chat is turned off. Messages are kept, and only admins can see them."
+	msg := a.Name + " chat is turned on."
+	if !on {
+		msg = a.Name + " chat is turned off. Messages are kept, and only admins and the board"
+		if a.Ch.Kind == store.ChannelClass {
+			msg += ", and the class's mentors,"
+		}
+		msg += " can see it."
 	}
 	target := chatPath(a.Ch.ID)
 	if back := r.PostFormValue("back"); back == "class" && a.Link != "" {

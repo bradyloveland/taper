@@ -49,7 +49,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 	d.Upcoming = s.upcoming(q, 14, 8)
 	d.ToDo, d.Mentored = s.homeAssignments(current(r).user, d.Classes, 8)
-	if current(r).user.IsAdmin() {
+	if current(r).user.IsLeader() {
 		d.NClasses, _ = s.store.CountClasses()
 		counts, err := s.store.RoleCounts()
 		if err != nil {
@@ -57,8 +57,10 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		d.Counts = counts
-		d.Update = s.availableUpdate()
-		d.Unsent, _ = s.store.UnsentBugReports()
+		if current(r).user.IsAdmin() {
+			d.Update = s.availableUpdate()
+			d.Unsent, _ = s.store.UnsentBugReports()
+		}
 	}
 	s.render(w, r, http.StatusOK, "home", "Home", "home", d)
 }

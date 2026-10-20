@@ -403,6 +403,7 @@ type File struct {
 const (
 	FileForAssignment = "assignment"
 	FileForSubmission = "submission"
+	FileForMessage    = "message" // attached to a chat message
 )
 
 const fileCols = `id, owner_kind, owner_id, name, size, content_type, stored, COALESCE(uploaded_by, 0), created_at`
@@ -451,6 +452,29 @@ func (s *Store) ListFiles(kind string, ownerID int64) ([]*File, error) {
 	return out, rows.Err()
 }
 
+// FilesFor returns the files attached to several owners, keyed by owner.
+func (s *Store) FilesFor(kind string, ownerIDs []int64) (map[int64][]*File, error) {
+	out := map[int64][]*File{}
+	if len(ownerIDs) == 0 {
+		return out, nil
+	}
+	marks, args := idList(ownerIDs)
+	rows, err := s.db.Query(`SELECT `+fileCols+` FROM files WHERE owner_kind = ? AND owner_id IN (`+marks+`) ORDER BY id`,
+		append([]any{kind}, args...)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		f, err := scanFile(rows)
+		if err != nil {
+			return nil, err
+		}
+		out[f.OwnerID] = append(out[f.OwnerID], f)
+	}
+	return out, rows.Err()
+}
+
 // DeleteFile removes a file's record and returns where it was stored.
 func (s *Store) DeleteFile(id int64) (string, error) {
 	f, err := s.GetFile(id)
@@ -466,7 +490,8 @@ func (s *Store) DeleteFile(id int64) (string, error) {
 func (s *Store) OrphanFiles() ([]string, error) {
 	rows, err := s.db.Query(`SELECT id, stored FROM files f WHERE
 		(f.owner_kind = 'assignment' AND NOT EXISTS (SELECT 1 FROM assignments a WHERE a.id = f.owner_id)) OR
-		(f.owner_kind = 'submission' AND NOT EXISTS (SELECT 1 FROM submissions w WHERE w.id = f.owner_id))`)
+		(f.owner_kind = 'submission' AND NOT EXISTS (SELECT 1 FROM submissions w WHERE w.id = f.owner_id)) OR
+		(f.owner_kind = 'message' AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.id = f.owner_id AND m.deleted_at = 0))`)
 	if err != nil {
 		return nil, err
 	}

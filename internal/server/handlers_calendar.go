@@ -324,7 +324,7 @@ func (s *Server) canAddTo(u *store.User, key string, class *store.Class) (bool, 
 		return err == nil && a.CanEdit, strconv.FormatInt(class.ID, 10)
 	}
 	if key == "school" {
-		return u.IsAdmin(), "school"
+		return u.IsLeader(), "school"
 	}
 	// My calendar: anyone who can add to at least one calendar.
 	return len(s.editableCalendars(u)) > 0, ""
@@ -333,11 +333,11 @@ func (s *Server) canAddTo(u *store.User, key string, class *store.Class) (bool, 
 // editableCalendars lists the calendars u may add events to.
 func (s *Server) editableCalendars(u *store.User) []calChoice {
 	var out []calChoice
-	if u.IsAdmin() {
+	if u.IsLeader() {
 		out = append(out, calChoice{Key: "school", Label: "School calendar"})
 	}
 	var classes []*store.Class
-	if u.IsAdmin() {
+	if u.IsLeader() {
 		classes, _ = s.store.ListClasses(store.ClassFilter{})
 	} else {
 		mine, _ := s.store.ListClassesFor(u.ID)
@@ -400,7 +400,7 @@ func (s *Server) event(w http.ResponseWriter, r *http.Request) (*store.CalEvent,
 	}
 	u := current(r).user
 	if e.ClassID == 0 {
-		return e, u.IsAdmin(), true
+		return e, u.IsLeader(), true
 	}
 	c, err := s.store.GetClass(e.ClassID)
 	if err != nil {

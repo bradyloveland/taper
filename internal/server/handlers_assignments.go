@@ -44,7 +44,7 @@ func (s *Server) assignmentAccess(u *store.User, a *store.Assignment) (assignAcc
 		return assignAccess{}, err
 	}
 	acc := assignAccess{Class: c, CanEdit: ca.CanEdit, Scholar: ca.Role == store.ClassScholar}
-	acc.CanReview = u.IsAdmin() || ca.Role == store.ClassMentor
+	acc.CanReview = u.IsLeader() || ca.Role == store.ClassMentor
 	acc.CanSee = acc.CanReview || (ca.CanSee && a.Published(time.Now().Unix()))
 	return acc, nil
 }
@@ -264,7 +264,7 @@ func (s *Server) handleClassAssignments(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	u := current(r).user
-	reviewer := u.IsAdmin() || ca.Role == store.ClassMentor
+	reviewer := u.IsLeader() || ca.Role == store.ClassMentor
 	list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: []int64{c.ID}, PublishedOnly: !reviewer, Now: time.Now().Unix()})
 	if err != nil {
 		s.serverError(w, r, "listing assignments", err)
@@ -301,7 +301,7 @@ func (s *Server) splitByDue(items []assignItem, scholar bool) (upcoming, past []
 
 // classAssignments returns the items for a class page's Assignments card.
 func (s *Server) classAssignments(c *store.Class, ca classAccess, u *store.User, limit int) ([]assignItem, int) {
-	reviewer := u.IsAdmin() || ca.Role == store.ClassMentor
+	reviewer := u.IsLeader() || ca.Role == store.ClassMentor
 	list, err := s.store.ListAssignments(store.AssignmentQuery{ClassIDs: []int64{c.ID}, PublishedOnly: !reviewer, Now: time.Now().Unix()})
 	if err != nil {
 		slog.Error("listing assignments", "err", err)
@@ -326,6 +326,11 @@ type fileItem struct {
 	*store.File
 	Link string
 	Size string
+}
+
+// IsImage reports whether the file can be shown as a picture.
+func (f fileItem) IsImage() bool {
+	return strings.HasPrefix(f.ContentType, "image/") && inlineTypes[f.ContentType]
 }
 
 func fileItems(list []*store.File) []fileItem {
@@ -1024,7 +1029,7 @@ func (s *Server) handleReviewSave(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if acc.Class.Archived && !current(r).user.IsAdmin() {
+	if acc.Class.Archived && !current(r).user.IsLeader() {
 		s.renderError(w, r, http.StatusForbidden, "This class is archived", "Work can't be changed in an archived class.")
 		return
 	}

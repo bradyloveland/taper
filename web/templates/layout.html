@@ -43,7 +43,8 @@
         <div class="menu-who"><strong>{{.User.DisplayName}}</strong><span>{{.User.RoleLabel}} · {{.User.Username}}</span></div>
         <a href="/account" {{if eq .Section "account"}}aria-current="page"{{end}}>My account</a>
         <a href="/guide" {{if eq .Section "guide"}}aria-current="page"{{end}}>Guide</a>
-        {{if .User.IsAdmin}}<a href="/admin/settings" {{if adminSection .Section}}aria-current="page"{{end}}>Settings</a>{{end}}
+        {{if .User.IsAdmin}}<a href="/admin/settings" {{if adminSection .Section}}aria-current="page"{{end}}>Settings</a>
+        {{else if .User.IsLeader}}<a href="/admin/people" {{if eq .Section "people"}}aria-current="page"{{end}}>People</a>{{end}}
         <form method="post" action="/logout" class="menu-form">
           <input type="hidden" name="csrf" value="{{.CSRF}}">
           <button type="submit">Sign out</button>
@@ -115,11 +116,12 @@
 {{define "chat-channels"}}
 <ul class="chat-channels">
   {{range .}}
+  {{if .Head}}<li class="chat-section">{{.Section}}</li>{{end}}
   <li><a href="/chat/{{.Ch.ID}}" class="chat-chan{{if .Active}} active{{end}}" {{if .Active}}aria-current="page"{{end}} data-channel-link="{{.Ch.ID}}">
-    <span class="chat-chan-mark c-{{.Color}}" aria-hidden="true">{{if eq .Ch.ClassID 0}}#{{else}}{{initial .Name}}{{end}}</span>
+    <span class="chat-chan-mark c-{{.Color}}" aria-hidden="true">{{if eq .Ch.Kind "community"}}#{{else}}{{initial .Name}}{{end}}</span>
     <span class="chat-chan-text">
       <strong>{{.Name}}</strong>{{if not .Ch.Enabled}} <span class="badge muted">Off</span>{{end}}
-      {{with .Last}}<span class="muted small chat-preview">{{if .Deleted}}Message removed{{else}}{{.AuthorName}}: {{.Body}}{{end}}</span>{{end}}
+      {{with .Last}}<span class="muted small chat-preview">{{if .Deleted}}Message removed{{else if .Body}}{{.AuthorName}}: {{.Body}}{{else}}{{.AuthorName}} sent a file{{end}}</span>{{end}}
     </span>
     {{if .Unread}}<span class="chat-unread" aria-label="{{.Unread}} unread">{{.Unread}}</span>{{end}}
   </a></li>
