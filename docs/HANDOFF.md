@@ -18,8 +18,9 @@ server. Roles: **admin**, **board**, **mentor** (teacher), **scholar**
 
 ## What's built
 
-Milestones 1–7 of 8 are done, plus the Parent role. Releases v0.3.0 to v0.6.0
-are tagged; 0.7.0 (M7 and parents) is in a release pull request.
+Milestones 1–7 of 8 are done, plus the Parent role, and M8 is under way
+(notifications and web push are done). Releases v0.3.0 to v0.7.0 are tagged;
+0.8.0 (notifications, web push, the Dev/Beta label) is in a release pull request.
 
 | Milestone | What it added |
 |-----------|---------------|
@@ -30,6 +31,7 @@ are tagged; 0.7.0 (M7 and parents) is in a release pull request.
 | **M5 Calendars** | School and class calendars, repeating events, school time zone. Month, week and list views. Private iCal subscription links per calendar, each resettable on its own. |
 | **M6 Assignments** | Formatted instructions and attachments, due dates (on the calendars and feeds), publish now, later or as a draft. Scholar work saves itself as they type; files; turn in or take back. Mentor review with feedback, plus Undo complete and Return to scholar. Backups that include uploaded files. |
 | **M7 Chat** | Community, class and group chats, live over server-sent events, with unread counts. Photos and files. Moderation (remove messages, mute people). Admins and the board can turn chats off. Plus the **Board** role. |
+| **M8, so far** | **Notifications**: the bell, five kinds (new assignments, work and feedback, due tomorrow, chat, calendar), combined while unread, chosen per person; email each or a daily summary (off by default, no content in emails). **Web push** per device, tied to the session, encrypted (`internal/webpush`, stdlib only). The **Dev/Beta label** under the logo (`TAPER_LABEL`). |
 | **Parents** (after M7) | The **Parent** role and a `parents` link table: anyone who isn't a scholar can be linked to scholars. Parents see their scholars' classes, calendars and work, turn work in for them (history says "(parent)"), and talk in class chats. Linked on the person page or by a "Parent of" import column. |
 
 Between M6 and M7 the header was simplified. The top bar has Home, Calendar,
@@ -119,8 +121,8 @@ minutes), they're undone, so a school can't lock itself out from the browser.
 
 ## Current state
 
-- **`main`** has M7 (PRs #12, #13) and the Parent role (PR #14).
-- **`release-0.7.0`** sets VERSION to `0.7.0`. After it merges, tag `v0.7.0`.
+- **`main`** has everything through web push (PR #18).
+- **`release-0.8.0`** sets VERSION to `0.8.0`. After it merges, tag `v0.8.0`.
 - **Dev VM** (hostname `dev`, 10.10.10.34) runs two copies of Taper:
 
   | | **Beta** | **Dev** |
@@ -181,13 +183,11 @@ minutes), they're undone, so a school can't lock itself out from the browser.
 
 ## Next steps
 
-1. **Release 0.7.0:** merge `release-0.7.0`, then tag `v0.7.0` and check that
-   the release has the archives, with `MANIFEST` and `MANIFEST.sig` inside.
-2. **M8, polish and 1.0** (see [plan.md](plan.md#m8-polish-and-10)):
-   - Notifications in the app, by email (each person chooses) and by web push.
-     New messages, work turned in and feedback are the obvious first ones, and
-     parents should hear about their scholars' feedback.
-   - Passkeys.
+1. **Release 0.8.0:** merge `release-0.8.0`, then tag `v0.8.0` and check that
+   the release has the archives, with `MANIFEST` and `MANIFEST.sig` inside. The
+   owner then updates the beta copy, which starts showing its **Beta** label.
+2. **The rest of M8** (see [plan.md](plan.md#m8-polish-and-10)):
+   - Passkeys (next).
    - An accessibility pass, a performance check, and the guide with screenshots.
    - A tested upgrade path from every pre-release, then **1.0.0**.
    - The chat loose ends above are good M8 candidates.

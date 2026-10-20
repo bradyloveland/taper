@@ -6,6 +6,8 @@ All notable changes to Taper are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-19
+
 ### Added
 - **Notifications on your lock screen** (web push). Under **My account → Notifications**, turn
   them on for each phone, tablet or computer, and send a test. They follow the same choices
